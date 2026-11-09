@@ -92,19 +92,14 @@ export function pageShare(): HTMLElement {
 
   const intro = introBlock({
     what: "Encrypt confidential text messages or files using a password on your device. Anyone with the password and NXTL Shield can decrypt it.",
-    when: "Use this before sending credentials, API tokens, account details, or confidential files over email, chat, or cloud drives.",
     howSteps: [
       "Select Encrypt or Decrypt tab.",
       "Type a message or drop a file (up to 25 MB).",
       "Enter a strong shared password (or click Generate).",
       "Click Encrypt, then copy or share the protected result.",
-      "Send the password through a separate trusted channel.",
+      "Send the password separately, e.g. by another app.",
     ],
-    limits: [
-      "Encryption happens locally in your browser with Web Crypto / OpenPGP. Nothing is sent to any server.",
-      "This encrypts only the specific text or file you paste here; it does not encrypt your normal chat apps.",
-      "If you forget or lose the password, the data cannot be recovered.",
-    ],
+    limit: "Encryption happens locally in your browser with Web Crypto / OpenPGP. If you lose the password, the data cannot be recovered.",
   });
 
   const header = h("div", {}, [
@@ -306,7 +301,7 @@ export function pageShare(): HTMLElement {
       share.addEventListener("click", () => shareOut(status, label, text));
 
       const trustedChannelNote = h("p", { class: "muted-soft", style: "width: 100%; margin-top: var(--sp-2);" }, [
-        "Send the password through a separate trusted channel.",
+        "Send the password separately, e.g. by another app.",
       ]);
 
       actions.append(copy, share, trustedChannelNote);
@@ -330,7 +325,7 @@ export function pageShare(): HTMLElement {
       share.addEventListener("click", () => shareOut(status, name, undefined, { name, bytes }));
 
       const trustedChannelNote = h("p", { class: "muted-soft", style: "width: 100%; margin-top: var(--sp-2);" }, [
-        "Send the password through a separate trusted channel.",
+        "Send the password separately, e.g. by another app.",
       ]);
 
       actions.append(save, share, trustedChannelNote);
