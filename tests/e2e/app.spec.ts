@@ -169,9 +169,9 @@ test("section 8 scroll tests: scroll to top on route change and restore on Back"
   expect(scrolledY).toBeGreaterThan(100);
 
   // Click 'Your connection' tile
-  await page.locator('a[href="#/connection"]').click();
+  await page.locator('a.tile[href="#/connection"]').click();
   await expect(page).toHaveURL(/#\/connection/);
-  const h1 = page.locator("main h1");
+  const h1 = page.getByRole("heading", { name: "Your connection" });
   await expect(h1).toBeVisible();
   const newY = await page.evaluate(() => window.scrollY);
   expect(newY).toBeLessThanOrEqual(2);
@@ -187,20 +187,27 @@ test("section 8 scroll tests: scroll to top on route change and restore on Back"
   await page.waitForFunction(() => window.scrollY > 100);
   await page.locator('.bottom-tab[href="#/check"]').click();
   await expect(page).toHaveURL(/#\/check/);
-  await expect(page.locator("main h1")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Check a link, message or file" })).toBeVisible();
   const mobileY = await page.evaluate(() => window.scrollY);
   expect(mobileY).toBeLessThanOrEqual(2);
 
   // 3. Back/Forward restores scroll position
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("./");
   await expect(page.getByRole("heading", { name: "All protections and tools" })).toBeVisible();
   const link = page.locator('a.tile[href="#/setup"]');
   await link.scrollIntoViewIfNeeded();
-  const savedY = await page.evaluate(() => window.scrollY);
+  const savedY = await page.evaluate(() => {
+    const el = document.querySelector('a.tile[href="#/setup"]') as HTMLElement | null;
+    el?.scrollIntoView({ block: "center", behavior: "instant" as ScrollBehavior });
+    return window.scrollY;
+  });
   expect(savedY).toBeGreaterThan(100);
-  await link.click();
+  await page.evaluate(() => {
+    (document.querySelector('a.tile[href="#/setup"]') as HTMLElement | null)?.click();
+  });
   await expect(page).toHaveURL(/#\/setup/);
-  await expect(page.locator("main h1")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Safe DNS Setup" })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/(#\/?$|\/nxtl-shield\/?$)/);
   await expect(page.getByRole("heading", { name: "All protections and tools" })).toBeVisible();
