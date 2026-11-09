@@ -1,0 +1,15 @@
+Windows Registry Editor Version 5.00
+
+; NXTL Shield - Browser Secure DNS (DNS-over-HTTPS) Configuration
+; Configures Google Chrome and Microsoft Edge to use encrypted ad & tracker blocking DNS.
+; Resolver: https://dns.adguard-dns.com/dns-query
+; Note: Chrome and Edge will display a "Managed by your organization" notice while policy is in effect.
+; To undo, apply nxtl-shield-browser-dns-undo.reg
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+"DnsOverHttpsMode"="secure"
+"DnsOverHttpsTemplates"="https://dns.adguard-dns.com/dns-query"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+"DnsOverHttpsMode"="secure"
+"DnsOverHttpsTemplates"="https://dns.adguard-dns.com/dns-query"

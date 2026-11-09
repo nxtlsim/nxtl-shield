@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0
+
+- Clearer setup and home layout, with square controls and a compact Shield mark in the header.
+- Easier Windows Safe DNS setup: download a setup folder, with undo files and browser policy files included.
+- Password generator includes a one-tap Copy button.
+- Link check accepts a bare domain such as delfi.lt and adds https:// for you.
+- Customer-facing text covers how to use the tools, without internal notes.
+
+## 0.2.0
+
+- First public redesign of the web app, browser extension, and setup guides.
+
 ## 0.1.1
 
 - Fix Chromium threat redirect regex escaping and signed-URL cleaning allow rules.

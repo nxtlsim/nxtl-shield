@@ -88,7 +88,7 @@ export function inspectMagic(name: string, bytes: Uint8Array): Evidence[] {
     evidence.push({
       id: "eicar",
       title: "EICAR test string",
-      detail: "The file begins with the harmless EICAR antivirus test pattern. NXTL Shield did not run an antivirus engine. This is only a string match.",
+      detail: "The file begins with a well-known harmless test pattern. This is only a text match, not a full malware scan.",
       severity: "info",
     });
   }
@@ -144,7 +144,7 @@ export async function inspectFile(name: string, bytes: Uint8Array | null, now = 
     scope: "The file name and, if you selected a file under the size cap, a local SHA-256 and a few magic-byte checks. The file was not uploaded.",
     timestamp: now.toISOString(),
     transmission: "local",
-    uncertainty: "There is no antivirus engine in NXTL Shield v1. Unknown malware will not be detected. Encrypted files cannot be classified from a hash.",
+    uncertainty: "NXTL Shield does not run a full malware scanner. Unknown or encrypted files may not be identified from a name or hash alone.",
     fileName: name.split(/[/\\]/).pop() ?? name,
     sha256,
     notAMalwareScan: true,

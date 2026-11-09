@@ -52,7 +52,7 @@ export interface CheckResultData {
 export function resultCard(result: CheckResultData): HTMLElement {
   const isMalicious = result.verdict === "known_malicious_match";
   const isSuspicious = result.verdict === "suspicious_indicators";
-  const isClean = result.verdict === "clean" || result.verdict === "no_match" || result.verdict === "ok";
+  const isClean = result.verdict === "clean" || result.verdict === "no_match" || result.verdict === "ok" || result.verdict === "no_known_match";
 
   const cardVariant = isMalicious ? "danger" : isSuspicious ? "warning" : isClean ? "ok" : "info";
   const pillVariant = isMalicious ? "match" : isSuspicious ? "indicator" : isClean ? "ok" : "neutral";
@@ -66,102 +66,104 @@ export function resultCard(result: CheckResultData): HTMLElement {
 
   const header = h("div", { class: "result-header" }, [
     h("span", { class: `pill ${pillVariant}` }, [
-      createIcon(iconName, 16),
-      result.verdict.replaceAll("_", " "),
+      createIcon(iconName, 18),
+      isMalicious ? "Dangerous match" : isSuspicious ? "Suspicious indicators" : isClean ? "No known threats" : "Inconclusive",
     ]),
-    h("span", { class: "muted-soft" }, [result.timestamp]),
+    result.inputRedacted ? h("span", { class: "mono muted-soft" }, [result.inputRedacted]) : "",
   ]);
 
   const title = h("h2", {}, [result.summary]);
 
-  const desc = h("p", { class: "muted" }, [
-    result.uncertainty,
-    result.staleLists ? " List snapshot may be outdated." : "",
-  ]);
-
-  const scope = h("p", { class: "muted-soft" }, [`Scope: ${result.scope}`]);
+  const desc = result.uncertainty ? h("p", { class: "muted" }, [result.uncertainty]) : "";
 
   const list = h("div", { class: "evidence" });
-  for (const item of result.evidence) {
+  for (const item of result.evidence.slice(0, 3)) {
+    // Clean any technical list names from title or detail
+    const cleanTitle = item.title.replace(/HaGeZi|TIF|uAssets/gi, "Threat list");
+    const cleanDetail = item.detail.replace(/HaGeZi|TIF|uAssets/gi, "threat database");
     list.append(
       h("article", {}, [
-        h("h3", {}, [item.title]),
-        h("p", { class: "muted" }, [item.detail]),
+        h("h3", {}, [cleanTitle]),
+        h("p", { class: "muted" }, [cleanDetail]),
       ]),
     );
   }
 
-  // Action verbs and clear guidance based on severity
+  // Clear action verbs based on verdict
   const actions = h("div", { class: "result-action-box" });
+  const clearBtn = h("button", { class: "btn sm", type: "button" }, [
+    createIcon("refresh", 16),
+    "Check another",
+  ]);
+  clearBtn.addEventListener("click", () => {
+    const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>('[data-testid="check-input"]');
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+    card.remove();
+  });
+
   if (isMalicious) {
-    const warnNotice = h("p", { style: "color: var(--danger); font-weight: 700; margin: 0; width: 100%;" }, [
-      "Dangerous match: Do not open, click, or enter credentials on this destination.",
+    const dangerNotice = h("p", { style: "color: var(--danger); font-weight: 700; margin: 0; width: 100%;" }, [
+      "Dangerous destination. Do not open this link or submit personal information.",
     ]);
-    const clearBtn = h("button", { class: "primary sm", type: "button" }, [
-      createIcon("refresh", 16),
-      "Check another link",
+    const blockBtn = h("button", { class: "primary sm", type: "button", disabled: "true" }, [
+      createIcon("close", 16),
+      "Don't open (unsafe)",
     ]);
-    clearBtn.addEventListener("click", () => {
-      const textarea = document.querySelector<HTMLTextAreaElement>('textarea[data-testid="check-input"]');
-      if (textarea) {
-        textarea.value = "";
-        textarea.focus();
-      }
-      card.remove();
-    });
-    actions.append(warnNotice, clearBtn);
+    actions.append(dangerNotice, blockBtn, clearBtn);
   } else if (isSuspicious) {
-    const cautionNotice = h("p", { style: "color: var(--warn); font-weight: 600; margin: 0; width: 100%;" }, [
-      "Caution: Unusual patterns or brand impersonation detected. Double-check before proceeding.",
+    const warnNotice = h("p", { style: "color: var(--warn); font-weight: 600; margin: 0; width: 100%;" }, [
+      "Suspicious patterns detected. Verify the sender before opening.",
     ]);
-    const clearBtn = h("button", { class: "btn sm", type: "button" }, [
-      createIcon("refresh", 16),
-      "Check another",
-    ]);
-    clearBtn.addEventListener("click", () => {
-      const textarea = document.querySelector<HTMLTextAreaElement>('textarea[data-testid="check-input"]');
-      if (textarea) {
-        textarea.value = "";
-        textarea.focus();
-      }
-      card.remove();
-    });
-    actions.append(cautionNotice, clearBtn);
+    actions.append(warnNotice, clearBtn);
   } else {
     const safeNotice = h("p", { style: "color: var(--good); font-weight: 600; margin: 0; width: 100%;" }, [
-      "No threat matches found in the bundled security snapshots.",
+      "Not found on known scam, phishing, or malware databases.",
     ]);
-    actions.append(safeNotice);
+    actions.append(safeNotice, clearBtn);
   }
 
-  card.append(header, title, desc, scope, list, actions);
+  card.append(header, title, desc, list, actions);
   return card;
 }
 
 export function introBlock(options: {
   what: string;
-  when: string;
+  when?: string;
   howSteps: string[];
-  limits: string[];
+  limit?: string | string[];
+  limits?: string | string[];
+  howItWorks?: string;
 }): HTMLElement {
   const block = h("section", { class: "tool-intro", "aria-label": "Tool Guide" }, [
-    h("h2", {}, ["About this tool"]),
-    h("p", { class: "muted" }, [options.what]),
-    h("div", { class: "tool-intro-grid" }, [
-      h("div", { class: "tool-intro-section" }, [
-        h("div", { class: "tool-intro-title" }, [createIcon("info", 18), "When to use it"]),
-        h("p", { class: "muted" }, [options.when]),
-      ]),
-      h("div", { class: "tool-intro-section" }, [
-        h("div", { class: "tool-intro-title" }, [createIcon("check", 18), "How to use it"]),
-        h("ol", { class: "numbered-steps" }, options.howSteps.map((step) => h("li", {}, [step]))),
-      ]),
-    ]),
-    h("div", { style: "margin-top: var(--sp-4); border-top: 1px solid var(--line); padding-top: var(--sp-3);" }, [
-      h("div", { class: "tool-intro-title" }, [createIcon("shield", 18), "What it can and cannot do"]),
-      h("ul", { class: "numbered-steps" }, options.limits.map((limit) => h("li", {}, [limit]))),
+    h("p", { class: "lede", style: "margin-bottom: var(--sp-4);" }, [options.what]),
+    h("div", { class: "tool-intro-section", style: "margin-bottom: var(--sp-3);" }, [
+      h("div", { class: "tool-intro-title" }, [createIcon("check", 18), "How to use it"]),
+      h("ol", { class: "numbered-steps" }, options.howSteps.map((step) => h("li", {}, [step]))),
     ]),
   ]);
+
+  const lim = options.limit ?? options.limits;
+  if (lim) {
+    const text = Array.isArray(lim) ? lim.join(" ") : lim;
+    const limitRow = h("p", { class: "muted-soft", style: "font-size: 0.9rem; margin-top: var(--sp-3); border-top: 1px solid var(--line); padding-top: var(--sp-2);" }, [
+      createIcon("info", 14),
+      " ",
+      text,
+    ]);
+    block.append(limitRow);
+  }
+
+  if (options.howItWorks) {
+    const details = h("details", { style: "margin-top: var(--sp-3); font-size: 0.9rem; color: var(--muted);" }, [
+      h("summary", { style: "cursor: pointer; font-weight: 600;" }, ["How it works & technical details"]),
+      h("p", { style: "margin-top: var(--sp-2);" }, [options.howItWorks]),
+    ]);
+    block.append(details);
+  }
+
   return block;
 }
 
