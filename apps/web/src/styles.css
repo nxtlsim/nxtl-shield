@@ -154,6 +154,7 @@ html {
   scroll-behavior: auto;
   -webkit-text-size-adjust: 100%;
   overflow-x: hidden;
+  overflow-anchor: none;
 }
 
 body {

@@ -173,6 +173,7 @@ test("section 8 scroll tests: scroll to top on route change and restore on Back"
   await expect(page).toHaveURL(/#\/connection/);
   const h1 = page.getByRole("heading", { name: "Your connection" });
   await expect(h1).toBeVisible();
+  await page.waitForFunction(() => window.scrollY <= 2);
   const newY = await page.evaluate(() => window.scrollY);
   expect(newY).toBeLessThanOrEqual(2);
   const h1Box = await h1.boundingBox();
