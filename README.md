@@ -42,12 +42,25 @@ Explain browser-visible connection signals and optional public-IP or pricing loo
 ### Optional NXTL eSIM
 Guidance and live rates for NXTL eSIM, an optional paid London-exit mobile connection. It does not unlock Shield and is not described as a privacy tunnel.
 
+
+## Screenshots
+
+| Home (desktop, dark) | Home (mobile, light) |
+|---|---|
+| ![Home desktop dark](docs/screenshots/home-1280-dark.png) | ![Home mobile light](docs/screenshots/home-390-light.png) |
+
+| Secure Share | Browser extension |
+|---|---|
+| ![Secure Share](docs/screenshots/share-1280-dark.png) | ![Extension page](docs/screenshots/extension-page-1280-dark.png) |
+
+More captures (check result, ad blocker, phone protection, light/dark, 390/1280) live in [`docs/screenshots/`](docs/screenshots/).
+
 ## Install
 
 - **Web app:** open [https://nxtlsim.github.io/nxtl-shield/](https://nxtlsim.github.io/nxtl-shield/) and use Install / Add to Home Screen when your browser offers it.
 - **Hugging Face Space:** [https://huggingface.co/spaces/nxtl-esim/nxtl-shield](https://huggingface.co/spaces/nxtl-esim/nxtl-shield)
-- **Chromium extension:** download the zip from [GitHub Releases](https://github.com/nxtlsim/nxtl-shield/releases) and load it unpacked, or sideload the zip where your browser allows.
-- **Firefox extension:** install the signed XPI from the release (unlisted on addons.mozilla.org).
+- **Chromium extension:** download [nxtl-shield-chromium.zip](https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-chromium.zip) and load it unpacked (chrome://extensions → Developer mode → Load unpacked).
+- **Firefox extension:** install [nxtl-shield-firefox.xpi](https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-firefox.xpi) (signed, unlisted on addons.mozilla.org).
 
 ## Platform support
 
