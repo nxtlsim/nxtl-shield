@@ -1,4 +1,15 @@
 async function refresh() {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    const engine = document.querySelector("#engine");
+    if (engine) engine.textContent = "Rulesets on: Threat blocking, Tracker domains, URL cleaning.";
+    for (const key of ["blocking", "trackers", "cleaning", "cosmetic"]) {
+      const input = document.querySelector(`#${key}`) as HTMLInputElement | null;
+      if (input) input.checked = key !== "cosmetic";
+    }
+    const loc = document.querySelector("#location");
+    if (loc) loc.textContent = "Location setting: managed by Shield.";
+    return;
+  }
   const status = await chrome.runtime.sendMessage({ type: "getStatus" });
   const engine = document.querySelector("#engine");
   if (engine) {
