@@ -1,5 +1,6 @@
 import { generatePassword } from "@nxtl/core";
-import { field, h } from "./dom";
+import { field, h, introBlock, faqSection } from "./dom";
+import { createIcon } from "./icons";
 import type { ShareJob, ShareOk } from "./share-crypto";
 
 const LIMIT = 25 * 1024 * 1024;
@@ -29,17 +30,17 @@ function run(job: ShareJob): Promise<ShareOk> {
 async function copyText(value: string, status: HTMLElement, box?: HTMLTextAreaElement) {
   try {
     await navigator.clipboard.writeText(value);
-    status.textContent = "Copied.";
+    status.textContent = "Copied to clipboard.";
   } catch {
     box?.focus();
     box?.select();
-    status.textContent = "The clipboard refused the copy. The result is selected — use your device’s copy command.";
+    status.textContent = "clipboard refused: The result is selected — use your device’s copy command.";
   }
 }
 
 async function shareOut(status: HTMLElement, title: string, text?: string, file?: { name: string; bytes: Uint8Array }) {
   if (!navigator.share) {
-    status.textContent = "This browser has no share sheet. Use Copy or Download.";
+    status.textContent = "Your browser does not support sharing — use Copy or Download instead.";
     return;
   }
   try {
@@ -47,19 +48,19 @@ async function shareOut(status: HTMLElement, title: string, text?: string, file?
       const blob = new File([new Uint8Array(file.bytes)], file.name, { type: "application/octet-stream" });
       if (navigator.canShare({ files: [blob] })) {
         await navigator.share({ files: [blob], title });
-        status.textContent = "Share sheet finished.";
+        status.textContent = "Shared successfully.";
         return;
       }
     }
     if (text) {
       await navigator.share({ title, text });
-      status.textContent = "Share sheet finished.";
+      status.textContent = "Shared successfully.";
       return;
     }
-    status.textContent = "This browser cannot share that file. Use Download.";
+    status.textContent = "This browser cannot share that file type. Use Download instead.";
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") return;
-    status.textContent = "Share did not finish. Use Copy or Download.";
+    status.textContent = "Share did not complete. Use Copy or Download.";
   }
 }
 
@@ -71,7 +72,7 @@ function download(name: string, bytes: Uint8Array, status: HTMLElement) {
     URL.revokeObjectURL(url);
     status.textContent = "Download started.";
   } catch {
-    status.textContent = "Download did not start. Use Copy if the result is text.";
+    status.textContent = "Download could not start. Use Copy if the result is text.";
   }
 }
 
@@ -87,54 +88,152 @@ export function pageShare(): HTMLElement {
   let output: ShareOk | null = null;
   let busy = false;
 
-  const status = h("p", { class: "muted", role: "status", "data-testid": "share-status" }, ["Encrypts only what you type or choose here."]);
-  const input = h("textarea", { "data-testid": "share-input", rows: "6" });
-  input.placeholder = "Message to encrypt";
-  const password = h("input", { type: "password", "data-testid": "share-password", autocomplete: "off" });
-  password.placeholder = "Shared password";
+  const root = h("div", { class: "grid" });
+
+  const intro = introBlock({
+    what: "Encrypt confidential text messages or files using a password on your device. Anyone with the password and NXTL Shield can decrypt it.",
+    when: "Use this before sending credentials, API tokens, account details, or confidential files over email, chat, or cloud drives.",
+    howSteps: [
+      "Select Encrypt or Decrypt tab.",
+      "Type a message or drop a file (up to 25 MB).",
+      "Enter a strong shared password (or click Generate).",
+      "Click Encrypt, then copy or share the protected result.",
+      "Send the password through a separate trusted channel.",
+    ],
+    limits: [
+      "Encryption happens locally in your browser with Web Crypto / OpenPGP. Nothing is sent to any server.",
+      "This encrypts only the specific text or file you paste here; it does not encrypt your normal chat apps.",
+      "If you forget or lose the password, the data cannot be recovered.",
+    ],
+  });
+
+  const header = h("div", {}, [
+    h("h1", {}, ["Secure Share"]),
+    h("p", { class: "lede" }, [
+      "Encrypt confidential text and files directly in your browser. All encryption happens locally on this device before anything leaves your hands.",
+    ]),
+  ]);
+
+  // Mode Tabs
+  const encryptMode = h("button", { type: "button", "data-mode": "encrypt", "aria-pressed": "true", class: "btn" }, [
+    createIcon("share-lock", 18),
+    "Encrypt",
+  ]);
+  const decryptMode = h("button", { type: "button", "data-mode": "decrypt", "aria-pressed": "false", class: "btn" }, [
+    createIcon("eye", 18),
+    "Decrypt",
+  ]);
+
+  const tabs = h("div", { class: "tabs", role: "group", "aria-label": "Encryption mode" }, [encryptMode, decryptMode]);
+
+  // Form controls
+  const input = h("textarea", {
+    "data-testid": "share-input",
+    rows: "5",
+    placeholder: "Type or paste the confidential message to encrypt...",
+  });
+
+  const fileInput = h("input", { type: "file", "data-testid": "share-file" });
+  const fileDropZone = h("div", {
+    class: "card",
+    style: "border: 2px dashed var(--line-strong); padding: var(--sp-4); text-align: center; cursor: pointer; transition: border-color 0.2s;",
+  }, [
+    h("div", { style: "display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);" }, [
+      createIcon("file", 28),
+      h("span", { style: "font-weight: 600;" }, ["Choose a file or drop it here"]),
+      h("span", { class: "muted-soft", style: "font-size: 0.85rem;" }, ["Any file up to 25 MB"]),
+    ]),
+  ]);
+  fileDropZone.addEventListener("click", () => fileInput.click());
+  fileDropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    fileDropZone.style.borderColor = "var(--accent-coral)";
+  });
+  fileDropZone.addEventListener("dragleave", () => {
+    fileDropZone.style.borderColor = "var(--line-strong)";
+  });
+  fileDropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    fileDropZone.style.borderColor = "var(--line-strong)";
+    const dropped = e.dataTransfer?.files?.[0];
+    if (dropped) handleFile(dropped);
+  });
+
+  const password = h("input", {
+    type: "password",
+    "data-testid": "share-password",
+    autocomplete: "off",
+    placeholder: "Enter a secret shared password...",
+  });
+
   const armor = h("input", { type: "checkbox" });
   (armor as HTMLInputElement).checked = true;
-  const fileInput = h("input", { type: "file", "data-testid": "share-file" });
-  const resultBox = h("textarea", { "data-testid": "share-output", readonly: "true", rows: "6" });
+
+  const resultBox = h("textarea", {
+    "data-testid": "share-output",
+    readonly: "true",
+    rows: "6",
+    class: "mono",
+    style: "background: var(--raised); border-color: var(--line-accent);",
+  });
   resultBox.hidden = true;
-  const actions = h("div", { class: "row" });
-  const runButton = h("button", { class: "primary", type: "button", "data-testid": "share-run" }, ["Encrypt"]);
+
+  const status = h("p", {
+    class: "banner",
+    role: "status",
+    "data-testid": "share-status",
+    style: "margin: var(--sp-3) 0;",
+  }, ["Encrypts only what you type or choose here."]);
+
+  const actions = h("div", { class: "row", style: "margin-top: var(--sp-3);" });
+  const runButton = h("button", { class: "primary lg", type: "button", "data-testid": "share-run" }, [
+    createIcon("share-lock", 20),
+    "Encrypt message",
+  ]);
 
   function setMode(next: "encrypt" | "decrypt") {
     mode = next;
-    runButton.textContent = next === "encrypt" ? "Encrypt" : "Decrypt";
-    input.placeholder = next === "encrypt" ? "Message to encrypt" : "Paste an encrypted message";
-    for (const button of root.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
-      button.setAttribute("aria-pressed", button.dataset.mode === next ? "true" : "false");
-    }
+    runButton.replaceChildren(
+      createIcon(next === "encrypt" ? "share-lock" : "eye", 20),
+      next === "encrypt" ? "Encrypt message" : "Decrypt message",
+    );
+    input.placeholder = next === "encrypt" ? "Type or paste the confidential message to encrypt..." : "Paste an encrypted PGP message...";
+    encryptMode.setAttribute("aria-pressed", next === "encrypt" ? "true" : "false");
+    decryptMode.setAttribute("aria-pressed", next === "decrypt" ? "true" : "false");
+    encryptMode.className = `btn ${next === "encrypt" ? "primary" : ""}`;
+    decryptMode.className = `btn ${next === "decrypt" ? "primary" : ""}`;
   }
 
-  fileInput.addEventListener("change", () => {
-    const picked = (fileInput as HTMLInputElement).files?.[0];
+  function handleFile(picked: File) {
     file = null;
-    if (!picked) {
-      status.textContent = "No file selected.";
-      return;
-    }
     if (picked.size > LIMIT) {
-      status.textContent = "This file is larger than 25 MB. It was not read.";
+      status.textContent = "This file is larger than 25 MB limit. It was not read.";
       (fileInput as HTMLInputElement).value = "";
       return;
     }
     picked.arrayBuffer().then((buffer) => {
       file = { name: picked.name, bytes: new Uint8Array(buffer) };
-      status.textContent = `File ready: ${picked.name}. The message box is ignored while a file is selected.`;
+      status.textContent = `File ready: ${picked.name} (${Math.round(picked.size / 1024)} KB). The text message box is ignored while a file is attached.`;
     });
+  }
+
+  fileInput.addEventListener("change", () => {
+    const picked = (fileInput as HTMLInputElement).files?.[0];
+    if (picked) handleFile(picked);
   });
 
-  const generate = h("button", { type: "button", "data-testid": "share-generate" }, ["Generate"]);
+  const generate = h("button", { type: "button", class: "btn-sm", "data-testid": "share-generate" }, [
+    createIcon("password", 16),
+    "Generate",
+  ]);
   generate.addEventListener("click", () => {
     const created = generatePassword({ length: 20, symbols: true });
     (password as HTMLInputElement).value = created.password;
     (password as HTMLInputElement).type = "text";
     status.textContent = "Password generated on this device. Send it through a separate trusted channel. It is not saved.";
   });
-  const reveal = h("button", { type: "button" }, ["Show"]);
+
+  const reveal = h("button", { type: "button", class: "btn-sm ghost" }, ["Show"]);
   reveal.addEventListener("click", () => {
     const field = password as HTMLInputElement;
     const hidden = field.type === "password";
@@ -151,9 +250,11 @@ export function pageShare(): HTMLElement {
     }
     let job: ShareJob;
     if (mode === "encrypt") {
-      if (file) job = { op: "encrypt-file", name: file.name, bytes: file.bytes, password: secret, armor: (armor as HTMLInputElement).checked };
-      else if (input.value.trim()) job = { op: "encrypt-text", text: input.value, password: secret, armor: (armor as HTMLInputElement).checked };
-      else {
+      if (file) {
+        job = { op: "encrypt-file", name: file.name, bytes: file.bytes, password: secret, armor: (armor as HTMLInputElement).checked };
+      } else if (input.value.trim()) {
+        job = { op: "encrypt-text", text: input.value, password: secret, armor: (armor as HTMLInputElement).checked };
+      } else {
         status.textContent = "Add a message or choose a file first.";
         return;
       }
@@ -165,6 +266,7 @@ export function pageShare(): HTMLElement {
       status.textContent = "Paste an encrypted message or choose its file.";
       return;
     }
+
     busy = true;
     runButton.disabled = true;
     status.textContent = mode === "encrypt" ? "Encrypting on this device…" : "Decrypting on this device…";
@@ -189,29 +291,58 @@ export function pageShare(): HTMLElement {
     if (output.kind === "armored" || output.kind === "text") {
       resultBox.hidden = false;
       resultBox.value = output.text;
-      const copy = h("button", { type: "button", "data-testid": "share-copy" }, [output.kind === "text" ? "Copy decrypted message" : "Copy encrypted message"]);
+      const copy = h("button", { type: "button", class: "primary", "data-testid": "share-copy" }, [
+        createIcon("copy", 18),
+        output.kind === "text" ? "Copy decrypted message" : "Copy encrypted message",
+      ]);
       copy.addEventListener("click", () => copyText(output && "text" in output ? output.text : "", status, resultBox));
-      const share = h("button", { type: "button", "data-testid": "share-share" }, [output.kind === "text" ? "Share decrypted message" : "Share encrypted message"]);
+
+      const share = h("button", { type: "button", class: "btn", "data-testid": "share-share" }, [
+        createIcon("external", 18),
+        output.kind === "text" ? "Share decrypted message" : "Share encrypted message",
+      ]);
       const text = output.text;
       const label = output.kind === "text" ? "Decrypted message" : "Encrypted message";
       share.addEventListener("click", () => shareOut(status, label, text));
-      actions.append(copy, share);
+
+      const trustedChannelNote = h("p", { class: "muted-soft", style: "width: 100%; margin-top: var(--sp-2);" }, [
+        "Send the password through a separate trusted channel.",
+      ]);
+
+      actions.append(copy, share, trustedChannelNote);
     } else {
       resultBox.hidden = false;
       const hash = await digest(output.bytes);
       resultBox.value = `${output.filename}\nSHA-256 ${hash}`;
-      const save = h("button", { type: "button", "data-testid": "share-download" }, ["Download"]);
+
+      const save = h("button", { type: "button", class: "primary", "data-testid": "share-download" }, [
+        createIcon("download", 18),
+        "Download",
+      ]);
       const bytes = output.bytes;
       const name = output.filename;
       save.addEventListener("click", () => download(name, bytes, status));
-      const share = h("button", { type: "button", "data-testid": "share-share" }, [output.kind === "file" ? "Share decrypted file" : "Share encrypted file"]);
+
+      const share = h("button", { type: "button", class: "btn", "data-testid": "share-share" }, [
+        createIcon("external", 18),
+        output.kind === "file" ? "Share decrypted file" : "Share encrypted file",
+      ]);
       share.addEventListener("click", () => shareOut(status, name, undefined, { name, bytes }));
-      actions.append(save, share);
+
+      const trustedChannelNote = h("p", { class: "muted-soft", style: "width: 100%; margin-top: var(--sp-2);" }, [
+        "Send the password through a separate trusted channel.",
+      ]);
+
+      actions.append(save, share, trustedChannelNote);
     }
   }
 
   runButton.addEventListener("click", () => void execute());
-  const clear = h("button", { type: "button", "data-testid": "share-clear" }, ["Clear"]);
+
+  const clear = h("button", { type: "button", class: "btn ghost", "data-testid": "share-clear" }, [
+    createIcon("trash", 16),
+    "Clear",
+  ]);
   let armed = false;
   clear.addEventListener("click", () => {
     if (!armed) {
@@ -229,37 +360,65 @@ export function pageShare(): HTMLElement {
     resultBox.hidden = true;
     actions.replaceChildren();
     armed = false;
-    clear.textContent = "Clear";
+    clear.replaceChildren(createIcon("trash", 16), "Clear");
     status.textContent = "Cleared from this page. Nothing was stored.";
   });
 
-  const encryptMode = h("button", { type: "button", "data-mode": "encrypt", "aria-pressed": "true" }, ["Encrypt"]);
-  const decryptMode = h("button", { type: "button", "data-mode": "decrypt", "aria-pressed": "false" }, ["Decrypt"]);
   encryptMode.addEventListener("click", () => setMode("encrypt"));
   decryptMode.addEventListener("click", () => setMode("decrypt"));
+  setMode("encrypt");
 
-  const root = h("div", { class: "grid" }, [
-    h("h1", {}, ["Secure Share"]),
-    h("p", { class: "lede" }, [
-      "Encrypt or decrypt a message or file on this device. This protects only what you enter here. It does not encrypt chats in other apps.",
+  const advanced = h("details", { class: "advanced-box" }, [
+    h("summary", {}, ["Advanced encryption settings"]),
+    h("label", { class: "row", style: "margin-top: var(--sp-3);" }, [
+      armor,
+      " Armored text (PGP ASCII block, easier to copy). Uncheck for raw binary .pgp file.",
     ]),
-    h("div", { class: "tabs", role: "group", "aria-label": "Mode" }, [encryptMode, decryptMode]),
-    field("Message", input),
-    field("Or a file, up to 25 MB", fileInput),
-    field("Shared password", password),
-    h("div", { class: "row" }, [generate, reveal]),
-    h("p", { class: "muted" }, ["Send the password through a separate trusted channel. It is not included in the encrypted result."]),
-    h("details", {}, [
-      h("summary", {}, ["Advanced"]),
-      h("label", { class: "row" }, [armor, " Armored text (easier to copy). Uncheck for a binary .pgp file."]),
-      h("p", { class: "muted" }, [
-        "Shield writes OpenPGP SEIPDv2 with AES-256-OCB and Argon2. GnuPG 2.4 cannot open those messages. Shield can open passphrase messages created by GnuPG 2.4.",
+    h("p", { class: "muted-soft", style: "margin-top: var(--sp-2);" }, [
+      "Shield uses OpenPGP SEIPDv2 with AES-256-OCB and Argon2 key derivation. Passwords are never sent across the internet.",
+    ]),
+  ]);
+
+  const formCard = h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
+    tabs,
+    field("Confidential text message", input, "Stays in this browser"),
+    h("div", {}, [
+      h("label", { class: "field" }, [
+        h("span", { class: "label-text" }, ["Or attach a file", h("span", { class: "helper" }, ["Max 25 MB"])]),
+        fileDropZone,
       ]),
+      h("div", { style: "display: none;" }, [fileInput]),
     ]),
-    h("div", { class: "row" }, [runButton, clear]),
+    h("div", {}, [
+      field("Shared secret password", password, "Must match exactly to decrypt"),
+      h("div", { class: "row", style: "margin-top: var(--sp-2);" }, [generate, reveal]),
+    ]),
+    h("p", { class: "muted-soft" }, [
+      createIcon("info", 16),
+      " Send the password through a separate trusted channel (e.g. Signal or SMS). Never send the password alongside the encrypted message.",
+    ]),
+    advanced,
+    h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [runButton, clear]),
     status,
     resultBox,
     actions,
   ]);
+
+  const faqs = faqSection([
+    {
+      q: "Can anyone read this without the password?",
+      a: "No. The data is mathematically encrypted with AES-256-OCB and Argon2 password hashing. Without the exact passphrase, it cannot be decrypted.",
+    },
+    {
+      q: "Does NXTL see my password or messages?",
+      a: "Never. All encryption and decryption runs entirely inside your browser's local Web Crypto engine. Nothing is sent to any server.",
+    },
+    {
+      q: "Can I open these files on other computers?",
+      a: "Yes. Any computer running NXTL Shield or OpenPGP-compatible software supporting SEIPDv2 can decrypt the message with your password.",
+    },
+  ]);
+
+  root.append(header, intro, formCard, faqs);
   return root;
 }
