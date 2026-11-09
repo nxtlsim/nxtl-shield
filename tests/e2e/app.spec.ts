@@ -163,7 +163,7 @@ test("section 8 scroll tests: scroll to top on route change and restore on Back"
   await expect(page.getByRole("heading", { name: "All protections and tools" })).toBeVisible();
 
   // 1. Scroll home near bottom and click tile
-  await page.evaluate(() => window.scrollTo({ top: 800, behavior: "instant" }));
+  await page.evaluate(() => window.scrollTo(0, 800));
   await page.waitForFunction(() => window.scrollY > 100);
   const scrolledY = await page.evaluate(() => window.scrollY);
   expect(scrolledY).toBeGreaterThan(100);
@@ -184,7 +184,7 @@ test("section 8 scroll tests: scroll to top on route change and restore on Back"
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("./");
   await expect(page.getByRole("heading", { name: "All protections and tools" })).toBeVisible();
-  await page.evaluate(() => window.scrollTo({ top: 800, behavior: "instant" }));
+  await page.evaluate(() => window.scrollTo(0, 800));
   await page.waitForFunction(() => window.scrollY > 100);
   await page.locator('.bottom-tab[href="#/check"]').click();
   await expect(page).toHaveURL(/#\/check/);
