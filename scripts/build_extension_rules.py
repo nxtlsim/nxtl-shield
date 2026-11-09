@@ -74,11 +74,7 @@ def redirect(rule_id: int, host: str, priority: int = 10, regex: str | None = No
             "priority": priority,
             "action": {"type": "redirect", "redirect": {"regexSubstitution": regex}},
             "condition": {
-<<<<<<< HEAD
                 "regexFilter": f"^https?://{escaped_host}(?::\\d+)?(?:[/?#]|$)",
-=======
-                "regexFilter": f"^https?://{host.replace('.', r'\.')}(?::\\d+)?(?:[/?#]|$)",
->>>>>>> cursor/nxtl-shield-v1-69d4
                 "resourceTypes": ["main_frame"],
             },
         }
