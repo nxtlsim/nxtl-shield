@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const skipWebkit = process.env.PLAYWRIGHT_SKIP_WEBKIT === "1";
+
+const projects = [
+  { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+  { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+  ...(skipWebkit ? [] : [{ name: "webkit", use: { ...devices["Desktop Safari"] } }]),
+];
+
 export default defineConfig({
   testDir: "tests",
   timeout: 90_000,
@@ -13,9 +21,5 @@ export default defineConfig({
     timeout: 180_000,
     reuseExistingServer: !process.env.CI,
   },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
-  ],
+  projects,
 });

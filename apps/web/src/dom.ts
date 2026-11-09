@@ -76,7 +76,7 @@ export function resultCard(result: CheckResultData): HTMLElement {
 
   const desc = h("p", { class: "muted" }, [
     result.uncertainty,
-    result.staleLists ? " (List snapshot is past an upstream expiry hint)." : "",
+    result.staleLists ? " List snapshot may be outdated." : "",
   ]);
 
   const scope = h("p", { class: "muted-soft" }, [`Scope: ${result.scope}`]);

@@ -4,7 +4,7 @@ This document describes a possible later app. Version 0.1 does not include an AP
 
 ## Why a native app
 
-Android allows one active VPN service per user or profile. A local filtering VPN would replace any other VPN. The page cannot do that.
+Android allows one active local-filtering tunnel per user or profile. A companion tunnel would replace any other tunnel app. The page cannot do that.
 
 Call screening needs the call-screening role. Broad file checks need storage access that a browser does not have, and even then other apps’ private directories stay out of reach.
 
