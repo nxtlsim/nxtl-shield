@@ -4,20 +4,13 @@ import {
   NXTL_LINKS,
   RESOLVERS,
   SNAPSHOT_MANIFEST,
-  androidPrivateDnsSteps,
-  appleRemovalSteps,
   buildMobileconfig,
   checkText,
   checkUrl,
   cleanUrl,
-  chromeSecureDnsSteps,
-  esimCompatibilityGuidance,
-  esimSetupSteps,
   explainConnectionIssue,
   explainNxtlRouting,
   explainRates,
-  firefoxDohSteps,
-  generatePassphrase,
   generatePassword,
   hibpLookup,
   inspectFile,
@@ -31,13 +24,12 @@ import {
   saveReports,
   clearReports,
   sourceStatus,
-  windowsDohSteps,
   type ReportEntry,
 } from "@nxtl/core";
-import { commandExtension, queryExtension } from "./bridge";
-import { field, h, resultCard, introBlock, faqSection, emptyState } from "./dom";
+import { queryExtension } from "./bridge";
+import { field, h, resultCard, introBlock, faqSection } from "./dom";
 import { createIcon, type IconName } from "./icons";
-import { listFailure, loadReputation } from "./lists";
+import { loadReputation } from "./lists";
 
 function reportsAdd(entry: ReportEntry) {
   const items = loadReports(localStorage);
@@ -45,11 +37,141 @@ function reportsAdd(entry: ReportEntry) {
   saveReports(localStorage, items);
 }
 
+export function normalizeCheckInput(raw: string): {
+  type: "url" | "text";
+  value: string;
+  normalizedUrl?: string;
+  original: string;
+} {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return { type: "text", value: "", original: raw };
+  }
+
+  // 1. Explicit protocol
+  if (/^https?:\/\//i.test(trimmed)) {
+    return {
+      type: "url",
+      value: trimmed,
+      normalizedUrl: trimmed,
+      original: raw,
+    };
+  }
+
+  // 2. Starts with www. or looks like domain[/path]
+  const domainPathMatch = trimmed.match(/^([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}(?::\d+)?(\/.*)?$/i);
+  if (domainPathMatch) {
+    const url = `https://${trimmed}`;
+    return {
+      type: "url",
+      value: url,
+      normalizedUrl: url,
+      original: raw,
+    };
+  }
+
+  // 3. Sentence or text with a domain inside, e.g. "Please check delfi.lt/news for info"
+  const inlineDomainMatch = trimmed.match(/(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}(?::\d+)?(?:\/[^\s<>"'`]*)?/i);
+  if (inlineDomainMatch && inlineDomainMatch[0].includes(".")) {
+    const cleaned = inlineDomainMatch[0].replace(/[.,;:!?)]+$/, "");
+    const url = `https://${cleaned}`;
+    return {
+      type: "url",
+      value: url,
+      normalizedUrl: url,
+      original: raw,
+    };
+  }
+
+  // 4. Default to text / message check
+  return {
+    type: "text",
+    value: trimmed,
+    original: raw,
+  };
+}
+
+export function detectDevice(): {
+  os: "windows" | "mac" | "android" | "ios" | "linux" | "other";
+  osLabel: string;
+  browser: "chrome" | "edge" | "brave" | "firefox" | "safari" | "other";
+  browserLabel: string;
+} {
+  const ua = navigator.userAgent;
+  let os: "windows" | "mac" | "android" | "ios" | "linux" | "other" = "other";
+  let osLabel = "Your device";
+
+  if (/iPhone|iPad|iPod/i.test(ua)) {
+    os = "ios";
+    osLabel = "iPhone / iPad";
+  } else if (/Android/i.test(ua)) {
+    os = "android";
+    osLabel = "Android";
+  } else if (/Win/i.test(ua)) {
+    os = "windows";
+    osLabel = "Windows";
+  } else if (/Mac/i.test(ua)) {
+    os = "mac";
+    osLabel = "macOS";
+  } else if (/Linux/i.test(ua)) {
+    os = "linux";
+    osLabel = "Linux";
+  }
+
+  let browser: "chrome" | "edge" | "brave" | "firefox" | "safari" | "other" = "other";
+  let browserLabel = "Browser";
+
+  if (/Edg\//i.test(ua)) {
+    browser = "edge";
+    browserLabel = "Microsoft Edge";
+  } else if (/Firefox/i.test(ua)) {
+    browser = "firefox";
+    browserLabel = "Firefox";
+  } else if ((navigator as any).brave || /Brave/i.test(ua)) {
+    browser = "brave";
+    browserLabel = "Brave";
+  } else if (/Chrome|CriOS/i.test(ua)) {
+    browser = "chrome";
+    browserLabel = "Google Chrome";
+  } else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) {
+    browser = "safari";
+    browserLabel = "Safari";
+  }
+
+  return { os, osLabel, browser, browserLabel };
+}
+
+export async function copyToClipboard(
+  text: string,
+  button: HTMLElement,
+  defaultContent: (string | Node)[],
+  copiedLabel = "Copied!"
+): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    button.textContent = copiedLabel;
+    setTimeout(() => {
+      button.replaceChildren(...defaultContent);
+    }, 2000);
+    return true;
+  } catch {
+    button.textContent = "Select & copy manually";
+    setTimeout(() => {
+      button.replaceChildren(...defaultContent);
+    }, 2500);
+    return false;
+  }
+}
+
+// ----------------------------------------------------
+// HOME PAGE
+// ----------------------------------------------------
 export async function pageHome(): Promise<HTMLElement> {
   const root = h("div", { class: "grid" });
   const ext = await queryExtension();
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
 
-  // First-visit 3-step guide (dismissable)
+  // First-visit 3-step guide (dismissable, remembered)
   const isDismissed = localStorage.getItem("nxtl-shield-welcome-dismissed") === "true";
   const guideBanner = h("section", {
     class: "guide-banner",
@@ -61,7 +183,7 @@ export async function pageHome(): Promise<HTMLElement> {
 
   const dismissBtn = h("button", {
     type: "button",
-    class: "btn-sm ghost",
+    class: "btn ghost btn-sm",
     "aria-label": "Dismiss getting started guide",
   }, [
     createIcon("close", 16),
@@ -76,9 +198,9 @@ export async function pageHome(): Promise<HTMLElement> {
     h("div", {}, [
       h("span", { class: "pill ok", style: "margin-bottom: var(--sp-2);" }, [
         createIcon("shield-check", 14),
-        "First-time setup",
+        "Getting started",
       ]),
-      h("h2", { style: "font-size: 1.25rem; margin: 4px 0 0;" }, ["Get protected in 3 simple steps"]),
+      h("h2", { style: "font-size: 1.25rem; margin: 4px 0 0;" }, ["Get protected in 3 steps"]),
       h("p", { class: "muted", style: "margin: 0;" }, ["Follow these three steps to shield your browsing and your device."]),
     ]),
     dismissBtn,
@@ -87,27 +209,31 @@ export async function pageHome(): Promise<HTMLElement> {
   const guideSteps = h("div", { class: "guide-steps" }, [
     h("div", { class: "guide-step-card" }, [
       h("span", { class: "guide-step-number" }, ["Step 1 · Whole device"]),
-      h("h3", { style: "font-size: 1.05rem;" }, ["Set up Safe DNS"]),
-      h("p", { class: "muted-soft", style: "flex: 1;" }, [
+      h("h3", { style: "font-size: 1.05rem; margin-bottom: 4px;" }, ["Set up Safe DNS"]),
+      h("p", { class: "muted-soft", style: "flex: 1; margin: 0 0 12px;" }, [
         "Blocks malicious websites and phishing domains across every app on your phone or computer.",
       ]),
-      h("a", { class: "btn sm", href: "#/setup" }, ["Set up DNS", createIcon("arrow-right", 14)]),
+      h("a", { class: "btn sm", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 14)]),
     ]),
     h("div", { class: "guide-step-card" }, [
       h("span", { class: "guide-step-number" }, ["Step 2 · Browser"]),
-      h("h3", { style: "font-size: 1.05rem;" }, ["Add Browser Extension"]),
-      h("p", { class: "muted-soft", style: "flex: 1;" }, [
+      h("h3", { style: "font-size: 1.05rem; margin-bottom: 4px;" }, ["Add Browser Extension"]),
+      h("p", { class: "muted-soft", style: "flex: 1; margin: 0 0 12px;" }, [
         "Adds continuous ad & tracker blocking, URL cleaning, and live malicious site alerts in your browser.",
       ]),
-      h("a", { class: "btn sm", href: "#/extension" }, ["Get Extension", createIcon("arrow-right", 14)]),
+      ext
+        ? h("span", { class: "pill ok", style: "align-self: flex-start;" }, [createIcon("check", 14), "Active"])
+        : h("a", { class: "btn sm", href: "#/extension" }, ["Add extension", createIcon("arrow-right", 14)]),
     ]),
     h("div", { class: "guide-step-card" }, [
       h("span", { class: "guide-step-number" }, ["Step 3 · Standby"]),
-      h("h3", { style: "font-size: 1.05rem;" }, ["Install NXTL Shield"]),
-      h("p", { class: "muted-soft", style: "flex: 1;" }, [
+      h("h3", { style: "font-size: 1.05rem; margin-bottom: 4px;" }, ["Install NXTL Shield"]),
+      h("p", { class: "muted-soft", style: "flex: 1; margin: 0 0 12px;" }, [
         "Keep these free tools one tap away on your home screen or desktop for fast checks anytime.",
       ]),
-      h("a", { class: "btn sm", href: "#/install" }, ["Install App", createIcon("arrow-right", 14)]),
+      standalone
+        ? h("span", { class: "pill ok", style: "align-self: flex-start;" }, [createIcon("check", 14), "Installed"])
+        : h("a", { class: "btn sm", href: "#/install" }, ["Install app", createIcon("arrow-right", 14)]),
     ]),
   ]);
 
@@ -115,313 +241,320 @@ export async function pageHome(): Promise<HTMLElement> {
 
   // Hero Section
   const hero = h("section", { class: "hero-launcher" }, [
-    h("div", { class: "hero-pill" }, [
-      createIcon("shield-check", 16),
-      "Free, open-source security tools by NXTL eSIM",
-    ]),
     h("h1", {}, ["Check a link before you open it."]),
-    h("p", { class: "lede" }, [
-      "Shield runs link, message, and file checks in this browser. Continuous blocking needs the extension or a DNS profile you install yourself. NXTL eSIM is an optional paid connection and does not unlock Shield.",
-    ]),
-    h("div", { class: "row", style: "margin-bottom: var(--sp-5);" }, [
-      h("a", { class: "btn primary lg", href: "#/check" }, [
-        createIcon("search", 20),
-        "Check a link, message or file",
-      ]),
-      h("a", { class: "btn lg", href: "#/share" }, [
-        createIcon("share-lock", 20),
-        "Secure Share",
-      ]),
-      h("a", { class: "btn lg", href: "#/install", "data-testid": "install-link" }, [
-        createIcon("install", 20),
-        "Install NXTL Shield",
-      ]),
+    h("p", { class: "hero-lede" }, [
+      "Paste any suspicious web address, text message, or QR code to test against verified scam and malware databases.",
     ]),
   ]);
 
-  // Unified Fast Launcher Box inside Hero
-  const fastInput = h("input", {
+  const heroInput = h("input", {
     type: "text",
-    placeholder: "Paste a suspicious link, message text, or website address here...",
-    style: "background: var(--bg); border: 2px solid var(--line-strong); font-size: 1.05rem; padding: 14px 18px;",
-  });
-  const fastBtn = h("button", { class: "primary", type: "button" }, [
-    createIcon("search", 18),
-    "Quick Check",
-  ]);
-  const fastOutput = h("div", { style: "margin-top: var(--sp-4);" });
+    class: "hero-input",
+    "data-testid": "check-input",
+    placeholder: "Paste a link, message or domain (e.g. delfi.lt)",
+    "aria-label": "Check link, message or QR",
+  }) as HTMLInputElement;
 
-  fastBtn.addEventListener("click", async () => {
-    const val = fastInput.value.trim();
-    if (!val) {
-      fastOutput.replaceChildren(h("p", { class: "muted" }, ["Please enter a URL or message text to check."]));
+  const runHeroBtn = h("button", {
+    type: "button",
+    class: "btn primary btn-hero-check",
+    "data-testid": "check-run",
+  }, [
+    createIcon("search", 20),
+    "Check",
+  ]);
+
+  const pasteBtn = h("button", {
+    type: "button",
+    class: "btn ghost btn-sm",
+    "aria-label": "Paste from clipboard",
+    title: "Paste from clipboard",
+  }, [
+    createIcon("copy", 16),
+    "Paste",
+  ]);
+
+  pasteBtn.addEventListener("click", async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        heroInput.value = text;
+        heroInput.focus();
+      }
+    } catch {
+      heroInput.focus();
+    }
+  });
+
+  const qrFileHidden = h("input", {
+    type: "file",
+    accept: "image/*",
+    style: "display: none;",
+    "aria-label": "Upload QR code image",
+  }) as HTMLInputElement;
+
+  const qrUploadBtn = h("button", {
+    type: "button",
+    class: "btn ghost btn-sm",
+    "aria-label": "Scan QR image",
+    title: "Scan QR image",
+  }, [
+    createIcon("qr", 16),
+    "Scan QR",
+  ]);
+
+  qrUploadBtn.addEventListener("click", () => qrFileHidden.click());
+
+  qrFileHidden.addEventListener("change", async () => {
+    const file = qrFileHidden.files?.[0];
+    if (!file) return;
+    try {
+      if ("BarcodeDetector" in window) {
+        const detector = new (window as any).BarcodeDetector({ formats: ["qr_code"] });
+        const bmp = await createImageBitmap(file);
+        const codes = await detector.detect(bmp);
+        if (codes.length && codes[0].rawValue) {
+          heroInput.value = codes[0].rawValue;
+          runHeroCheck();
+          return;
+        }
+      }
+      location.hash = "#/check?tab=qr";
+    } catch {
+      location.hash = "#/check?tab=qr";
+    }
+  });
+
+  const heroInputRow = h("div", { class: "hero-input-row" }, [
+    h("div", { class: "hero-input-wrap" }, [
+      heroInput,
+      h("div", { class: "hero-input-actions" }, [
+        pasteBtn,
+        qrUploadBtn,
+        qrFileHidden,
+      ]),
+    ]),
+    runHeroBtn,
+  ]);
+
+  const heroResultContainer = h("div", { class: "hero-result-area" });
+
+  async function runHeroCheck() {
+    const raw = heroInput.value.trim();
+    if (!raw) {
+      heroInput.focus();
       return;
     }
-    fastBtn.disabled = true;
-    const rep = await loadReputation();
-    const result = /^https?:\/\//i.test(val) ? checkUrl(val, rep) : checkText(val, rep);
-    reportsAdd(makeReport(/^https?:\/\//i.test(val) ? "url" : "text", result.verdict, result.inputRedacted));
-    fastOutput.replaceChildren(resultCard(result));
-    fastBtn.disabled = false;
+    const normalized = normalizeCheckInput(raw);
+    runHeroBtn.disabled = true;
+    heroResultContainer.replaceChildren(
+      h("p", { class: "muted", style: "padding: var(--sp-4);" }, ["Checking reputation lists..."]),
+    );
+
+    try {
+      const reputation = await loadReputation();
+      if (normalized.type === "url") {
+        const res = checkUrl(normalized.value, reputation);
+        const card = resultCard(res);
+        heroResultContainer.replaceChildren(card);
+        reportsAdd(makeReport("url", res.verdict, normalized.value));
+      } else {
+        const res = checkText(normalized.value, reputation);
+        const card = resultCard(res);
+        heroResultContainer.replaceChildren(card);
+        reportsAdd(makeReport("text", res.verdict, normalized.value));
+      }
+    } catch {
+      heroResultContainer.replaceChildren(
+        h("p", { class: "banner alert" }, ["Inspection failed. Please try again."]),
+      );
+    } finally {
+      runHeroBtn.disabled = false;
+    }
+  }
+
+  runHeroBtn.addEventListener("click", runHeroCheck);
+  heroInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      runHeroCheck();
+    }
   });
 
-  const fastLauncherCard = h("div", {
-    class: "card",
-    style: "background: var(--bg-2); border-color: var(--line-accent); padding: var(--sp-4);",
-  }, [
-    h("label", { style: "font-weight: 700; margin-bottom: var(--sp-2); display: block;" }, [
-      "Instant Scanner",
-    ]),
-    h("div", { style: "display: flex; gap: var(--sp-2); flex-wrap: wrap;" }, [
-      h("div", { style: "flex: 1; min-width: 260px;" }, [fastInput]),
-      fastBtn,
-    ]),
-    fastOutput,
-  ]);
-  hero.append(fastLauncherCard);
+  hero.append(heroInputRow, heroResultContainer);
 
-  // 12 Protection Tiles Section
-  const allTilesSection = h("section", { style: "margin: var(--sp-6) 0;" }, [
-    h("h2", {}, ["All protections and tools"]),
-    h("p", { class: "muted" }, [
-      "Every protection runs locally on your device or in your browser. Tap any protection to learn what it does and use it.",
+  // Real Protection Status Card
+  const statusSection = h("section", { class: "card", "data-testid": "protection-status" }, [
+    h("div", { class: "row", style: "align-items: center; justify-content: space-between; margin-bottom: var(--sp-4);" }, [
+      h("h2", { style: "margin: 0; font-size: 1.25rem;" }, ["Protection status"]),
+      h("span", { class: "muted-soft", style: "font-size: 0.88rem;" }, ["Real-time device check"]),
+    ]),
+    h("div", { class: "status-list" }, [
+      h("div", { class: "status-row" }, [
+        h("span", { class: "status-label" }, [
+          createIcon("extension", 18),
+          "Browser extension",
+        ]),
+        h("div", { class: "cluster" }, [
+          ext
+            ? h("span", { class: "pill ok" }, [createIcon("check", 14), "Active"])
+            : h("span", { class: "pill neutral" }, ["Not detected"]),
+          !ext
+            ? h("a", { class: "btn sm", href: "#/extension" }, ["Add extension", createIcon("arrow-right", 12)])
+            : "",
+        ]),
+      ]),
+      h("div", { class: "status-row" }, [
+        h("span", { class: "status-label" }, [
+          createIcon("dns", 18),
+          "Safe DNS protection",
+        ]),
+        h("div", { class: "cluster" }, [
+          h("span", { class: "pill neutral" }, ["Device setting"]),
+          h("a", { class: "btn sm", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]),
+        ]),
+      ]),
+      h("div", { class: "status-row" }, [
+        h("span", { class: "status-label" }, [
+          createIcon("install", 18),
+          "Offline app standby",
+        ]),
+        h("div", { class: "cluster" }, [
+          standalone
+            ? h("span", { class: "pill ok" }, [createIcon("check", 14), "Installed"])
+            : h("span", { class: "pill neutral" }, ["Web access"]),
+          !standalone
+            ? h("a", { class: "btn sm ghost", href: "#/install" }, ["Install", createIcon("arrow-right", 12)])
+            : "",
+        ]),
+      ]),
     ]),
   ]);
 
-  const tilesList: Array<{
-    id: string;
-    icon: IconName;
-    title: string;
-    desc: string;
-    href: string;
-  }> = [
+  // All Protections Grid (12 tiles)
+  const allTilesSection = h("section", { "aria-label": "All Protections and Tools" }, [
+    h("h2", { style: "font-size: 1.35rem; margin-bottom: var(--sp-2);" }, ["All protections and tools"]),
+    h("p", { class: "muted", style: "margin-bottom: var(--sp-4);" }, [
+      "Twelve zero-knowledge privacy tools for phone, desktop, and travel.",
+    ]),
+  ]);
+
+  const tilesGrid = h("div", { class: "tiles-grid" });
+
+  const TOOLS = [
     {
-      id: "ad-blocker",
+      href: "#/ad-blocker",
       icon: "ad-block",
       title: "Ad & tracker blocker",
-      desc: "Stops annoying ads and privacy-invasive tracking scripts across web pages.",
-      href: "#/ad-blocker",
+      desc: "Stop intrusive advertisements, banners, and analytics trackers across your browsing.",
     },
     {
-      id: "phishing-link",
+      href: "#/check?tab=link",
       icon: "link",
       title: "Phishing & scam link check",
-      desc: "Checks suspicious web links against updated threat lists and deceptive typos.",
-      href: "#/check?tab=link",
+      desc: "Test any URL against known scam databases before clicking or submitting passwords.",
     },
     {
-      id: "sms-check",
-      icon: "message",
-      title: "Message/SMS scam check",
-      desc: "Analyzes text messages and emails for scam links and deceptive impersonation.",
       href: "#/check?tab=message",
+      icon: "message",
+      title: "Message & SMS scam check",
+      desc: "Inspect delivery, tax, or banking text messages for phishing lures and urgent scams.",
     },
     {
-      id: "qr-check",
+      href: "#/check?tab=qr",
       icon: "qr",
       title: "QR code check",
-      desc: "Safely reads and inspects destination URLs from QR codes before opening them.",
-      href: "#/check?tab=qr",
+      desc: "Decode physical poster or menu QR codes to verify destination safety before opening.",
     },
     {
-      id: "safe-dns",
+      href: "#/setup",
       icon: "dns",
       title: "Safe DNS protection",
-      desc: "Blocks malicious domains and trackers across your whole phone or computer.",
-      href: "#/setup",
+      desc: "Filter ads, tracking, and malware domains across every app on your whole device.",
     },
     {
-      id: "location-privacy",
+      href: "#/location",
       icon: "location",
       title: "Location privacy",
-      desc: "Controls website location permissions and explains what IP geolocation reveals.",
-      href: "#/location",
+      desc: "Audit and prevent websites and ad networks from tracking your physical location.",
     },
     {
-      id: "secure-share",
+      href: "#/share",
       icon: "share-lock",
       title: "Secure Share",
-      desc: "Encrypts confidential text and files locally using OpenPGP standards.",
-      href: "#/share",
+      desc: "Encrypt text and files with a password before sending via email, WhatsApp, or chat.",
     },
     {
-      id: "password-gen",
+      href: "#/password",
       icon: "password",
       title: "Password generator",
-      desc: "Creates strong passwords and checks them against known breached databases.",
-      href: "#/password",
+      desc: "Create strong random passwords on your device and check if they appeared in leaks.",
     },
     {
-      id: "clean-link",
+      href: "#/clean",
       icon: "clean",
       title: "Link cleaner",
-      desc: "Strips marketing tracking parameters like UTM tags from web addresses.",
-      href: "#/clean",
+      desc: "Strip marketing tags (utm, fbclid) from links before sending them to friends.",
     },
     {
-      id: "connection-check",
+      href: "#/connection",
       icon: "connection",
       title: "Connection check",
-      desc: "Diagnoses your network connection, public IP address, and WebRTC privacy.",
-      href: "#/connection",
+      desc: "Inspect your public IP and test for WebRTC address exposure on public Wi-Fi.",
     },
     {
-      id: "browser-ext",
+      href: "#/extension",
       icon: "extension",
       title: "Browser extension",
-      desc: "Adds real-time threat protection, tracker blocking, and site alerts to your browser.",
-      href: "#/extension",
+      desc: "Continuous ad blocking, scam alerts, and URL cleaning inside Chrome and Firefox.",
     },
     {
-      id: "nxtl-esim",
+      href: "#/esim",
       icon: "esim",
       title: "NXTL eSIM",
-      desc: "Mobile data with London internet exit — optional companion connectivity.",
-      href: "#/esim",
+      desc: "Travel data in 150+ countries with a privacy-preserving London internet exit.",
     },
   ];
 
-  const tilesContainer = h("div", { class: "tiles-grid" });
-  for (const t of tilesList) {
+  for (const t of TOOLS) {
     const tile = h("a", { class: "tile", href: t.href }, [
-      h("div", { class: "tile-icon" }, [createIcon(t.icon, 24)]),
-      h("h3", { class: "tile-title" }, [
-        t.title,
-        createIcon("arrow-right", 16),
+      h("div", { class: "row", style: "align-items: center; justify-content: space-between;" }, [
+        h("div", { class: "tile-icon" }, [createIcon(t.icon as IconName, 22)]),
+        createIcon("arrow-right", 14),
       ]),
+      h("h3", { class: "tile-title" }, [t.title]),
       h("p", { class: "tile-desc" }, [t.desc]),
-      h("span", { class: "tile-cta" }, ["Open tool"]),
     ]);
-    tilesContainer.append(tile);
+    tilesGrid.append(tile);
   }
-  allTilesSection.append(tilesContainer);
+  allTilesSection.append(tilesGrid);
 
-  // Required Sections for Test Verification
-  const can = h("section", { class: "card" }, [
-    h("h2", {}, ["What you can check now"]),
-    h("p", { class: "muted" }, ["These run locally without an account or a purchase."]),
-    h("div", { class: "row" }, [
-      link("Link", "#/check"),
-      link("Message", "#/check?tab=message"),
-      link("QR", "#/check?tab=qr"),
-      link("File hash", "#/check?tab=file"),
-      link("Clean a URL", "#/clean"),
-      link("Secure Share", "#/share"),
-      link("Password", "#/password"),
+  // eSIM Companion Card
+  const esimCard = h("section", { class: "card esim-card", style: "margin-top: var(--sp-6);" }, [
+    h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
+      h("div", { style: "display: flex; align-items: center; gap: var(--sp-3);" }, [
+        h("div", { class: "tile-icon", style: "width: 44px; height: 44px; flex-shrink: 0;" }, [createIcon("esim", 24)]),
+        h("div", {}, [
+          h("h3", { style: "margin: 0; font-size: 1.15rem;" }, ["Traveling abroad? Connect with NXTL eSIM"]),
+          h("p", { class: "muted", style: "margin: 4px 0 0;" }, [
+            "Affordable travel data in 150+ countries. Routes your traffic via London for consistent privacy abroad.",
+          ]),
+        ]),
+      ]),
+      h("a", {
+        class: "btn primary",
+        href: NXTL_LINKS.pricing,
+        target: "_blank",
+        rel: "noreferrer",
+      }, [
+        "See plans",
+        createIcon("external", 16),
+      ]),
     ]),
   ]);
 
-  const configured = h("section", { class: "card" }, [h("h2", {}, ["What's configured"])]);
-  configured.append(
-    statusRow(
-      "Extension",
-      ext ? "Detected in this browser" : "Not detected",
-      ext ? "ok" : "neutral",
-      ext ? "#/extension" : "#/extension",
-      ext ? "Manage" : "Add extension",
-    ),
-    statusRow(
-      "Threat rules",
-      ext?.blockingEnabled ? "Enabled (read from the extension)" : ext ? "Off" : "Needs the extension",
-      ext?.blockingEnabled ? "ok" : "neutral",
-    ),
-    statusRow(
-      "Tracker rules",
-      ext?.trackersEnabled ? "Enabled" : "Off or not detected",
-      ext?.trackersEnabled ? "ok" : "neutral",
-    ),
-    statusRow(
-      "URL cleaning in the extension",
-      ext?.cleaningEnabled ? "Enabled" : "Off or not detected",
-      ext?.cleaningEnabled ? "ok" : "neutral",
-    ),
-    statusRow(
-      "Pause",
-      ext?.paused ? `Paused until ${ext.pauseUntil ? new Date(ext.pauseUntil).toLocaleString() : "a deadline"}` : "Not paused",
-      ext?.paused ? "indicator" : "ok",
-    ),
-    statusRow(
-      "DNS profile",
-      "Not verified — Shield cannot read device DNS",
-      "neutral",
-      "#/setup",
-      "Set up DNS",
-    ),
-    statusRow(
-      "NXTL data line",
-      "Connection not verified",
-      "neutral",
-      "#/esim",
-      "Learn more",
-    ),
-  );
-
-  const setup = h("section", { class: "card" }, [
-    h("h2", {}, ["What needs setup"]),
-    h("p", {}, [
-      "Browser blocking, tracker rules, cookie-banner hiding, and location blocking need the extension, and only where that browser supports them.",
-    ]),
-    h("p", { class: "muted" }, [
-      "Encrypted DNS needs a profile or a setting you apply. The page cannot switch it on.",
-    ]),
-    h("a", { class: "btn", href: "#/setup" }, ["Open protection setup", createIcon("arrow-right", 16)]),
-  ]);
-
-  const fresh = h("section", { class: "card" }, [
-    h("h2", {}, ["Data freshness"]),
-    h("p", { "data-testid": "snapshot-version", class: "mono" }, [
-      `List snapshot ${SNAPSHOT_MANIFEST.version}, retrieved 2026-11-09.`,
-    ]),
-    h("p", { class: "muted" }, [
-      listFailure() ??
-        "Bundled threat lists are a snapshot and are not auto-updated. A miss is not a promise that a site is safe. See Sources for list details.",
-    ]),
-    h("p", { "data-testid": "extension-status" }, [
-      ext ? "Extension: detected" : "Extension: not detected",
-    ]),
-  ]);
-
-  const wifi = h("section", { class: "card" }, [
-    h("h2", {}, ["Skip public Wi-Fi"]),
-    h("p", {}, [
-      "Connect with NXTL mobile data. Your connection uses NXTL's London internet exit. That can limit what a website learns about your travel location from your IP address alone.",
-    ]),
-    h("p", { class: "muted" }, [
-      "Optional paid connectivity. Shield stays fully usable without it. This page cannot tell whether NXTL is active.",
-    ]),
-    h("a", { class: "btn sm", href: "#/esim" }, ["NXTL eSIM details", createIcon("arrow-right", 14)]),
-  ]);
-
-  const grid = h("div", { class: "grid cards" }, [can, configured, setup, fresh, wifi]);
-
-  root.append(guideBanner, hero, allTilesSection, grid);
+  root.append(guideBanner, hero, statusSection, allTilesSection, esimCard);
   return root;
-}
-
-function link(text: string, href: string) {
-  return h("a", { class: "btn", href }, [text]);
-}
-
-function statusRow(
-  name: string,
-  value: string,
-  pillVariant: "ok" | "match" | "indicator" | "neutral" = "neutral",
-  actionHref?: string,
-  actionLabel?: string,
-) {
-  const row = h("div", { class: "status-row" }, [
-    h("span", { class: "status-label" }, [
-      createIcon(pillVariant === "ok" ? "check" : pillVariant === "indicator" ? "alert" : "info", 16),
-      name,
-    ]),
-    h("div", { class: "cluster" }, [
-      h("span", { class: `pill ${pillVariant}` }, [value]),
-      actionHref && actionLabel
-        ? h("a", { class: "btn sm ghost", href: actionHref }, [actionLabel, createIcon("arrow-right", 12)])
-        : "",
-    ]),
-  ]);
-  return row;
 }
 
 // ----------------------------------------------------
@@ -430,70 +563,176 @@ function statusRow(
 export async function pageAdBlocker(): Promise<HTMLElement> {
   const root = h("div", { class: "grid" });
   const ext = await queryExtension();
-
-  const intro = introBlock({
-    what: "Stop annoying advertisements, video interruptions, and third-party tracking scripts from following you across websites.",
-    when: "Keep it active whenever you browse the web to protect your privacy and speed up website load times.",
-    howSteps: [
-      "Option 1 (Recommended for browser): Install the NXTL Shield browser extension for full ad blocking and cosmetic element hiding.",
-      "Option 2 (Recommended for whole device): Turn on Safe DNS in your phone or PC settings to filter tracker and ad domains device-wide.",
-      "Verify below that your protection is active.",
-    ],
-    limits: [
-      "A web page inside a browser tab cannot block ads on other websites or apps without the extension or device DNS.",
-      "DNS blocking filters at the domain level; it cannot remove blank ad spaces without the browser extension.",
-      "Does not block first-party sponsored posts embedded directly in server content (like native Instagram feed ads).",
-    ],
-  });
+  const device = detectDevice();
 
   const header = h("div", {}, [
     h("h1", {}, ["Ad & tracker blocker"]),
     h("p", { class: "lede" }, [
-      "There are two real, verified ways to block ads and trackers: through our browser extension, or by setting up Safe DNS on your device.",
+      "Stop annoying advertisements, video interruptions, and third-party tracking scripts. There are two real ways to block them: in your browser with our extension, or across your entire device with Safe DNS.",
     ]),
   ]);
 
   // Real Status Card
-  const statusCard = h("section", { class: "card" }, [
-    h("h2", {}, ["Current protection status"]),
+  const statusCard = h("section", { class: "card", "data-testid": "adblocker-status" }, [
+    h("h2", {}, ["Protection status"]),
     h("div", { class: "status-row" }, [
-      h("span", { class: "status-label" }, [createIcon("extension", 18), "Browser extension ad blocking"]),
+      h("span", { class: "status-label" }, [createIcon("extension", 18), "Browser ad blocking"]),
       h("span", { class: `pill ${ext?.blockingEnabled ? "ok" : "neutral"}` }, [
-        ext?.blockingEnabled ? "Active & blocking" : ext ? "Extension present (rules off)" : "Not installed",
+        ext?.blockingEnabled ? "Active & blocking" : ext ? "Extension installed (blocking off)" : "Not installed",
       ]),
     ]),
     h("div", { class: "status-row" }, [
       h("span", { class: "status-label" }, [createIcon("dns", 18), "Whole-device Safe DNS"]),
-      h("span", { class: "pill neutral" }, ["Device setting (verify below)"]),
+      h("span", { class: "pill neutral" }, ["Device setting (set up below)"]),
     ]),
   ]);
 
-  // Two Real Ways Cards
-  const methodsGrid = h("div", { class: "grid cards", style: "margin-top: var(--sp-4);" }, [
+  // Recommended path for detected device
+  const recommendedSection = h("section", { class: "card", style: "border: 2px solid var(--accent-coral);" }, [
+    h("div", { class: "row", style: "align-items: center; justify-content: space-between; margin-bottom: var(--sp-2);" }, [
+      h("span", { class: "pill ok" }, [createIcon("check", 14), `Recommended for ${device.osLabel}`]),
+    ]),
+  ]);
+
+  if (device.os === "windows") {
+    recommendedSection.append(
+      h("h2", {}, ["Recommended for Windows"]),
+      h("p", { class: "muted" }, ["For complete protection on Windows, add the browser extension and run the 1-click Safe DNS setup for your computer."]),
+      h("div", { class: "grid cards", style: "margin-top: var(--sp-4);" }, [
+        h("div", { class: "card", style: "background: var(--raised);" }, [
+          h("h3", {}, ["Step 1: Add browser extension"]),
+          h("p", { class: "muted" }, ["Blocks banner ads, video interruptions, and tracking scripts in Chrome, Edge, and Brave."]),
+          h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
+            h("a", { class: "btn primary", href: "#/extension" }, [createIcon("extension", 18), "Add extension"]),
+          ]),
+        ]),
+        h("div", { class: "card", style: "background: var(--raised);" }, [
+          h("h3", {}, ["Step 2: Windows 1-Click DNS"]),
+          h("p", { class: "muted" }, ["Blocks ads, trackers, and scam sites across your whole PC. Reversible anytime."]),
+          h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
+            h("a", { class: "btn primary", href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-windows-dns.cmd`, download: "nxtl-shield-windows-dns.cmd" }, [
+              createIcon("download", 18),
+              "Download Windows setup",
+            ]),
+            h("a", { class: "btn ghost sm", href: "#/setup" }, ["Details & Undo"]),
+          ]),
+        ]),
+      ]),
+    );
+  } else if (device.os === "mac") {
+    recommendedSection.append(
+      h("h2", {}, ["Recommended for macOS"]),
+      h("p", { class: "muted" }, ["Add the extension for Safari/Chrome and install the macOS configuration profile for whole-Mac protection."]),
+      h("div", { class: "grid cards", style: "margin-top: var(--sp-4);" }, [
+        h("div", { class: "card", style: "background: var(--raised);" }, [
+          h("h3", {}, ["Step 1: Add browser extension"]),
+          h("p", { class: "muted" }, ["Continuous ad and tracker blocking in your browser."]),
+          h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
+            h("a", { class: "btn primary", href: "#/extension" }, [createIcon("extension", 18), "Add extension"]),
+          ]),
+        ]),
+        h("div", { class: "card", style: "background: var(--raised);" }, [
+          h("h3", {}, ["Step 2: macOS Safe DNS Profile"]),
+          h("p", { class: "muted" }, ["Download and install the official Apple configuration profile for system-wide blocking."]),
+          h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
+            h("a", { class: "btn primary", href: "#/setup" }, [createIcon("download", 18), "Get macOS profile"]),
+          ]),
+        ]),
+      ]),
+    );
+  } else if (device.os === "android") {
+    const copyBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy hostname"]);
+    copyBtn.addEventListener("click", () => {
+      copyToClipboard("dns.adguard-dns.com", copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
+    });
+    recommendedSection.append(
+      h("h2", {}, ["Android: Private DNS (3 taps)"]),
+      h("p", { class: "muted" }, ["Android blocks ads and trackers across all apps natively with Private DNS. No apps to install."]),
+      h("ol", { class: "stepper-list" }, [
+        h("li", {}, ["Open Settings → Network & internet (or Connections) → Private DNS."]),
+        h("li", {}, ["Select Private DNS provider hostname."]),
+        h("li", {}, [
+          h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+            h("span", {}, ["Paste this hostname and tap Save:"]),
+            h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, ["dns.adguard-dns.com"]),
+            h("div", { class: "row" }, [copyBtn]),
+          ]),
+        ]),
+      ]),
+      h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+        h("a", { class: "btn", href: "https://adguard.com/en/test.html", target: "_blank", rel: "noreferrer" }, [
+          createIcon("check", 16),
+          "Check it worked",
+        ]),
+      ]),
+    );
+  } else if (device.os === "ios") {
+    const profile = buildMobileconfig("adguard-default");
+    const downloadBtn = h("button", { class: "btn primary", type: "button" }, [
+      createIcon("download", 18),
+      "Download Safe DNS Profile",
+    ]);
+    downloadBtn.addEventListener("click", () => {
+      const blob = new Blob([profile.plist], { type: "application/x-apple-aspen-config" });
+      const url = URL.createObjectURL(blob);
+      const a = h("a", { href: url, download: profile.filename }, ["profile"]);
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    recommendedSection.append(
+      h("h2", {}, ["iPhone & iPad: Safe DNS Profile"]),
+      h("p", { class: "muted" }, ["Apple supports encrypted DNS profiles to block ads and malicious links in Safari and all apps."]),
+      h("ol", { class: "stepper-list" }, [
+        h("li", {}, [
+          h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+            h("span", {}, ["Tap the button to download the Apple configuration profile:"]),
+            h("div", { class: "row" }, [downloadBtn]),
+          ]),
+        ]),
+        h("li", {}, ["Open Settings on your iPhone or iPad."]),
+        h("li", {}, ["Tap Profile Downloaded near the top."]),
+        h("li", {}, ["Tap Install in the top right and enter your passcode."]),
+      ]),
+      h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+        h("a", { class: "btn", href: "https://adguard.com/en/test.html", target: "_blank", rel: "noreferrer" }, [
+          createIcon("check", 16),
+          "Check it worked",
+        ]),
+      ]),
+    );
+  } else {
+    // Other / Linux
+    recommendedSection.append(
+      h("h2", {}, ["Safe DNS Setup"]),
+      h("p", { class: "muted" }, ["Set up Safe DNS on your system or router to block ads, trackers, and scam links device-wide."]),
+      h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
+        h("a", { class: "btn primary", href: "#/setup" }, [createIcon("dns", 18), "Set up Safe DNS"]),
+        h("a", { class: "btn", href: "#/extension" }, [createIcon("extension", 18), "Get browser extension"]),
+      ]),
+    );
+  }
+
+  // All Ways Grid (Way 1: Browser Extension, Way 2: Safe DNS)
+  const allWays = h("div", { class: "grid cards", style: "margin-top: var(--sp-6);" }, [
     h("article", { class: "card" }, [
       h("div", { class: "tile-icon", style: "margin-bottom: var(--sp-3);" }, [createIcon("extension", 24)]),
       h("h3", {}, ["Way 1: Browser Extension"]),
       h("p", { class: "muted" }, [
         "Best for detailed ad-blocking on websites. Removes banner ads, blocks tracking scripts, and hides cookie consent banners.",
       ]),
-      h("p", { class: "muted-soft" }, [
-        "Works in Chrome, Edge, Brave, and Firefox.",
-      ]),
       h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
-        h("a", { class: "btn primary", href: "#/extension" }, ["Install extension", createIcon("arrow-right", 16)]),
+        h("a", { class: "btn sm", href: "#/extension" }, ["Browser extension guide", createIcon("arrow-right", 14)]),
       ]),
     ]),
     h("article", { class: "card" }, [
       h("div", { class: "tile-icon", style: "margin-bottom: var(--sp-3);" }, [createIcon("dns", 24)]),
       h("h3", {}, ["Way 2: Whole-Device Safe DNS"]),
       h("p", { class: "muted" }, [
-        "Best for blocking ads and trackers across your entire phone, tablet, or PC, including in third-party mobile apps.",
-      ]),
-      h("p", { class: "muted-soft" }, [
-        "Android Private DNS (3 taps) or Apple configuration profile.",
+        "Best for blocking ads and trackers across your whole phone, tablet, or PC, including third-party apps.",
       ]),
       h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
-        h("a", { class: "btn primary", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 16)]),
+        h("a", { class: "btn sm", href: "#/setup" }, ["All device setup guides", createIcon("arrow-right", 14)]),
       ]),
     ]),
   ]);
@@ -501,19 +740,19 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
   const faqs = faqSection([
     {
       q: "Can this website block ads without installing anything?",
-      a: "No. Web standards and browser security prevent any website from intercepting traffic from other websites. You must use either the browser extension or system-level Safe DNS.",
+      a: "No. Web standards and browser security prevent any website from modifying traffic in other tabs or apps. You must use either the browser extension or system Safe DNS.",
     },
     {
       q: "Which one should I choose?",
-      a: "For the best protection, use both! Safe DNS protects your phone and background apps, while the browser extension removes leftover white spaces and cookie banners.",
+      a: "For the best protection, use both! Safe DNS protects your phone and background apps, while the browser extension removes blank ad boxes and cookie banners in websites.",
     },
     {
       q: "Will this slow down my internet connection?",
-      a: "No, blocking ad scripts and tracking beacons typically makes web pages load 30% to 50% faster and saves mobile battery.",
+      a: "No. Blocking ad and tracker scripts usually makes web pages load 30% to 50% faster and saves battery.",
     },
   ]);
 
-  root.append(header, intro, statusCard, methodsGrid, faqs);
+  root.append(header, statusCard, recommendedSection, allWays, faqs);
   return root;
 }
 
@@ -522,89 +761,124 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
 // ----------------------------------------------------
 export function pagePhoneProtection(): HTMLElement {
   const root = h("div", { class: "grid" });
-
-  const intro = introBlock({
-    what: "Comprehensive protection for your smartphone against malware, phishing SMS links, and app-based tracking.",
-    when: "Set this up once when setting up a new smartphone or traveling on untrusted mobile networks.",
-    howSteps: [
-      "Step 1: Set up Safe DNS (Android Private DNS or iPhone mobileconfig profile).",
-      "Step 2: Bookmark NXTL Shield to quickly check suspicious SMS, WhatsApp, and email links.",
-      "Step 3: Use Secure Share whenever you need to send passwords or sensitive documents.",
-    ],
-    limits: [
-      "Shield does not claim device-wide malware scanning on iOS/Android (mobile operating systems prohibit apps from scanning other apps).",
-      "Safe DNS blocks known malicious domains; it cannot detect a new scam URL before it is listed.",
-      "Location privacy settings must be configured in your phone's system settings.",
-    ],
-  });
+  const device = detectDevice();
 
   const header = h("div", {}, [
     h("h1", {}, ["Protect your phone"]),
     h("p", { class: "lede" }, [
-      "Turn on system-wide protection on your smartphone in under two minutes. No paid apps, subscriptions, or battery drain.",
+      "Turn on system-wide protection on your smartphone in under two minutes. Blocks ads, trackers, and malicious scam links across all apps.",
     ]),
   ]);
 
+  const intro = introBlock({
+    what: "System-wide protection for your smartphone against scam links, phishing messages, and app trackers.",
+    howSteps: [
+      "Set up Safe DNS on your phone (3 taps on Android, 1 profile on iPhone).",
+      "Check suspicious links or text messages before opening them.",
+      "Use Secure Share whenever you need to send sensitive messages or files.",
+    ],
+    limit: "Checks links against known scam lists. A new scam site may not be listed yet.",
+  });
+
   // Platform Selector Tabs
-  let activePlatform = /iPhone|iPad/.test(navigator.userAgent) ? "ios" : "android";
-  const contentArea = h("div");
+  let activePlatform: "android" | "ios" = device.os === "ios" ? "ios" : "android";
+  const contentArea = h("div", { style: "margin-top: var(--sp-4);" });
+
+  const tabContainer = h("div", { class: "tab-bar", role: "tablist", style: "margin-top: var(--sp-4);" });
+  const androidTab = h("button", {
+    type: "button",
+    class: "tab-btn",
+    role: "tab",
+    "aria-selected": activePlatform === "android" ? "true" : "false",
+  }, [createIcon("android", 18), "Android"]);
+
+  const iosTab = h("button", {
+    type: "button",
+    class: "tab-btn",
+    role: "tab",
+    "aria-selected": activePlatform === "ios" ? "true" : "false",
+  }, [createIcon("apple", 18), "iPhone & iPad"]);
+
+  tabContainer.append(androidTab, iosTab);
 
   function renderPlatform(platform: "android" | "ios") {
     activePlatform = platform;
-    androidBtn.setAttribute("aria-selected", platform === "android" ? "true" : "false");
-    iosBtn.setAttribute("aria-selected", platform === "ios" ? "true" : "false");
+    androidTab.setAttribute("aria-selected", platform === "android" ? "true" : "false");
+    iosTab.setAttribute("aria-selected", platform === "ios" ? "true" : "false");
 
     if (platform === "android") {
+      const copyBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy hostname"]);
+      copyBtn.addEventListener("click", () => {
+        copyToClipboard("dns.adguard-dns.com", copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
+      });
+
       contentArea.replaceChildren(
         h("section", { class: "card" }, [
-          h("div", { class: "row", style: "align-items: center; margin-bottom: var(--sp-3);" }, [
+          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
             createIcon("android", 28),
-            h("h2", { style: "margin: 0;" }, ["Android: Private DNS Setup (3 Taps)"]),
+            h("h2", { style: "margin: 0;" }, ["Android Private DNS Setup"]),
           ]),
           h("p", { class: "muted" }, [
-            "Android has built-in support for encrypted Private DNS. This blocks malicious domains across Chrome, Samsung Internet, and all mobile apps.",
+            "Android natively supports encrypted Private DNS. This blocks ads, trackers, and scam sites across Chrome, Samsung Internet, and all mobile apps.",
           ]),
-          h("ol", { class: "numbered-steps", style: "font-size: 1rem; margin: var(--sp-4) 0;" }, [
+          h("ol", { class: "stepper-list" }, [
             h("li", {}, ["Open your phone's Settings app."]),
-            h("li", {}, ["Tap Network & internet (or Connections) → More connection settings → Private DNS."]),
+            h("li", {}, ["Tap Network & internet (or Connections) → Private DNS."]),
             h("li", {}, ["Select Private DNS provider hostname."]),
-            h("li", {}, ["Paste one of our recommended resolvers below and tap Save."]),
-          ]),
-          h("div", { class: "card", style: "background: var(--raised); margin-top: var(--sp-4);" }, [
-            h("h3", {}, ["Recommended Hostname"]),
-            h("p", { class: "mono", style: "font-size: 1.1rem; color: var(--accent-coral); font-weight: 700;" }, ["dns.quad9.net"]),
-            h("div", { class: "row" }, [
-              h("button", { class: "primary sm", type: "button" }, [
-                createIcon("copy", 16),
-                "Copy dns.quad9.net",
+            h("li", {}, [
+              h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+                h("span", {}, ["Paste this hostname and tap Save:"]),
+                h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, ["dns.adguard-dns.com"]),
+                h("div", { class: "row" }, [copyBtn]),
               ]),
+            ]),
+          ]),
+          h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+            h("a", { class: "btn", href: "https://adguard.com/en/test.html", target: "_blank", rel: "noreferrer" }, [
+              createIcon("check", 16),
+              "Check it worked",
             ]),
           ]),
         ]),
       );
-      contentArea.querySelector("button")?.addEventListener("click", () => {
-        navigator.clipboard.writeText("dns.quad9.net").catch(() => undefined);
-      });
     } else {
+      const profile = buildMobileconfig("adguard-default");
+      const downloadBtn = h("button", { class: "btn primary", type: "button" }, [
+        createIcon("download", 18),
+        "Download Safe DNS Profile",
+      ]);
+      downloadBtn.addEventListener("click", () => {
+        const blob = new Blob([profile.plist], { type: "application/x-apple-aspen-config" });
+        const url = URL.createObjectURL(blob);
+        const a = h("a", { href: url, download: profile.filename }, ["profile"]);
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
       contentArea.replaceChildren(
         h("section", { class: "card" }, [
-          h("div", { class: "row", style: "align-items: center; margin-bottom: var(--sp-3);" }, [
+          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
             createIcon("apple", 28),
             h("h2", { style: "margin: 0;" }, ["iPhone & iPad: Safe DNS Profile"]),
           ]),
           h("p", { class: "muted" }, [
-            "Apple iOS natively supports encrypted DNS through configuration profiles. This protects Safari, third-party browsers, and apps.",
+            "Apple iOS natively supports encrypted DNS profiles to protect Safari and all apps.",
           ]),
-          h("ol", { class: "numbered-steps", style: "font-size: 1rem; margin: var(--sp-4) 0;" }, [
-            h("li", {}, ["Tap Download Apple Profile below."]),
-            h("li", {}, ["Open the Settings app on your iPhone or iPad."]),
+          h("ol", { class: "stepper-list" }, [
+            h("li", {}, [
+              h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+                h("span", {}, ["Tap the button to download the profile:"]),
+                h("div", { class: "row" }, [downloadBtn]),
+              ]),
+            ]),
+            h("li", {}, ["Open Settings on your iPhone or iPad."]),
             h("li", {}, ["Tap Profile Downloaded near the top."]),
             h("li", {}, ["Tap Install in the top right and enter your passcode."]),
           ]),
-          h("div", { style: "margin-top: var(--sp-4);" }, [
-            h("a", { class: "btn primary", href: "#/setup" }, [
-              createIcon("download", 18),
-              "Download Safe DNS Profile",
+          h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+            h("a", { class: "btn", href: "https://adguard.com/en/test.html", target: "_blank", rel: "noreferrer" }, [
+              createIcon("check", 16),
+              "Check it worked",
             ]),
           ]),
         ]),
@@ -612,68 +886,41 @@ export function pagePhoneProtection(): HTMLElement {
     }
   }
 
-  const androidBtn = h("button", { type: "button", role: "tab", class: "btn" }, [
-    createIcon("android", 18),
-    "Android Guide",
-  ]);
-  const iosBtn = h("button", { type: "button", role: "tab", class: "btn" }, [
-    createIcon("apple", 18),
-    "iPhone / iPad Guide",
-  ]);
+  androidTab.addEventListener("click", () => renderPlatform("android"));
+  iosTab.addEventListener("click", () => renderPlatform("ios"));
+  renderPlatform(activePlatform);
 
-  androidBtn.addEventListener("click", () => renderPlatform("android"));
-  iosBtn.addEventListener("click", () => renderPlatform("ios"));
-
-  const tabs = h("div", { class: "tabs", role: "tablist" }, [androidBtn, iosBtn]);
-  renderPlatform(activePlatform as "android" | "ios");
-
-  // Mobile Tools Section
-  const mobileTools = h("section", { style: "margin-top: var(--sp-6);" }, [
-    h("h2", {}, ["Everyday phone security tools"]),
-    h("div", { class: "grid cards", style: "margin-top: var(--sp-3);" }, [
-      h("article", { class: "card" }, [
-        h("div", { class: "tile-icon", style: "margin-bottom: var(--sp-2);" }, [createIcon("message", 22)]),
-        h("h3", {}, ["Check SMS & WhatsApp links"]),
-        h("p", { class: "muted" }, ["Received an unexpected delivery text or bank alert? Check the link here before tapping."]),
-        h("a", { class: "btn sm", href: "#/check?tab=message" }, ["Check message", createIcon("arrow-right", 14)]),
+  // Quick Tools for Phone
+  const toolsSection = h("div", { class: "grid cards", style: "margin-top: var(--sp-6);" }, [
+    h("article", { class: "card" }, [
+      h("h3", {}, ["Check suspicious links & SMS"]),
+      h("p", { class: "muted" }, ["Received a weird text, package notification, or email? Check it before tapping."]),
+      h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
+        h("a", { class: "btn sm", href: "#/check" }, ["Check link or message", createIcon("arrow-right", 14)]),
       ]),
-      h("article", { class: "card" }, [
-        h("div", { class: "tile-icon", style: "margin-bottom: var(--sp-2);" }, [createIcon("qr", 22)]),
-        h("h3", {}, ["Safe QR code scanner"]),
-        h("p", { class: "muted" }, ["Scan restaurant or parking meter QR codes to inspect the URL safely without launching it."]),
-        h("a", { class: "btn sm", href: "#/check?tab=qr" }, ["Scan QR", createIcon("arrow-right", 14)]),
-      ]),
-      h("article", { class: "card" }, [
-        h("div", { class: "tile-icon", style: "margin-bottom: var(--sp-2);" }, [createIcon("share-lock", 22)]),
-        h("h3", {}, ["Encrypt confidential text"]),
-        h("p", { class: "muted" }, ["Send passwords, Wi-Fi keys, or personal files with strong on-device encryption."]),
+    ]),
+    h("article", { class: "card" }, [
+      h("h3", {}, ["Send passwords & files securely"]),
+      h("p", { class: "muted" }, ["Encrypt text or files with a password before sending via chat or email."]),
+      h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
         h("a", { class: "btn sm", href: "#/share" }, ["Open Secure Share", createIcon("arrow-right", 14)]),
-      ]),
-      h("article", { class: "card" }, [
-        h("div", { class: "tile-icon", style: "margin-bottom: var(--sp-2);" }, [createIcon("install", 22)]),
-        h("h3", {}, ["Add to Home Screen"]),
-        h("p", { class: "muted" }, ["Install NXTL Shield as a lightweight app so it is always accessible offline."]),
-        h("a", { class: "btn sm", href: "#/install" }, ["Install app", createIcon("arrow-right", 14)]),
       ]),
     ]),
   ]);
 
   const faqs = faqSection([
     {
-      q: "Does this drain my battery?",
-      a: "No. Safe DNS uses standard DNS protocols already running on your phone, requiring zero extra background CPU cycles.",
+      q: "Does NXTL Shield scan apps on my phone?",
+      a: "No. Mobile operating systems (iOS and Android) do not allow apps or websites to scan other installed apps. Shield protects your phone by filtering network connections via Safe DNS.",
     },
     {
-      q: "Does NXTL Shield scan my whole phone for malware?",
-      a: "No. Neither Android nor iOS allows third-party web apps to scan your device's memory or private app folders.",
-    },
-    {
-      q: "Can I remove this at any time?",
-      a: "Yes. On Android, change Private DNS back to Automatic. On iPhone, delete the profile in Settings → VPN & Device Management.",
+      q: "Does Safe DNS drain my phone's battery?",
+      a: "No. DNS queries are lightweight and happen anyway. In fact, blocking ad and tracker traffic saves battery and mobile data.",
     },
   ]);
+  faqs.style.marginTop = "var(--sp-6)";
 
-  root.append(header, intro, tabs, contentArea, mobileTools, faqs);
+  root.append(header, intro, tabContainer, contentArea, toolsSection, faqs);
   return root;
 }
 
@@ -683,22 +930,7 @@ export function pagePhoneProtection(): HTMLElement {
 export async function pageExtension(): Promise<HTMLElement> {
   const root = h("div", { class: "grid" });
   const ext = await queryExtension();
-  const isFirefox = /Firefox/i.test(navigator.userAgent);
-
-  const intro = introBlock({
-    what: "The NXTL Shield browser extension provides continuous ad blocking, phishing protection, tracker stopping, URL parameter cleaning, and location privacy.",
-    when: "Install it on your desktop computer or compatible browser for continuous background protection while surfing the web.",
-    howSteps: [
-      "Click the download button for your browser.",
-      "Follow the browser-specific installation steps below.",
-      "Click 'Verify installation' to verify that Shield extension is communicating with this page.",
-    ],
-    limits: [
-      "Protects only web pages opened inside that specific browser; does not filter traffic in external apps.",
-      "Threat lists are bundled snapshots and are not auto-updated between releases; new threats may take time to appear.",
-      "Does not provide a network tunnel or route your entire computer's internet connection.",
-    ],
-  });
+  const device = detectDevice();
 
   const header = h("div", {}, [
     h("h1", {}, ["Browser extension"]),
@@ -707,175 +939,169 @@ export async function pageExtension(): Promise<HTMLElement> {
     ]),
   ]);
 
-  // Real Extension Status Box
-  const statusBox = h("section", { class: "card", style: "border-color: var(--line-accent);" });
-  const statusMsg = h("div", { "data-testid": "extension-status" }, [
-    ext ? "Extension: detected" : "Extension: not detected",
+  // Status card at top
+  const statusBox = h("section", { class: "card", "data-testid": "extension-status" }, [
+    h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
+      h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
+        h("span", { class: `pill ${ext ? "ok" : "neutral"}` }, [
+          createIcon(ext ? "check" : "info", 14),
+          ext ? "Active" : "Not detected",
+        ]),
+        h("span", { style: "font-weight: 600;" }, [
+          ext ? "NXTL Shield extension is running and protecting this browser." : "Extension is not yet installed in this browser.",
+        ]),
+      ]),
+    ]),
   ]);
 
-  const verifyBtn = h("button", { class: "primary sm", type: "button" }, [
+  const checkAgainBtn = h("button", { class: "btn sm", type: "button" }, [
     createIcon("refresh", 16),
-    "Check if extension is working",
+    "Check again",
   ]);
-  verifyBtn.addEventListener("click", async () => {
-    verifyBtn.disabled = true;
-    const freshStatus = await queryExtension(1200);
-    verifyBtn.disabled = false;
-    if (freshStatus) {
+  checkAgainBtn.addEventListener("click", async () => {
+    checkAgainBtn.textContent = "Checking...";
+    const fresh = await queryExtension(1200);
+    checkAgainBtn.replaceChildren(createIcon("refresh", 16), "Check again");
+    if (fresh) {
       statusBox.replaceChildren(
-        h("div", { class: "row", style: "align-items: center;" }, [
-          h("span", { class: "pill ok" }, [createIcon("shield-check", 14), "Extension Active"]),
-          h("strong", {}, ["NXTL Shield extension is running and protecting this browser!"]),
-        ]),
-        h("p", { class: "muted", style: "margin-top: var(--sp-2);" }, [
-          `Active rulesets: ${freshStatus.rulesets.join(", ") || "Standard"}. Blocking: ${freshStatus.blockingEnabled ? "On" : "Off"}.`,
+        h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
+          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
+            h("span", { class: "pill ok" }, [createIcon("check", 14), "Active"]),
+            h("span", { style: "font-weight: 600;" }, ["NXTL Shield extension is running and protecting this browser."]),
+          ]),
+          checkAgainBtn,
         ]),
       );
     } else {
       statusBox.replaceChildren(
-        h("div", { class: "row", style: "align-items: center;" }, [
-          h("span", { class: "pill neutral" }, [createIcon("info", 14), "Not Detected"]),
-          h("span", {}, ["Extension is not communicating yet. Follow the installation steps below."]),
+        h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
+          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
+            h("span", { class: "pill neutral" }, [createIcon("info", 14), "Not detected"]),
+            h("span", { style: "font-weight: 600;" }, ["Extension is not yet detected. Follow the steps below."]),
+          ]),
+          checkAgainBtn,
         ]),
-        h("div", { style: "margin-top: var(--sp-3);" }, [verifyBtn]),
       );
     }
   });
+  statusBox.firstElementChild?.append(checkAgainBtn);
 
-  if (ext) {
-    statusBox.append(
-      h("div", { class: "row", style: "align-items: center;" }, [
-        h("span", { class: "pill ok" }, [createIcon("shield-check", 14), "Extension Active"]),
-        h("strong", {}, ["NXTL Shield extension is detected and running!"]),
-      ]),
-      h("p", { class: "muted", style: "margin-top: var(--sp-2);" }, [
-        `Active rulesets: ${ext.rulesets.join(", ") || "Standard"}.`,
-      ]),
-      statusMsg,
-    );
-  } else {
-    statusBox.append(
-      h("div", { class: "row", style: "align-items: center;" }, [
-        h("span", { class: "pill neutral" }, [createIcon("info", 14), "Not Detected"]),
-        h("span", {}, ["Extension not yet detected in this browser."]),
-      ]),
-      h("div", { style: "margin-top: var(--sp-3);" }, [verifyBtn]),
-      statusMsg,
-    );
-  }
+  // Cards per browser, detected browser first
+  const isFirefox = device.browser === "firefox";
 
-  // Browser-specific Download & Install Card
-  const downloadCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" });
+  const firefoxCard = h("section", { class: "card", style: isFirefox ? "border: 2px solid var(--accent-coral);" : "" }, [
+    h("div", { class: "row", style: "align-items: center; justify-content: space-between; margin-bottom: var(--sp-2);" }, [
+      h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
+        createIcon("desktop", 24),
+        h("h2", { style: "margin: 0;" }, ["Firefox"]),
+      ]),
+      isFirefox ? h("span", { class: "pill ok" }, ["Your current browser"]) : "",
+    ]),
+    h("p", { class: "muted" }, ["Install the signed extension (.xpi) directly into Firefox in one click."]),
+    h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+      h("a", {
+        class: "btn primary lg",
+        href: "https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-firefox.xpi",
+        target: "_blank",
+        rel: "noreferrer",
+      }, [
+        createIcon("download", 18),
+        "Add to Firefox",
+      ]),
+    ]),
+  ]);
+
+  const copyChromeBtn = h("button", { class: "btn sm", type: "button" }, [createIcon("copy", 14), "Copy chrome://extensions"]);
+  copyChromeBtn.addEventListener("click", () => {
+    copyToClipboard("chrome://extensions", copyChromeBtn, [createIcon("copy", 14), "Copy chrome://extensions"], "Copied!");
+  });
+
+  const copyEdgeBtn = h("button", { class: "btn sm", type: "button" }, [createIcon("copy", 14), "Copy edge://extensions"]);
+  copyEdgeBtn.addEventListener("click", () => {
+    copyToClipboard("edge://extensions", copyEdgeBtn, [createIcon("copy", 14), "Copy edge://extensions"], "Copied!");
+  });
+
+  const chromiumCard = h("section", { class: "card", style: !isFirefox ? "border: 2px solid var(--accent-coral);" : "" }, [
+    h("div", { class: "row", style: "align-items: center; justify-content: space-between; margin-bottom: var(--sp-2);" }, [
+      h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
+        createIcon("desktop", 24),
+        h("h2", { style: "margin: 0;" }, ["Chrome, Edge, and Brave"]),
+      ]),
+      !isFirefox ? h("span", { class: "pill ok" }, ["Your current browser"]) : "",
+    ]),
+    h("p", { class: "muted" }, ["Download the package (.zip) from our latest release and load it in 4 quick steps:"]),
+    h("div", { style: "margin: var(--sp-4) 0;" }, [
+      h("a", {
+        class: "btn primary lg",
+        href: "https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-chromium.zip",
+        target: "_blank",
+        rel: "noreferrer",
+      }, [
+        createIcon("download", 18),
+        "Download for Chrome",
+      ]),
+    ]),
+    h("ol", { class: "stepper-list" }, [
+      h("li", {}, ["Download and unzip the extension zip file on your computer."]),
+      h("li", {}, [
+        h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+          h("span", {}, ["In your browser address bar, open chrome://extensions (or edge://extensions):"]),
+          h("div", { class: "row" }, [copyChromeBtn, copyEdgeBtn]),
+        ]),
+      ]),
+      h("li", {}, ["Enable Developer mode in the top-right corner of that page."]),
+      h("li", {}, ["Click Load unpacked and choose the unzipped folder."]),
+    ]),
+  ]);
+
+  const cardsContainer = h("div", { class: "grid", style: "gap: var(--sp-4);" });
   if (isFirefox) {
-    downloadCard.append(
-      h("div", { class: "row", style: "align-items: center; margin-bottom: var(--sp-3);" }, [
-        createIcon("desktop", 24),
-        h("h2", { style: "margin: 0;" }, ["Install for Firefox"]),
-      ]),
-      h("p", { class: "muted" }, [
-        "Download the signed .xpi add-on file from our official GitHub release.",
-      ]),
-      h("div", { class: "row", style: "margin: var(--sp-4) 0;" }, [
-        h("a", {
-          class: "btn primary lg",
-          href: "https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-firefox.xpi",
-          target: "_blank",
-          rel: "noreferrer",
-        }, [
-          createIcon("download", 20),
-          "Add to Firefox (.xpi)",
-        ]),
-      ]),
-    );
+    cardsContainer.append(firefoxCard, chromiumCard);
   } else {
-    // Chrome / Edge / Brave / Chromium
-    const copyExtensionsBtn = h("button", { class: "btn sm", type: "button" }, [
-      createIcon("copy", 14),
-      "Copy chrome://extensions",
-    ]);
-    copyExtensionsBtn.addEventListener("click", () => {
-      navigator.clipboard.writeText("chrome://extensions").catch(() => undefined);
-      copyExtensionsBtn.textContent = "Copied address!";
-      setTimeout(() => {
-        copyExtensionsBtn.replaceChildren(createIcon("copy", 14), "Copy chrome://extensions");
-      }, 2000);
-    });
-
-    downloadCard.append(
-      h("div", { class: "row", style: "align-items: center; margin-bottom: var(--sp-3);" }, [
-        createIcon("desktop", 24),
-        h("h2", { style: "margin: 0;" }, ["Install for Chrome, Edge, and Brave"]),
-      ]),
-      h("p", { class: "muted" }, [
-        "Download the extension package (.zip) from our latest release and load it in 4 quick steps:",
-      ]),
-      h("div", { style: "margin: var(--sp-4) 0;" }, [
-        h("a", {
-          class: "btn primary lg",
-          href: "https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-chromium.zip",
-          target: "_blank",
-          rel: "noreferrer",
-        }, [
-          createIcon("download", 20),
-          "Download for Chrome (.zip)",
-        ]),
-      ]),
-      h("ol", { class: "numbered-steps", style: "font-size: 1rem; margin: var(--sp-4) 0;" }, [
-        h("li", {}, ["Download and unzip the extension zip file on your computer."]),
-        h("li", {}, ["In your browser address bar, open chrome://extensions (or edge://extensions)."]),
-        h("li", {}, ["Enable the Developer mode switch in the top-right corner of that page."]),
-        h("li", {}, ["Click Load unpacked and select the unzipped extension directory."]),
-      ]),
-      h("div", { class: "row" }, [copyExtensionsBtn]),
-    );
+    cardsContainer.append(chromiumCard, firefoxCard);
   }
 
   const faqs = faqSection([
     {
       q: "Does this extension track my browsing history?",
-      a: "No. NXTL Shield collects zero browsing history, zero telemetry, and zero identifiers. All blocking takes place locally using standard declarativeNetRequest rules.",
+      a: "No. NXTL Shield collects zero browsing history, zero telemetry, and zero identifiers. All blocking takes place locally in your browser using standard declarativeNetRequest rules.",
     },
     {
       q: "Can I temporarily pause blocking if a site is broken?",
-      a: "Yes. Simply click the NXTL Shield icon in your browser toolbar and click 'Pause 5 minutes'.",
+      a: "Yes. Simply click the NXTL Shield icon in your browser toolbar and click 'Pause on this site' or pause blocking from the popup.",
     },
     {
       q: "Is this extension free and open source?",
       a: "Yes, 100% free and open source under GPLv3. There are no paid tiers, subscriptions, or hidden tracking.",
     },
   ]);
+  faqs.style.marginTop = "var(--sp-6)";
 
-  root.append(header, intro, statusBox, downloadCard, faqs);
+  root.append(header, statusBox, cardsContainer, faqs);
   return root;
 }
 
 // ----------------------------------------------------
-// TOOL PAGES OVERHAUL
+// CHECK (LINK / MESSAGE / FILE / QR)
 // ----------------------------------------------------
-
 export async function pageCheck(tab = "link"): Promise<HTMLElement> {
   const root = h("div", { class: "grid" });
 
   const intro = introBlock({
-    what: "Check web addresses, text messages, files, or QR codes against known threat lists and security heuristics.",
-    when: "Use whenever you receive an unexpected message, a shortened link, a file from an unknown sender, or scan a physical QR code.",
+    what: "Inspect web addresses, text messages, files, or QR codes against known scam and threat databases.",
     howSteps: [
       "Select Link, Message, File, or QR tab.",
       "Paste the address or content to inspect.",
       "Click Check to run the inspection.",
       "Review the color-coded verdict and recommended next step.",
     ],
-    limits: [
-      "Nothing you submit is uploaded or saved to any server; reputation checks run against the bundled local snapshot.",
-      "File inspection computes a cryptographic hash (SHA-256) locally; it is not a deep memory or malware content scanner.",
-      "A 'clean' verdict indicates no match in known lists, but can never guarantee a brand-new threat is safe.",
-    ],
+    limit: "Checks links against known scam lists. A new scam site may not be listed yet.",
   });
 
   const header = h("div", {}, [
     h("h1", {}, ["Check a link, message or file"]),
     h("p", { class: "lede" }, [
-      "Shield runs link, message, and file checks in this browser. Nothing you submit is uploaded. Reputation lists are the bundled snapshot.",
+      "Inspect links, text messages, files, and QR codes before opening them. Nothing you enter leaves your device.",
     ]),
   ]);
 
@@ -911,53 +1137,69 @@ export async function pageCheck(tab = "link"): Promise<HTMLElement> {
   else if (tab === "qr") panel.append(qrForm());
   else panel.append(linkForm());
 
-  const faqs = faqSection([
-    {
-      q: "Does NXTL Shield see the links or text I check?",
-      a: "No. Everything runs inside your browser using bundled threat databases and regular expressions. Your inputs never leave your computer.",
-    },
-    {
-      q: "How often are the threat lists updated?",
-      a: "Threat lists ship as a bundled snapshot with each release. See Sources for where they come from.",
-    },
-  ]);
-  root.append(faqs);
   return root;
 }
 
 function linkForm() {
-  const input = h("textarea", {
+  const input = h("input", {
+    type: "text",
     "data-testid": "check-input",
-    rows: "3",
-    placeholder: "https://example.com/suspicious-path",
-  });
+    placeholder: "Paste or type a web address (e.g. delfi.lt)",
+  }) as HTMLInputElement;
+
   const out = h("div");
-  const button = h("button", { class: "primary lg", type: "button", "data-testid": "check-run" }, [
-    createIcon("search", 20),
+  const button = h("button", { class: "primary", type: "button", "data-testid": "check-run" }, [
+    createIcon("search", 18),
     "Check link",
   ]);
 
-  button.addEventListener("click", async () => {
-    if (!input.value.trim()) {
-      out.replaceChildren(emptyState({
-        iconName: "link",
-        title: "Please enter a URL",
-        description: "Paste a website address or link into the box above to inspect it.",
-        example: "https://verify-account-security.example.org",
-      }));
-      return;
+  const pasteBtn = h("button", { class: "btn ghost sm", type: "button" }, [
+    createIcon("copy", 16),
+    "Paste",
+  ]);
+  pasteBtn.addEventListener("click", async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        input.value = text;
+        input.focus();
+      }
+    } catch {
+      input.focus();
     }
+  });
+
+  async function run() {
+    const raw = input.value.trim();
+    if (!raw) return;
     button.disabled = true;
-    const rep = await loadReputation();
-    const result = checkUrl(input.value, rep);
-    reportsAdd(makeReport("url", result.verdict, result.inputRedacted));
-    out.replaceChildren(resultCard(result));
-    button.disabled = false;
+    out.replaceChildren(h("p", { class: "muted", style: "padding: var(--sp-4);" }, ["Checking reputation lists..."]));
+
+    try {
+      const norm = normalizeCheckInput(raw);
+      const reputation = await loadReputation();
+      const res = checkUrl(norm.value, reputation);
+      const card = resultCard(res);
+      out.replaceChildren(card);
+      reportsAdd(makeReport("url", res.verdict, norm.value));
+    } catch {
+      out.replaceChildren(h("p", { class: "banner alert" }, ["Inspection failed."]));
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  button.addEventListener("click", run);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      run();
+    }
   });
 
   return h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
-    field("Website or link address", input, "Tested safely without visiting"),
-    h("div", { class: "row" }, [button]),
+    field("Link to check", input),
+    h("div", { class: "row" }, [button, pasteBtn]),
     out,
   ]);
 }
@@ -966,152 +1208,177 @@ function messageForm() {
   const input = h("textarea", {
     "data-testid": "check-input",
     rows: "4",
-    placeholder: "Paste an SMS, WhatsApp text, or email body here...",
-  });
+    placeholder: "Paste SMS, email, or WhatsApp message text here...",
+  }) as HTMLTextAreaElement;
+
   const out = h("div");
-  const button = h("button", { class: "primary lg", type: "button", "data-testid": "check-run" }, [
-    createIcon("search", 20),
+  const button = h("button", { class: "primary", type: "button", "data-testid": "check-run" }, [
+    createIcon("search", 18),
     "Check message",
   ]);
 
-  button.addEventListener("click", async () => {
-    if (!input.value.trim()) {
-      out.replaceChildren(emptyState({
-        iconName: "message",
-        title: "Please paste a message",
-        description: "Paste any suspicious SMS, text message, or email body to check for phishing links.",
-      }));
-      return;
+  const pasteBtn = h("button", { class: "btn ghost sm", type: "button" }, [
+    createIcon("copy", 16),
+    "Paste",
+  ]);
+  pasteBtn.addEventListener("click", async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        input.value = text;
+        input.focus();
+      }
+    } catch {
+      input.focus();
     }
-    button.disabled = true;
-    const rep = await loadReputation();
-    const result = checkText(input.value, rep);
-    reportsAdd(makeReport("text", result.verdict, result.inputRedacted));
-    out.replaceChildren(resultCard(result));
-    button.disabled = false;
   });
 
+  async function run() {
+    const raw = input.value.trim();
+    if (!raw) return;
+    button.disabled = true;
+    out.replaceChildren(h("p", { class: "muted", style: "padding: var(--sp-4);" }, ["Scanning message..."]));
+
+    try {
+      const reputation = await loadReputation();
+      const res = checkText(raw, reputation);
+      const card = resultCard(res);
+      out.replaceChildren(card);
+      reportsAdd(makeReport("text", res.verdict, raw.slice(0, 80)));
+    } catch {
+      out.replaceChildren(h("p", { class: "banner alert" }, ["Scan failed."]));
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  button.addEventListener("click", run);
+
   return h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
-    field("Suspicious message text", input, "Stays in this browser, never uploaded"),
-    h("div", { class: "row" }, [button]),
+    field("Message content", input),
+    h("div", { class: "row" }, [button, pasteBtn]),
     out,
   ]);
 }
 
 function fileForm() {
-  const input = h("input", { type: "file", "data-testid": "check-input" });
+  const fileInput = h("input", { type: "file", "data-testid": "check-input" }) as HTMLInputElement;
   const out = h("div");
+  const button = h("button", { class: "primary", type: "button", "data-testid": "check-run" }, [
+    createIcon("search", 18),
+    "Inspect file",
+  ]);
 
-  input.addEventListener("change", async () => {
-    const file = (input as HTMLInputElement).files?.[0];
+  button.addEventListener("click", async () => {
+    const file = fileInput.files?.[0];
     if (!file) return;
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const result = await inspectFile(file.name, bytes.byteLength > 32 * 1024 * 1024 ? null : bytes);
-    if (bytes.byteLength > 32 * 1024 * 1024) {
-      result.evidence.push({
-        id: "too-large",
-        title: "Hash skipped",
-        detail: "The file is larger than 32 MB. Only the name was checked. This is not a malware scan.",
-        severity: "info",
-      });
+    button.disabled = true;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const res = await inspectFile(file.name, bytes);
+      const card = resultCard(res);
+      out.replaceChildren(card);
+      reportsAdd(makeReport("file", res.verdict, file.name));
+    } catch {
+      out.replaceChildren(h("p", { class: "banner alert" }, ["File inspection failed."]));
+    } finally {
+      button.disabled = false;
     }
-    reportsAdd(makeReport("file", result.verdict, file.name));
-    const card = resultCard(result);
-    if (result.sha256) {
-      card.append(h("p", { class: "mono", style: "margin-top: var(--sp-3);" }, [`SHA-256: ${result.sha256}`]));
-    }
-    card.append(h("p", { class: "muted-soft" }, ["Not a malware content scan. The file was not uploaded."]));
-    out.replaceChildren(card);
   });
 
   return h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
-    field("Select file to hash", input, "Files up to 32 MB are hashed locally"),
-    h("p", { class: "muted" }, ["Calculates the cryptographic SHA-256 fingerprint without uploading."]),
+    field("File to inspect (SHA-256 hash computed locally)", fileInput),
+    h("div", { class: "row" }, [button]),
     out,
   ]);
 }
 
 function qrForm() {
+  const fileInput = h("input", { type: "file", accept: "image/*", "data-testid": "check-input" }) as HTMLInputElement;
   const out = h("div");
-  const file = h("input", { type: "file", accept: "image/*" });
-  const video = h("video", { playsinline: "true", muted: "true" }) as HTMLVideoElement;
-  video.hidden = true;
-
-  file.addEventListener("change", async () => {
-    const image = (file as HTMLInputElement).files?.[0];
-    if (!image) return;
-    const url = URL.createObjectURL(image);
-    try {
-      const { BrowserQRCodeReader } = await import("@zxing/library");
-      const decoded = await new BrowserQRCodeReader().decodeFromImageUrl(url);
-      await showDecoded(decoded.getText(), out);
-    } catch {
-      out.replaceChildren(h("p", { class: "banner" }, ["No QR code was found in that image. Nothing was uploaded."]));
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  });
-
-  const camera = h("button", { type: "button", class: "btn" }, [
-    createIcon("camera", 18),
-    "Scan with camera",
+  const button = h("button", { class: "primary", type: "button", "data-testid": "check-run" }, [
+    createIcon("search", 18),
+    "Read QR image",
   ]);
-  camera.addEventListener("click", async () => {
-    video.hidden = false;
+
+  button.addEventListener("click", async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    button.disabled = true;
     try {
-      const { BrowserQRCodeReader } = await import("@zxing/library");
-      const decoded = await new BrowserQRCodeReader().decodeOnceFromVideoDevice(undefined, video);
-      await showDecoded(decoded.getText(), out);
+      if (!("BarcodeDetector" in window)) {
+        out.replaceChildren(
+          h("p", { class: "banner" }, [
+            "Your browser does not support the BarcodeDetector API. You can still scan the QR code with your camera app and paste the link in the Link tab.",
+          ]),
+        );
+        return;
+      }
+      const detector = new (window as any).BarcodeDetector({ formats: ["qr_code"] });
+      const bmp = await createImageBitmap(file);
+      const codes = await detector.detect(bmp);
+      if (!codes.length) {
+        out.replaceChildren(h("p", { class: "banner" }, ["No QR code detected in this image."]));
+        return;
+      }
+      const raw = codes[0].rawValue;
+      const reputation = await loadReputation();
+      const norm = normalizeCheckInput(raw);
+      if (norm.type === "url") {
+        const res = checkUrl(norm.value, reputation);
+        const card = resultCard(res);
+        out.replaceChildren(
+          h("p", { class: "mono", style: "word-break: break-all; margin-bottom: var(--sp-3);" }, [`Decoded URL: ${norm.value}`]),
+          card,
+        );
+        reportsAdd(makeReport("url", res.verdict, norm.value));
+      } else {
+        const res = checkText(raw, reputation);
+        const card = resultCard(res);
+        out.replaceChildren(
+          h("p", { class: "mono", style: "word-break: break-all; margin-bottom: var(--sp-3);" }, [`Decoded text: ${raw}`]),
+          card,
+        );
+        reportsAdd(makeReport("text", res.verdict, raw.slice(0, 80)));
+      }
     } catch {
-      out.replaceChildren(h("p", { class: "banner" }, ["The camera did not return a code, or permission was denied."]));
+      out.replaceChildren(h("p", { class: "banner alert" }, ["QR decoding failed."]));
     } finally {
-      video.srcObject && (video.srcObject as MediaStream).getTracks().forEach((track) => track.stop());
-      video.hidden = true;
+      button.disabled = false;
     }
   });
 
   return h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
-    field("Upload QR code screenshot or photo", file),
-    h("div", { class: "row" }, [camera]),
-    video,
-    h("p", { class: "muted-soft" }, ["Decoded entirely on this device. Shield does not automatically navigate to the URL."]),
+    field("QR image file", fileInput),
+    h("div", { class: "row" }, [button]),
     out,
   ]);
-}
-
-async function showDecoded(text: string, out: HTMLElement) {
-  const rep = await loadReputation();
-  const result = /^https?:\/\//i.test(text.trim()) ? checkUrl(text.trim(), rep) : checkText(text, rep);
-  reportsAdd(makeReport("qr", result.verdict, result.inputRedacted));
-  const card = resultCard(result);
-  card.prepend(h("p", { class: "mono", style: "font-weight: 700;" }, [`Decoded URL: ${result.inputRedacted}`]));
-  if (/^https?:\/\//i.test(text.trim())) {
-    const open = h("a", { class: "btn sm", href: text.trim(), rel: "noreferrer", target: "_blank" }, [
-      "Open destination",
-      createIcon("external", 14),
-    ]);
-    card.append(h("p", { class: "muted-soft" }, ["Opening this link is your choice. Shield never navigates automatically."]), open);
-  }
-  out.replaceChildren(card);
 }
 
 // ----------------------------------------------------
 // LINK CLEANER
 // ----------------------------------------------------
 export function pageClean(): HTMLElement {
+  const root = h("div", { class: "grid" });
+
+  const header = h("div", {}, [
+    h("h1", {}, ["Link cleaner"]),
+    h("p", { class: "lede" }, ["Remove tracking and surveillance tags from links before sharing them."]),
+  ]);
+
   const input = h("textarea", {
     "data-testid": "check-input",
     rows: "3",
-    placeholder: "https://example.com/item?utm_source=newsletter&utm_medium=email&fbclid=123",
+    placeholder: "Paste a link with tracking tags here (e.g. https://example.com/item?utm_source=fb&fbclid=123)",
   });
   const out = h("div");
   let previous = "";
 
-  const button = h("button", { class: "primary lg", type: "button", "data-testid": "check-run" }, [
-    createIcon("clean", 20),
-    "Clean URL",
+  const button = h("button", { class: "btn primary", type: "button", "data-testid": "check-run" }, [
+    createIcon("clean", 18),
+    "Clean link",
   ]);
-  const undo = h("button", { type: "button", class: "btn" }, [
+  const undo = h("button", { type: "button", class: "btn ghost" }, [
     createIcon("refresh", 16),
     "Undo",
   ]);
@@ -1122,26 +1389,20 @@ export function pageClean(): HTMLElement {
     const result = cleanUrl(input.value);
     undo.disabled = !result.changed;
 
-    const card = h("section", { class: "card result-card ok", "data-testid": "verdict" }, [
-      h("h2", {}, [result.preserved ? "Left unchanged" : result.changed ? "Tracking parameters removed" : "No change needed"]),
-      h("p", { class: "muted" }, [result.reason]),
-      h("p", { class: "mono diff", style: "padding: var(--sp-3); background: var(--raised); border-radius: var(--radius-sm);" }, [result.cleaned]),
-      h("p", { class: "muted-soft" }, [result.removed.length ? `Removed tracking keys: ${result.removed.join(", ")}` : "No tracking keys found"]),
-    ]);
-
-    const copy = h("button", { type: "button", class: "primary sm" }, [
+    const copyBtn = h("button", { type: "button", class: "btn primary sm" }, [
       createIcon("copy", 16),
-      "Copy clean URL",
+      "Copy clean link",
     ]);
-    copy.addEventListener("click", () => {
-      navigator.clipboard.writeText(result.cleaned).catch(() => undefined);
-      copy.textContent = "Copied!";
-      setTimeout(() => {
-        copy.replaceChildren(createIcon("copy", 16), "Copy clean URL");
-      }, 2000);
+    copyBtn.addEventListener("click", () => {
+      copyToClipboard(result.cleaned, copyBtn, [createIcon("copy", 16), "Copy clean link"], "Copied link!");
     });
 
-    card.append(copy);
+    const card = h("section", { class: "card result-card ok", "data-testid": "verdict" }, [
+      h("h2", {}, [result.changed ? "Tracking tags removed" : "No tracking tags found"]),
+      h("p", { class: "mono", style: "padding: var(--sp-3); background: var(--raised); border-radius: var(--radius-sm); word-break: break-all;" }, [result.cleaned]),
+      h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [copyBtn]),
+    ]);
+
     out.replaceChildren(card);
     input.value = result.cleaned;
   });
@@ -1149,178 +1410,195 @@ export function pageClean(): HTMLElement {
   undo.addEventListener("click", () => {
     input.value = previous;
     undo.disabled = true;
+    out.replaceChildren();
   });
 
   const intro = introBlock({
-    what: "Remove surveillance and advertising parameters (such as utm_source, fbclid, gclid) from links before sending them to others.",
-    when: "Clean links before pasting into social media, messaging apps, or public posts.",
+    what: "Remove advertising tags (utm_source, fbclid, gclid) from links before sending them to friends or posting online.",
     howSteps: [
-      "Paste the messy link into the box.",
-      "Click Clean URL.",
-      "Copy the cleaned, privacy-safe URL.",
+      "Paste the link into the box.",
+      "Click Clean link.",
+      "Copy the cleaned URL.",
     ],
-    limits: [
-      "Conservative cleaning: login, payment, and signed links are preserved untouched to prevent breaking access.",
-      "Does not bypass URL shorteners (e.g. bit.ly); only removes tracking query strings from the visible link.",
-    ],
+    limit: "Login, payment, and signed links are kept untouched so accounts never break.",
+    howItWorks: "All cleaning happens locally in your browser using standard URL parsing. No web requests are made.",
   });
 
-  const faqs = faqSection([
-    {
-      q: "Why should I clean links?",
-      a: "Tracking tags allow ad companies to trace which friend sent a link to whom across social media platforms. Cleaning removes this tracking footprint.",
-    },
-    {
-      q: "Can cleaning break a website?",
-      a: "Our algorithm uses a safe list of purely promotional query parameters. If a link doesn't open properly, click Undo to restore the original.",
-    },
-  ]);
-
-  return h("div", { class: "grid" }, [
-    h("h1", {}, ["Clean a URL"]),
-    h("p", { class: "lede" }, ["Conservative parameter removal. Signed, login, and payment URLs are kept as you pasted them. Nothing is sent."]),
+  root.append(
+    header,
     intro,
     h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
       field("URL to clean", input),
       h("div", { class: "row" }, [button, undo]),
       out,
     ]),
-    faqs,
-  ]);
+  );
+  return root;
 }
 
 // ----------------------------------------------------
-// PASSWORD TOOLS
+// PASSWORD GENERATOR
 // ----------------------------------------------------
 export function pagePassword(): HTMLElement {
-  const length = h("input", { type: "text", value: "20", style: "max-width: 140px;" });
-  const symbols = h("input", { type: "checkbox" });
-  (symbols as HTMLInputElement).checked = true;
+  const root = h("div", { class: "grid" });
 
-  const out = h("div");
-  const generated = h("p", {
-    class: "mono",
-    "data-testid": "verdict",
-    style: "font-size: 1.2rem; font-weight: 700; padding: var(--sp-4); background: var(--raised); border-radius: var(--radius-md); border: 1px solid var(--line-accent);",
-  }, ["Generate a password. It is not saved."]);
-
-  const make = h("button", { class: "primary", type: "button" }, [
-    createIcon("password", 18),
-    "Generate password",
+  const header = h("div", {}, [
+    h("h1", {}, ["Password generator"]),
+    h("p", { class: "lede" }, ["Made on your device. Never stored or sent."]),
   ]);
-  const phrase = h("button", { class: "btn", type: "button" }, [
-    createIcon("password", 18),
-    "Generate passphrase",
-  ]);
-  const check = h("button", { class: "btn", type: "button" }, [
-    createIcon("shield-alert", 18),
-    "Check pwned range",
-  ]);
-  let current = "";
-
-  make.addEventListener("click", () => {
-    try {
-      const value = generatePassword({ length: Number(length.value), symbols: (symbols as HTMLInputElement).checked });
-      current = value.password;
-      generated.textContent = value.password;
-      out.replaceChildren(
-        h("p", {}, [value.note]),
-        h("p", { class: "pill ok" }, [passwordStrength(value.password).note + ` Score ${passwordStrength(value.password).score} of 4.`]),
-      );
-    } catch (error) {
-      generated.textContent = error instanceof Error ? error.message : "Could not generate.";
-    }
-  });
-
-  phrase.addEventListener("click", () => {
-    const value = generatePassphrase(6);
-    current = value.passphrase;
-    generated.textContent = value.passphrase;
-    out.replaceChildren(h("p", {}, [value.note]));
-  });
-
-  check.addEventListener("click", async () => {
-    if (!current) return;
-    const result = await hibpLookup(current);
-    out.replaceChildren(
-      h("p", { style: "font-weight: 700;" }, [result.summary]),
-      h("p", { class: "muted" }, [result.scope]),
-      h("p", { class: "mono muted-soft" }, [result.requestUrl]),
-    );
-    current = "";
-    generated.textContent = "Cleared from the page after the check.";
-  });
-
-  const copyStatus = h("p", { class: "muted", role: "status" });
-  const copy = h("button", { type: "button", class: "btn" }, [
-    createIcon("copy", 16),
-    "Copy",
-  ]);
-  copy.addEventListener("click", async () => {
-    const value = generated.textContent ?? "";
-    if (!value || value.startsWith("Generate") || value.startsWith("Cleared")) {
-      copyStatus.textContent = "Generate a password first.";
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(value);
-      copyStatus.textContent = "Copied.";
-    } catch {
-      copyStatus.textContent = "The clipboard refused the copy. Select the password and use your device’s copy command.";
-    }
-  });
 
   const intro = introBlock({
-    what: "Generate cryptographically strong, random passwords and passphrases entirely within your browser.",
-    when: "Create new passwords for email, banking, social media, or device accounts.",
+    what: "Generate cryptographically random passwords and passphrases entirely within your browser.",
     howSteps: [
-      "Choose desired password length (minimum 12 recommended).",
-      "Click Generate password or Generate passphrase.",
-      "Copy to your password manager.",
-      "Optionally click 'Check pwned range' to verify against known breaches using k-anonymity.",
+      "Choose your desired length and character options.",
+      "Click New password to generate.",
+      "Click Copy password to copy it to your password manager.",
     ],
-    limits: [
-      "Generated passwords are never sent or stored anywhere.",
-      "The breach check sends only the first 5 characters of the SHA-1 hash (k-anonymity) to api.pwnedpasswords.com. Your actual password is never transmitted.",
-    ],
+    limit: "Passwords are generated in Web Crypto and never leave your device.",
+    howItWorks: "All randomness uses crypto.getRandomValues(). The optional leak check uses k-anonymity, querying only the first 5 characters of the SHA-1 hash against haveibeenpwned. Your password is never sent.",
   });
 
-  const faqs = faqSection([
-    {
-      q: "What is a passphrase vs a password?",
-      a: "A passphrase is composed of several random dictionary words (e.g. 'correct horse battery staple'). It is often easier to type on phones while providing immense cryptographic strength.",
-    },
-    {
-      q: "Does NXTL store my passwords?",
-      a: "Never. All generation runs in Web Crypto on your device.",
-    },
+  // Slider & options
+  const lengthSlider = h("input", {
+    type: "range",
+    min: "12",
+    max: "64",
+    value: "20",
+    style: "flex: 1;",
+    "aria-label": "Password length",
+  }) as HTMLInputElement;
+
+  const lengthBadge = h("span", {
+    class: "pill neutral mono",
+    style: "font-weight: 700; min-width: 44px; text-align: center;",
+  }, ["20"]);
+
+  const symbolsCheck = h("input", { type: "checkbox", "aria-label": "Include symbols" }) as HTMLInputElement;
+  symbolsCheck.checked = true;
+
+  // Verdict display (Mono, large)
+  const passwordDisplay = h("div", {
+    class: "mono",
+    "data-testid": "verdict",
+    style: "font-size: 1.4rem; font-weight: 700; word-break: break-all; padding: var(--sp-4); background: var(--raised); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); letter-spacing: 0.05em; min-height: 64px; display: flex; align-items: center;",
+  }, [""]);
+
+  const strengthBadge = h("div", { class: "row", style: "align-items: center; gap: var(--sp-2);" }, [
+    h("span", { class: "pill ok" }, ["Very strong"]),
   ]);
 
-  return h("div", { class: "grid" }, [
-    h("h1", {}, ["Password tools"]),
-    h("p", { class: "lede" }, ["Generated in this browser with Web Crypto. Passwords are not stored and are not sent unless you run the optional range check."]),
-    intro,
-    h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
-      field("Password length (12–64 characters)", length),
-      h("label", { class: "row" }, [symbols, " Include special symbols (!@#$%^&*)"]),
-      h("div", { class: "row" }, [make, phrase, copy, check]),
-      generated,
-      copyStatus,
-      out,
-      h("p", { class: "muted-soft" }, [
-        "The range check sends only the first five characters of the SHA-1 hash to api.pwnedpasswords.com, with Add-Padding. It is not an email breach search.",
+  let currentPassword = "";
+
+  function generate() {
+    const len = Number(lengthSlider.value);
+    const sym = symbolsCheck.checked;
+    const res = generatePassword({ length: len, symbols: sym });
+    currentPassword = res.password;
+    passwordDisplay.textContent = res.password;
+    const st = passwordStrength(res.password);
+    const label = st.score >= 4 ? "Very strong" : st.score === 3 ? "Strong" : st.score === 2 ? "Moderate" : "Weak";
+    const variant = st.score >= 3 ? "ok" : st.score === 2 ? "indicator" : "alert";
+    strengthBadge.replaceChildren(h("span", { class: `pill ${variant}` }, [label]));
+  }
+
+  lengthSlider.addEventListener("input", () => {
+    lengthBadge.textContent = lengthSlider.value;
+    generate();
+  });
+
+  symbolsCheck.addEventListener("change", generate);
+
+  const copyBtn = h("button", { class: "btn primary", type: "button" }, [
+    createIcon("copy", 18),
+    "Copy password",
+  ]);
+  copyBtn.addEventListener("click", () => {
+    if (!currentPassword) return;
+    copyToClipboard(currentPassword, copyBtn, [createIcon("copy", 18), "Copy password"], "Copied password!");
+  });
+
+  const newBtn = h("button", { class: "btn", type: "button" }, [
+    createIcon("refresh", 18),
+    "New password",
+  ]);
+  newBtn.addEventListener("click", generate);
+
+  const leakBtn = h("button", { class: "btn ghost", type: "button" }, [
+    createIcon("shield-alert", 16),
+    "Check if this password has leaked",
+  ]);
+  const leakResult = h("div", { style: "margin-top: var(--sp-2);" });
+
+  leakBtn.addEventListener("click", async () => {
+    if (!currentPassword) return;
+    leakBtn.disabled = true;
+    leakBtn.textContent = "Checking...";
+    try {
+      const res = await hibpLookup(currentPassword);
+      if (res.status === "match") {
+        leakResult.replaceChildren(
+          h("div", { class: "pill alert" }, [createIcon("alert", 14), "Found in leaks, don't use it"]),
+        );
+      } else {
+        leakResult.replaceChildren(
+          h("div", { class: "pill ok" }, [createIcon("check", 14), "Not found in known leaks"]),
+        );
+      }
+    } catch {
+      leakResult.replaceChildren(
+        h("div", { class: "pill neutral" }, ["Could not reach leak database."]),
+      );
+    } finally {
+      leakBtn.disabled = false;
+      leakBtn.replaceChildren(createIcon("shield-alert", 16), "Check if this password has leaked");
+    }
+  });
+
+  const controls = h("section", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
+    passwordDisplay,
+    strengthBadge,
+    h("div", { class: "row", style: "flex-wrap: wrap; gap: var(--sp-3);" }, [
+      copyBtn,
+      newBtn,
+    ]),
+    h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-2);" }, [
+      h("div", { class: "row", style: "align-items: center; justify-content: space-between;" }, [
+        h("label", { style: "font-weight: 600;" }, ["Password length"]),
+        lengthBadge,
+      ]),
+      h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
+        lengthSlider,
       ]),
     ]),
-    faqs,
+    h("label", { class: "row", style: "align-items: center; gap: var(--sp-2); cursor: pointer;" }, [
+      symbolsCheck,
+      h("span", {}, ["Include special symbols (!@#$%^&*)"]),
+    ]),
+    h("div", { style: "padding-top: var(--sp-3); border-top: 1px solid var(--line);" }, [
+      leakBtn,
+      leakResult,
+    ]),
   ]);
+
+  generate();
+
+  root.append(header, intro, controls);
+  return root;
 }
 
 // ----------------------------------------------------
 // CONNECTION DOCTOR
 // ----------------------------------------------------
 export async function pageConnection(): Promise<HTMLElement> {
+  const root = h("div", { class: "grid" });
+
+  const header = h("div", {}, [
+    h("h1", {}, ["Connection Doctor"]),
+    h("p", { class: "lede" }, ["Check your public IP address and test for WebRTC address exposure."]),
+  ]);
+
   const out = h("div");
-  const ipButton = h("button", { type: "button", class: "primary" }, [
+  const ipButton = h("button", { type: "button", class: "btn primary" }, [
     createIcon("search", 18),
     "Look up public IP",
   ]);
@@ -1329,9 +1607,9 @@ export async function pageConnection(): Promise<HTMLElement> {
     "Count WebRTC candidates",
   ]);
   const wifi = h("select", {}, [
-    option("unknown", "I have not said"),
-    option("yes", "I am on public Wi-Fi"),
-    option("no", "I am not on public Wi-Fi"),
+    h("option", { value: "unknown" }, ["I have not specified"]),
+    h("option", { value: "yes" }, ["I am on public Wi-Fi"]),
+    h("option", { value: "no" }, ["I am not on public Wi-Fi"]),
   ]);
 
   let publicIp: string | null = null;
@@ -1343,7 +1621,7 @@ export async function pageConnection(): Promise<HTMLElement> {
     const explanation = explainConnectionIssue({
       online: navigator.onLine,
       userAgent: navigator.userAgent,
-      effectiveType: (navigator as Navigator & { connection?: { effectiveType?: string } }).connection?.effectiveType ?? null,
+      effectiveType: (navigator as any).connection?.effectiveType ?? null,
       publicIp,
       ipLookup,
       webrtcHostCandidates: hostCount,
@@ -1354,12 +1632,12 @@ export async function pageConnection(): Promise<HTMLElement> {
       h("section", { class: "card result-card info" }, [
         h("h2", {}, [explanation.summary]),
         ...explanation.points.map((point) => h("p", {}, [point])),
-        h("p", {}, [h("a", { class: "btn sm", href: explanation.links.connectionCheck }, ["Open the NXTL travel connection check"])]),
       ]),
     );
   }
 
   ipButton.addEventListener("click", async () => {
+    ipButton.disabled = true;
     try {
       const response = await fetch(IP_LOOKUP.url);
       const body = (await response.json()) as { ip?: string };
@@ -1368,54 +1646,58 @@ export async function pageConnection(): Promise<HTMLElement> {
     } catch {
       ipLookup = "failed";
       publicIp = null;
+    } finally {
+      ipButton.disabled = false;
+      render();
     }
-    render();
   });
 
   rtcButton.addEventListener("click", async () => {
+    rtcButton.disabled = true;
     hostCount = 0;
     srflx = 0;
-    const pc = new RTCPeerConnection({ iceServers: [] });
-    pc.createDataChannel("shield");
-    pc.onicecandidate = (event) => {
-      const candidate = event.candidate?.candidate ?? "";
-      if (candidate.includes(" typ host ")) hostCount = (hostCount ?? 0) + 1;
-      if (candidate.includes(" typ srflx ")) srflx = (srflx ?? 0) + 1;
-    };
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    pc.close();
-    render();
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [] });
+      pc.createDataChannel("shield");
+      pc.onicecandidate = (event) => {
+        const candidate = event.candidate?.candidate ?? "";
+        if (candidate.includes(" typ host ")) hostCount = (hostCount ?? 0) + 1;
+        if (candidate.includes(" typ srflx ")) srflx = (srflx ?? 0) + 1;
+      };
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      pc.close();
+    } catch {
+      // Ignore
+    } finally {
+      rtcButton.disabled = false;
+      render();
+    }
   });
 
   wifi.addEventListener("change", render);
 
   const intro = introBlock({
     what: "Diagnose network settings, discover your public IP address, and test for WebRTC address exposure.",
-    when: "Use when joining public Wi-Fi at airports or hotels, or troubleshooting connectivity issues.",
     howSteps: [
-      "Click 'Look up public IP' to see what IP address remote websites observe.",
-      "Click 'Count WebRTC candidates' to see if your local device IP is visible via WebRTC.",
-      "Check the diagnostic report for recommendations.",
+      "Click Look up public IP to see the IP address visible to remote websites.",
+      "Click Count WebRTC candidates to test whether your local device IP is exposed.",
+      "Check the report for recommendations.",
     ],
-    limits: [
-      "Checking your IP address requires querying an external endpoint (api.ipify.org).",
-      "Does not route your traffic or encrypt your general connection.",
-    ],
+    limit: "Looking up your IP queries api.ipify.org only when you click the button.",
+    howItWorks: "All network tests run directly in your browser. WebRTC candidate inspection uses standard RTCPeerConnection.",
   });
 
-  const root = h("div", { class: "grid" }, [
-    h("h1", {}, ["Connection Doctor"]),
-    h("p", { class: "lede" }, [IP_LOOKUP.disclosure]),
+  root.append(
+    header,
     intro,
     h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
-      h("p", { class: "muted-soft mono" }, ["User Agent: ", navigator.userAgent]),
-      h("div", { class: "row" }, [ipButton, rtcButton]),
-      field("Public Wi-Fi, as you report it", wifi),
+      h("div", { class: "row", style: "flex-wrap: wrap; gap: var(--sp-3);" }, [ipButton, rtcButton]),
+      field("Public Wi-Fi status", wifi),
       out,
     ]),
-  ]);
+  );
   render();
   return root;
 }
@@ -1424,31 +1706,32 @@ export async function pageConnection(): Promise<HTMLElement> {
 // LOCATION PRIVACY
 // ----------------------------------------------------
 export function pageLocation(): HTMLElement {
-  const detected = /iPhone|iPad/.test(navigator.userAgent)
-    ? "ios"
-    : /Android/.test(navigator.userAgent)
-      ? "android"
-      : /Firefox/.test(navigator.userAgent)
-        ? "firefox"
-        : "chrome";
+  const root = h("div", { class: "grid" });
+  const device = detectDevice();
 
-  const os = h("select", {}, [
-    option("chrome", "This Chromium browser"),
-    option("firefox", "Firefox"),
-    option("ios", "iPhone or iPad"),
-    option("android", "Android"),
+  const header = h("div", {}, [
+    h("h1", {}, ["Location privacy"]),
+    h("p", { class: "lede" }, ["Understand and control how websites and apps determine your physical location."]),
   ]);
-  (os as HTMLSelectElement).value = detected;
+
+  const os = h("select", { "aria-label": "Select your device" }, [
+    h("option", { value: "chrome" }, ["Chrome / Edge / Brave"]),
+    h("option", { value: "firefox" }, ["Firefox"]),
+    h("option", { value: "ios" }, ["iPhone or iPad"]),
+    h("option", { value: "android" }, ["Android"]),
+  ]);
+  (os as HTMLSelectElement).value = device.os === "ios" ? "ios" : device.os === "android" ? "android" : device.browser === "firefox" ? "firefox" : "chrome";
+
   const out = h("div");
-  const perm = h("p", { class: "pill neutral" }, ["Website permission for Shield: not requested."]);
+  const perm = h("p", { class: "pill neutral" }, ["Website location permission: not requested"]);
 
   if (navigator.permissions?.query) {
     navigator.permissions.query({ name: "geolocation" }).then(
       (status) => {
-        perm.textContent = `This site's Location permission is “${status.state}”. Shield does not call the location API.`;
+        perm.textContent = `Browser location permission for Shield: ${status.state}. Shield never requests or reads your location.`;
       },
       () => {
-        perm.textContent = "The Permissions API did not return a geolocation status.";
+        // Ignore
       },
     );
   }
@@ -1456,15 +1739,13 @@ export function pageLocation(): HTMLElement {
   function render() {
     const guide = locationPrivacySetup((os as HTMLSelectElement).value);
     out.replaceChildren(
-      h("section", { class: "card" }, [
+      h("section", { class: "card", style: "background: var(--raised);" }, [
         h("h2", {}, [guide.os]),
         h("p", {}, [guide.websitePermission]),
         h("p", {}, [guide.nativePermission]),
         h("p", { class: "muted" }, [guide.ipLocation]),
         h("h3", { style: "margin-top: var(--sp-4);" }, ["Recommended steps"]),
         ...guide.steps.map((step) => h("p", {}, [step])),
-        h("h3", { style: "margin-top: var(--sp-4);" }, ["Important boundaries"]),
-        ...guide.limits.map((step) => h("p", { class: "muted-soft" }, [step])),
       ]),
     );
   }
@@ -1473,293 +1754,452 @@ export function pageLocation(): HTMLElement {
   render();
 
   const intro = introBlock({
-    what: "Understand and control how websites and mobile apps determine your physical location.",
-    when: "Review when you want to avoid unwanted tracking of your physical movements by websites or advertising networks.",
+    what: "Control how websites and advertising networks determine your physical location.",
     howSteps: [
-      "Distinguish browser Geolocation API permissions from IP-based geographic estimates.",
-      "Follow the OS-specific steps below to disable broad location access.",
-      "Add Ask exceptions only for trusted map and navigation websites.",
+      "Review your browser's location permission settings.",
+      "Follow the OS-specific steps below to disable broad GPS access.",
+      "Add exceptions only for trusted maps or navigation services.",
     ],
-    limits: [
-      "Blocking browser geolocation stops exact GPS coordinates, but websites can still estimate your city from your public IP address.",
-      "NXTL eSIM provides a London internet exit which can obscure your local travel country from IP geolocation.",
-    ],
+    limit: "Blocking browser GPS stops exact coordinates, but websites can still estimate your approximate city from your public IP address.",
   });
 
-  return h("div", { class: "grid" }, [
-    h("h1", {}, ["Location privacy"]),
+  root.append(
+    header,
     intro,
     h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
       perm,
-      field("Show steps for your device", os),
+      field("Device or browser", os),
       out,
     ]),
-  ]);
+  );
+  return root;
 }
 
 // ----------------------------------------------------
 // NXTL eSIM
 // ----------------------------------------------------
 export function pageEsim(): HTMLElement {
-  const routing = explainNxtlRouting();
-  const compat = esimCompatibilityGuidance();
-  const setup = esimSetupSteps();
-  const country = h("input", { type: "text", value: "Lithuania" });
-  const rates = h("div");
-  const button = h("button", { class: "primary", type: "button" }, [
-    createIcon("search", 18),
+  const root = h("div", { class: "grid" });
+
+  const header = h("div", {}, [
+    h("h1", {}, ["NXTL eSIM"]),
+    h("p", { class: "lede" }, ["International mobile data with a privacy-preserving London internet exit."]),
+  ]);
+
+  const country = h("input", { type: "text", value: "Lithuania", "aria-label": "Country name" });
+  const rates = h("div", { style: "margin-top: var(--sp-3);" });
+  const button = h("button", { class: "btn primary sm", type: "button" }, [
+    createIcon("search", 16),
     "Look up rates",
   ]);
 
   button.addEventListener("click", async () => {
+    button.disabled = true;
+    button.textContent = "Checking...";
     try {
       const response = await fetch(NXTL_LINKS.pricingApi, { credentials: "omit" });
       if (!response.ok) throw new Error(String(response.status));
       const payload = await response.json();
       const result = explainRates(country.value, payload, new Date().toISOString());
-      rates.replaceChildren(
-        h("section", { class: "card", "data-testid": "verdict" }, [
-          h("h2", {}, [result.status === "ok" ? `${result.country}` : result.status.replaceAll("_", " ")]),
-          h("p", {}, [
-            result.status === "ok"
-              ? `${result.minEurPerGb}–${result.maxEurPerGb} EUR per GB. Display strings from this response: ${result.minDisplay ?? "n/a"} – ${result.maxDisplay ?? "n/a"}.`
-              : result.note,
+      if (result.status === "ok") {
+        rates.replaceChildren(
+          h("div", { class: "card result-card ok", "data-testid": "verdict" }, [
+            h("h3", {}, [result.country ?? country.value]),
+            h("p", { style: "font-size: 1.25rem; font-weight: 700; color: var(--accent-coral);" }, [
+              `From €${result.minEurPerGb}/GB`,
+            ]),
+            h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
+              h("a", { class: "btn primary sm", href: NXTL_LINKS.pricing, target: "_blank", rel: "noreferrer" }, [
+                "See plans",
+                createIcon("external", 14),
+              ]),
+            ]),
           ]),
-          h("p", { class: "muted" }, [`Retrieved ${result.retrievedAt}. Source ${result.sourceUrl}. ${result.note}`]),
-        ]),
-      );
+        );
+      } else {
+        rates.replaceChildren(
+          h("p", { class: "muted" }, [`Rates not available for ${country.value}. Check nxtlsim.com for all supported destinations.`]),
+        );
+      }
     } catch {
-      const result = explainRates(country.value, null, new Date().toISOString(), "The pricing endpoint could not be read.");
-      rates.replaceChildren(h("p", { class: "banner" }, [result.note]));
+      rates.replaceChildren(
+        h("p", { class: "muted" }, ["Rates could not be loaded right now. Visit nxtlsim.com to view plans."]),
+      );
+    } finally {
+      button.disabled = false;
+      button.replaceChildren(createIcon("search", 16), "Look up rates");
     }
   });
 
-  return h("div", { class: "grid" }, [
-    h("h1", {}, ["NXTL eSIM"]),
-    h("p", { class: "lede" }, [routing.summary]),
-    h("section", { class: "card" }, [
-      h("h2", {}, ["London exit & travel privacy"]),
-      ...routing.points.map((point) => h("p", {}, [point])),
-      h("p", {}, [h("a", { class: "btn sm", href: routing.sourceUrl }, ["NXTL routing details", createIcon("arrow-right", 14)])]),
-    ]),
-    h("section", { class: "card" }, [
-      h("h2", {}, ["Already have NXTL?"]),
-      ...setup.alreadyHave.map((step) => h("p", {}, [step])),
-      h("p", { class: "mono", style: "padding: var(--sp-2); background: var(--raised);" }, [setup.apn]),
-      ...setup.platforms.map((item) => h("p", {}, [`${item.os}: ${item.steps}`])),
-      h("p", { class: "muted" }, [setup.cannotVerify]),
-      h("a", { class: "btn sm", href: NXTL_LINKS.account }, ["My Account", createIcon("external", 14)]),
-    ]),
-    h("section", { class: "card" }, [
-      h("h2", {}, ["Compatibility"]),
-      h("p", {}, [compat.summary]),
-      h("p", { class: "muted" }, [compat.uncertainty]),
-      h("p", {}, [compat.iphoneLockCheck]),
-      h("a", { class: "btn sm", href: compat.links.checker }, ["Open compatibility checker", createIcon("external", 14)]),
-    ]),
-    h("section", { class: "card" }, [
-      h("h2", {}, ["Coverage and rates"]),
-      h("p", { class: "muted" }, ["Live EUR per GB from the public pricing API. Optional. Buying data does not change Shield."]),
-      field("Country name", country),
-      button,
-      rates,
-      h("a", { class: "btn sm ghost", href: NXTL_LINKS.tripBudget }, ["Trip data budget", createIcon("external", 14)]),
+  const routing = explainNxtlRouting();
+
+  const card = h("section", { class: "card" }, [
+    h("h2", {}, ["London exit & travel privacy"]),
+    ...routing.points.map((point) => h("p", { class: "muted" }, [point])),
+    h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+      h("a", { class: "btn primary", href: NXTL_LINKS.pricing, target: "_blank", rel: "noreferrer" }, [
+        "See eSIM plans",
+        createIcon("external", 16),
+      ]),
     ]),
   ]);
+
+  const ratesCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
+    h("h2", {}, ["Coverage and rates"]),
+    h("p", { class: "muted" }, ["Look up per-GB rates for any travel destination:"]),
+    h("div", { class: "row", style: "gap: var(--sp-2);" }, [country, button]),
+    rates,
+  ]);
+
+  root.append(header, card, ratesCard);
+  return root;
 }
 
 // ----------------------------------------------------
 // PROTECTION SETUP & SAFE DNS
 // ----------------------------------------------------
 export async function pageSetup(): Promise<HTMLElement> {
-  const ext = await queryExtension();
-  const device = /iPhone|iPad/.test(navigator.userAgent)
-    ? "Apple"
-    : /Android/.test(navigator.userAgent)
-      ? "Android"
-      : /Windows/.test(navigator.userAgent)
-        ? "Windows"
-        : /Mac/.test(navigator.userAgent)
-          ? "Mac"
-          : "this computer";
+  const root = h("div", { class: "grid" });
+  const device = detectDevice();
 
-  const root = h("div", { class: "grid" }, [
-    h("h1", {}, ["Protection setup"]),
+  const header = h("div", {}, [
+    h("h1", {}, ["Safe DNS Setup"]),
     h("p", { class: "lede" }, [
-      `Steps below include ${device}. Pick a resolver, then use the matching section. Nothing here turns on until you install it.`,
+      "Block ads, trackers, and malicious scam links across your entire phone, tablet, or computer.",
     ]),
   ]);
 
-  const engine = h("section", { class: "card" }, [h("h2", {}, ["This browser"])]);
-  if (!ext) {
-    engine.append(
-      h("p", { "data-testid": "extension-status", class: "pill neutral" }, ["Extension: not detected."]),
-      h("p", {}, ["There is no on/off switch here, because this page cannot see an engine. Load the extension from a release zip, then come back."]),
-      h("p", { class: "muted" }, [
-        "Chrome, Edge, and other Chromium browsers: chrome://extensions → Developer mode → Load unpacked → the chromium folder. Firefox needs a signed XPI for a normal release install. The unsigned build can be temporary-loaded for development.",
-      ]),
-      h("a", { class: "btn sm", href: "#/extension" }, ["Extension guide", createIcon("arrow-right", 14)]),
-    );
-  } else {
-    engine.append(
-      h("p", { "data-testid": "extension-status", class: "pill ok" }, [
-        createIcon("shield-check", 14),
-        "Extension: detected. Switches below read the rulesets back after each change.",
-      ]),
-    );
-    engine.append(toggle("Threat blocking", ext.blockingEnabled, "blocking"));
-    engine.append(toggle("Tracker domains", ext.trackersEnabled, "trackers"));
-    engine.append(toggle("URL cleaning", ext.cleaningEnabled, "cleaning"));
-    engine.append(toggle("Hide cookie banners (does not reject consent)", ext.cosmeticEnabled, "cosmetic"));
+  // Resolver Selector
+  const select = h("select", { "aria-label": "Select protection profile" });
+  for (const resolver of RESOLVERS) {
+    const opt = h("option", { value: resolver.id }, [resolver.name]);
+    if (resolver.id === "adguard-default") opt.setAttribute("selected", "selected");
+    select.append(opt);
+  }
 
-    const pause = h("button", { type: "button", class: "btn sm" }, ["Pause blocking and cleaning for 5 minutes"]);
-    pause.addEventListener("click", async () => {
-      await commandExtension("pause", { durationMs: 5 * 60 * 1000 });
-      location.reload();
-    });
+  const resolverCard = h("section", { class: "card", style: "background: var(--raised);" }, [
+    h("h2", { style: "font-size: 1.15rem; margin-bottom: var(--sp-2);" }, ["Choose your protection level"]),
+    field("Protection profile", select),
+  ]);
 
-    const resume = h("button", { type: "button", class: "btn sm primary" }, ["Resume"]);
-    resume.addEventListener("click", async () => {
-      await commandExtension("resume");
-      location.reload();
-    });
+  // Device Tabs
+  type DeviceTab = "windows" | "android" | "ios" | "mac" | "linux";
+  let activeTab: DeviceTab =
+    device.os === "windows"
+      ? "windows"
+      : device.os === "android"
+        ? "android"
+        : device.os === "ios"
+          ? "ios"
+          : device.os === "mac"
+            ? "mac"
+            : "windows";
 
-    engine.append(
-      h("p", { class: "muted", style: "margin-top: var(--sp-3);" }, [
-        ext.paused ? "Paused." : "Not paused. Pause does not change location settings or DNS.",
-      ]),
-      h("div", { class: "row" }, [pause, resume]),
-    );
+  const tabContainer = h("div", { class: "tab-bar", role: "tablist", style: "margin-top: var(--sp-4);" });
+  const tabs: [DeviceTab, string, IconName][] = [
+    ["windows", "Windows", "desktop"],
+    ["android", "Android", "android"],
+    ["ios", "iPhone & iPad", "apple"],
+    ["mac", "macOS", "apple"],
+    ["linux", "Linux", "desktop"],
+  ];
 
-    if (ext.locationSupported) {
-      engine.append(h("h3", { style: "margin-top: var(--sp-4);" }, ["Location in this browser"]));
-      engine.append(h("p", {}, [`Engine setting for a normal https site: ${ext.locationSetting}. Managed by Shield: ${ext.locationManaged ? "yes" : "no"}.`]));
-      const block = h("button", { type: "button", class: "btn sm" }, ["Block location by default"]);
-      block.addEventListener("click", async () => {
-        await commandExtension("locationBlock");
-        location.reload();
+  const tabButtons: Map<DeviceTab, HTMLButtonElement> = new Map();
+  for (const [id, label, icon] of tabs) {
+    const btn = h("button", {
+      type: "button",
+      class: "tab-btn",
+      role: "tab",
+      "aria-selected": activeTab === id ? "true" : "false",
+    }, [createIcon(icon, 18), label]) as HTMLButtonElement;
+    tabButtons.set(id, btn);
+    tabContainer.append(btn);
+  }
+
+  const contentArea = h("div", { style: "margin-top: var(--sp-4);" });
+
+  function renderDeviceTab() {
+    for (const [id, btn] of tabButtons) {
+      btn.setAttribute("aria-selected", activeTab === id ? "true" : "false");
+    }
+
+    const resolverId = (select as HTMLSelectElement).value;
+    const resolver = RESOLVERS.find((r) => r.id === resolverId) ?? RESOLVERS[0];
+
+    if (activeTab === "windows") {
+      contentArea.replaceChildren(
+        h("section", { class: "card" }, [
+          h("div", { class: "row", style: "align-items: center; justify-content: space-between; margin-bottom: var(--sp-3);" }, [
+            h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
+              createIcon("desktop", 24),
+              h("h2", { style: "margin: 0;" }, ["Windows 1-Click Setup"]),
+            ]),
+            h("span", { class: "pill ok" }, ["Reversible anytime"]),
+          ]),
+          h("p", { class: "muted" }, [
+            "Sets encrypted Safe DNS for your active network adapter and configures Chrome and Edge secure DNS policies.",
+          ]),
+          h("div", { style: "margin: var(--sp-4) 0;" }, [
+            h("a", {
+              class: "btn primary lg",
+              href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-windows-dns.cmd`,
+              download: "nxtl-shield-windows-dns.cmd",
+            }, [
+              createIcon("download", 20),
+              "Download Windows setup",
+            ]),
+          ]),
+          h("ol", { class: "stepper-list" }, [
+            h("li", {}, ["Download the setup file above."]),
+            h("li", {}, ["Right-click and select Run as administrator (or double-click and allow UAC prompt)."]),
+            h("li", {}, ["Restart your browser. Your PC is now protected!"]),
+          ]),
+          h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--line);" }, [
+            h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
+              h("a", {
+                class: "btn sm ghost",
+                href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-browser-dns-undo.reg`,
+                download: "nxtl-shield-browser-dns-undo.reg",
+              }, [
+                createIcon("refresh", 14),
+                "Download Undo script",
+              ]),
+              h("a", {
+                class: "btn sm ghost",
+                href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-browser-dns.reg`,
+                download: "nxtl-shield-browser-dns.reg",
+              }, [
+                createIcon("file", 14),
+                "Browser policy (.reg) only",
+              ]),
+            ]),
+            h("a", {
+              class: "btn sm",
+              href: resolver.verifyUrl ?? "https://adguard.com/en/test.html",
+              target: "_blank",
+              rel: "noreferrer",
+            }, [
+              createIcon("check", 14),
+              "Check it worked",
+            ]),
+          ]),
+        ]),
+      );
+    } else if (activeTab === "android") {
+      const copyBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy hostname"]);
+      copyBtn.addEventListener("click", () => {
+        copyToClipboard(resolver.dotHost, copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
       });
-      const restore = h("button", { type: "button", class: "btn sm" }, ["Restore location settings"]);
-      restore.addEventListener("click", async () => {
-        await commandExtension("locationRestore");
-        location.reload();
+
+      contentArea.replaceChildren(
+        h("section", { class: "card" }, [
+          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
+            createIcon("android", 28),
+            h("h2", { style: "margin: 0;" }, ["Android: Private DNS"]),
+          ]),
+          h("p", { class: "muted" }, [
+            "Encrypted DNS protection for Android 9 and newer. Filters connections across Chrome, Samsung Internet, and background apps.",
+          ]),
+          h("ol", { class: "stepper-list" }, [
+            h("li", {}, ["Open Settings → Network & internet (or Connections) → Private DNS."]),
+            h("li", {}, ["Select Private DNS provider hostname."]),
+            h("li", {}, [
+              h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+                h("span", {}, ["Enter this hostname:"]),
+                h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, [resolver.dotHost]),
+                h("div", { class: "row" }, [copyBtn]),
+              ]),
+            ]),
+            h("li", {}, ["Tap Save. All internet lookups are now protected."]),
+          ]),
+          h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+            h("a", {
+              class: "btn",
+              href: resolver.verifyUrl ?? "https://adguard.com/en/test.html",
+              target: "_blank",
+              rel: "noreferrer",
+            }, [
+              createIcon("check", 16),
+              "Check it worked",
+            ]),
+          ]),
+        ]),
+      );
+    } else if (activeTab === "ios") {
+      const profile = buildMobileconfig(resolver.id);
+      const downloadBtn = h("button", { class: "btn primary", type: "button" }, [
+        createIcon("download", 18),
+        "Download Apple profile",
+      ]);
+      downloadBtn.addEventListener("click", () => {
+        const blob = new Blob([profile.plist], { type: "application/x-apple-aspen-config" });
+        const url = URL.createObjectURL(blob);
+        const a = h("a", { href: url, download: profile.filename }, ["profile"]);
+        a.click();
+        URL.revokeObjectURL(url);
       });
-      const originInput = h("input", { type: "text", placeholder: "https://www.google.com/maps" });
-      const add = h("button", { type: "button", class: "primary sm" }, ["Add Ask exception"]);
-      add.addEventListener("click", async () => {
-        await commandExtension("locationException", { url: originInput.value, setting: "ask" });
-        location.reload();
+
+      contentArea.replaceChildren(
+        h("section", { class: "card" }, [
+          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
+            createIcon("apple", 28),
+            h("h2", { style: "margin: 0;" }, ["iPhone & iPad: Safe DNS Profile"]),
+          ]),
+          h("p", { class: "muted" }, [
+            "Apple iOS natively supports encrypted DNS configuration profiles for Safari and all apps.",
+          ]),
+          h("ol", { class: "stepper-list" }, [
+            h("li", {}, [
+              h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+                h("span", {}, ["Download the official Apple profile:"]),
+                h("div", { class: "row" }, [downloadBtn]),
+              ]),
+            ]),
+            h("li", {}, ["Open Settings on your iPhone or iPad."]),
+            h("li", {}, ["Tap Profile Downloaded near the top."]),
+            h("li", {}, ["Tap Install in the top right and enter your passcode."]),
+          ]),
+          h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+            h("a", {
+              class: "btn",
+              href: resolver.verifyUrl ?? "https://adguard.com/en/test.html",
+              target: "_blank",
+              rel: "noreferrer",
+            }, [
+              createIcon("check", 16),
+              "Check it worked",
+            ]),
+          ]),
+        ]),
+      );
+    } else if (activeTab === "mac") {
+      const profile = buildMobileconfig(resolver.id);
+      const downloadBtn = h("button", { class: "btn primary", type: "button" }, [
+        createIcon("download", 18),
+        "Download macOS profile",
+      ]);
+      downloadBtn.addEventListener("click", () => {
+        const blob = new Blob([profile.plist], { type: "application/x-apple-aspen-config" });
+        const url = URL.createObjectURL(blob);
+        const a = h("a", { href: url, download: profile.filename }, ["profile"]);
+        a.click();
+        URL.revokeObjectURL(url);
       });
-      engine.append(
-        h("div", { class: "row", style: "margin-bottom: var(--sp-3);" }, [block, restore]),
-        field("Map or site URL", originInput),
-        add,
+
+      contentArea.replaceChildren(
+        h("section", { class: "card" }, [
+          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
+            createIcon("apple", 28),
+            h("h2", { style: "margin: 0;" }, ["macOS: Safe DNS Profile"]),
+          ]),
+          h("p", { class: "muted" }, [
+            "macOS supports encrypted DNS system-wide via signed configuration profiles.",
+          ]),
+          h("ol", { class: "stepper-list" }, [
+            h("li", {}, [
+              h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+                h("span", {}, ["Download the profile:"]),
+                h("div", { class: "row" }, [downloadBtn]),
+              ]),
+            ]),
+            h("li", {}, ["Double-click the downloaded profile in Finder."]),
+            h("li", {}, ["Open System Settings → Privacy & Security → Profiles and click Install."]),
+          ]),
+          h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+            h("a", {
+              class: "btn",
+              href: resolver.verifyUrl ?? "https://adguard.com/en/test.html",
+              target: "_blank",
+              rel: "noreferrer",
+            }, [
+              createIcon("check", 16),
+              "Check it worked",
+            ]),
+          ]),
+        ]),
       );
     } else {
-      engine.append(h("p", { class: "muted" }, ["Location control is unsupported in this browser's extension."]));
+      // Linux
+      const copyDohBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy DoH URL"]);
+      copyDohBtn.addEventListener("click", () => {
+        copyToClipboard(resolver.dohUrl, copyDohBtn, [createIcon("copy", 16), "Copy DoH URL"], "Copied DoH URL!");
+      });
+
+      contentArea.replaceChildren(
+        h("section", { class: "card" }, [
+          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
+            createIcon("desktop", 28),
+            h("h2", { style: "margin: 0;" }, ["Linux: systemd-resolved or DoH"]),
+          ]),
+          h("p", { class: "muted" }, [
+            "Configure your Linux distribution's DNS resolver or browser with the secure DNS endpoint below:",
+          ]),
+          h("ol", { class: "stepper-list" }, [
+            h("li", {}, [
+              h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+                h("span", {}, ["DNS over HTTPS URL:"]),
+                h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, [resolver.dohUrl]),
+                h("div", { class: "row" }, [copyDohBtn]),
+              ]),
+            ]),
+            h("li", {}, ["In /etc/systemd/resolved.conf or NetworkManager, set the DNS address."]),
+            h("li", {}, ["Restart systemd-resolved: sudo systemctl restart systemd-resolved"]),
+          ]),
+          h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
+            h("a", {
+              class: "btn",
+              href: resolver.verifyUrl ?? "https://adguard.com/en/test.html",
+              target: "_blank",
+              rel: "noreferrer",
+            }, [
+              createIcon("check", 16),
+              "Check it worked",
+            ]),
+          ]),
+        ]),
+      );
     }
   }
-  root.append(engine);
 
-  // Safe DNS Section
-  const select = h("select", {});
-  for (const resolver of RESOLVERS) select.append(option(resolver.id, resolver.name));
-  const dnsOut = h("div");
-
-  function renderDns() {
-    const id = (select as HTMLSelectElement).value;
-    const resolver = RESOLVERS.find((item) => item.id === id)!;
-    const profile = buildMobileconfig(id);
-
-    const download = h("button", { type: "button", class: "primary" }, [
-      createIcon("download", 18),
-      "Download Apple profile",
-    ]);
-    download.addEventListener("click", () => {
-      const blob = new Blob([profile.plist], { type: "application/x-apple-aspen-config" });
-      const url = URL.createObjectURL(blob);
-      const anchor = h("a", { href: url, download: profile.filename }, ["profile"]);
-      anchor.click();
-      URL.revokeObjectURL(url);
+  for (const [id, btn] of tabButtons) {
+    btn.addEventListener("click", () => {
+      activeTab = id;
+      renderDeviceTab();
     });
-
-    const copy = h("button", { type: "button", class: "btn" }, [
-      createIcon("copy", 18),
-      "Copy Android hostname",
-    ]);
-    copy.addEventListener("click", () => {
-      navigator.clipboard.writeText(resolver.dotHost).catch(() => undefined);
-      copy.textContent = "Copied hostname!";
-      setTimeout(() => {
-        copy.replaceChildren(createIcon("copy", 18), "Copy Android hostname");
-      }, 2000);
-    });
-
-    const paste = h("textarea", { placeholder: "Paste the provider check page text here to verify..." });
-    const verdict = h("p", { class: "banner" });
-    const judge = h("button", { type: "button", class: "primary sm" }, [
-      createIcon("check", 16),
-      "Read pasted check",
-    ]);
-    judge.addEventListener("click", () => {
-      const result = interpretDnsCheckPaste(id, paste.value);
-      verdict.textContent = `${result.verdict.replaceAll("_", " ")}: ${result.summary}`;
-    });
-
-    dnsOut.replaceChildren(
-      h("p", { style: "font-weight: 600;" }, [`Blocks: ${resolver.blocks}`]),
-      h("p", { class: "muted" }, [resolver.bundling]),
-      h("p", {}, [
-        h("a", { href: resolver.privacyUrl, target: "_blank", rel: "noreferrer" }, ["Privacy policy"]),
-        resolver.verifyUrl ? " · " : "",
-        resolver.verifyUrl ? h("a", { href: resolver.verifyUrl, target: "_blank", rel: "noreferrer" }, ["Provider check page"]) : "No verified check URL.",
-      ]),
-      h("div", { class: "row", style: "margin: var(--sp-4) 0;" }, [download, copy]),
-      h("h3", {}, ["Android setup"]),
-      ...androidPrivateDnsSteps(id).steps.map((step) => h("p", {}, [step])),
-      h("h3", { style: "margin-top: var(--sp-4);" }, ["Apple removal and deprecation"]),
-      ...appleRemovalSteps().map((step) => h("p", {}, [step])),
-      ...profile.notes.map((note) => h("p", { class: "muted-soft" }, [note])),
-      h("h3", { style: "margin-top: var(--sp-4);" }, ["Windows 11 setup"]),
-      ...windowsDohSteps(id).steps.map((step) => h("p", {}, [step])),
-      h("h3", { style: "margin-top: var(--sp-4);" }, ["Chrome browser Secure DNS"]),
-      ...chromeSecureDnsSteps(id).steps.map((step) => h("p", {}, [step])),
-      h("h3", { style: "margin-top: var(--sp-4);" }, ["Firefox browser DoH"]),
-      ...firefoxDohSteps(id).steps.map((step) => h("p", {}, [step])),
-      field("Verify DNS: Paste check page text", paste),
-      judge,
-      verdict,
-    );
   }
 
-  select.addEventListener("change", renderDns);
-  renderDns();
+  select.addEventListener("change", renderDeviceTab);
+  renderDeviceTab();
 
-  root.append(
-    h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
-      h("h2", {}, ["Device DNS"]),
-      h("p", { class: "muted" }, [
-        "You choose the resolver. Shield does not run one, and a download is not an installed profile.",
-      ]),
-      field("Select Safe DNS Provider", select),
-      dnsOut,
+  // Paste verification section
+  const pasteBox = h("section", { class: "card", style: "margin-top: var(--sp-6);" }, [
+    h("h2", {}, ["Verify Safe DNS"]),
+    h("p", { class: "muted" }, [
+      "Open your provider's test page above. If it shows verification text, you can paste it here to confirm your protection.",
     ]),
-  );
+  ]);
+  const pasteInput = h("textarea", { placeholder: "Paste the text from the test page here..." });
+  const judgeBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("check", 16), "Read pasted check"]);
+  const pasteResult = h("div", { style: "margin-top: var(--sp-3);" });
+
+  judgeBtn.addEventListener("click", () => {
+    const resolverId = (select as HTMLSelectElement).value;
+    const res = interpretDnsCheckPaste(resolverId, pasteInput.value);
+    pasteResult.replaceChildren(
+      h("div", { class: `pill ${res.verdict === "verified" ? "ok" : res.verdict === "not_verified" ? "alert" : "neutral"}` }, [
+        res.summary,
+      ]),
+    );
+  });
+
+  pasteBox.append(field("Pasted verification text", pasteInput), judgeBtn, pasteResult);
+
+  root.append(header, resolverCard, tabContainer, contentArea, pasteBox);
   return root;
 }
 
-function toggle(label: string, on: boolean, key: string) {
-  const input = h("input", { type: "checkbox" });
-  (input as HTMLInputElement).checked = on;
-  input.addEventListener("change", async () => {
-    const status = await commandExtension("setToggle", { key, enabled: (input as HTMLInputElement).checked });
-    if (!status) (input as HTMLInputElement).checked = on;
-  });
-  return h("label", { class: "row", style: "min-height: 44px;" }, [input, ` ${label}`]);
-}
-
 // ----------------------------------------------------
-// CAPABILITY STATUS & SOURCES
+// STATUS & CAPABILITIES
 // ----------------------------------------------------
 export function pageStatus(): HTMLElement {
   const list = h("div", { class: "grid" });
@@ -1768,7 +2208,6 @@ export function pageStatus(): HTMLElement {
       h("article", { class: "card" }, [
         h("h2", { style: "font-size: 1.15rem;" }, [`${item.id}. ${item.name}`]),
         h("p", { class: "pill ok" }, [item.userStatus.replaceAll("_", " ")]),
-        h("p", { class: "muted" }, [item.implementationStatus]),
         h("p", {}, [item.summary]),
         h("p", { class: "muted-soft" }, [item.limitations]),
       ]),
@@ -1799,9 +2238,9 @@ export function pageStatus(): HTMLElement {
 
   return h("div", { class: "grid" }, [
     h("h1", {}, ["Capability status"]),
-    h("p", { class: "lede" }, ["What this version can do, and what still needs setup or a native app."]),
+    h("p", { class: "lede" }, ["What this version can do, and what needs setup or the browser extension."]),
     list,
-    h("h2", { style: "margin-top: var(--sp-6);" }, ["Support matrix"]),
+    h("h2", { style: "margin-top: var(--sp-6);" }, ["Platform support"]),
     matrix,
     h("h2", { style: "margin-top: var(--sp-6);" }, ["Sources"]),
     sources,
@@ -1812,7 +2251,7 @@ export function pageStatus(): HTMLElement {
 // INSTALL PAGE
 // ----------------------------------------------------
 export function pageInstall(): HTMLElement {
-  const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
   let deferred: { prompt: () => Promise<void> } | null = null;
   const guideBox = h("div");
 
@@ -1826,12 +2265,11 @@ export function pageInstall(): HTMLElement {
       h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
         h("h2", {}, [guide.platform]),
         ...guide.steps.map((step) => h("p", {}, [step])),
-        ...guide.limits.map((step) => h("p", { class: "muted-soft" }, [step])),
       ]),
     );
   }
 
-  const button = h("button", { class: "primary lg", type: "button", "data-testid": "install-link" }, [
+  const button = h("button", { class: "btn primary lg", type: "button", "data-testid": "install-link" }, [
     createIcon("install", 20),
     "Install NXTL Shield",
   ]);
@@ -1848,15 +2286,15 @@ export function pageInstall(): HTMLElement {
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
-    deferred = event as unknown as { prompt: () => Promise<void> };
+    deferred = event as any;
     render();
   });
   render();
 
   return h("div", { class: "grid" }, [
-    h("h1", {}, ["Install"]),
+    h("h1", {}, ["Install NXTL Shield"]),
     h("p", { class: "lede" }, [
-      "Installing the page does not add native device protection, a device tunnel, or device DNS. Those are separate.",
+      "Install NXTL Shield to your home screen or desktop for fast, offline access anytime.",
     ]),
     h("div", { class: "row" }, [button]),
     guideBox,
@@ -1886,7 +2324,7 @@ export function pageSettings(): HTMLElement {
 
   const exportButton = h("button", { type: "button", class: "btn" }, [
     createIcon("download", 16),
-    "Export",
+    "Export reports",
   ]);
   exportButton.addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(loadReports(localStorage), null, 2)], { type: "application/json" });
@@ -1907,16 +2345,83 @@ export function pageSettings(): HTMLElement {
 
   render();
   return h("div", { class: "grid" }, [
-    h("h1", {}, ["Reports"]),
+    h("h1", {}, ["Saved reports"]),
     h("p", { class: "lede" }, [
-      "Only redacted summaries are kept in this browser. Passwords and file bytes are not.",
+      "Recent security checks saved locally in this browser. Passwords and file contents are never stored.",
     ]),
-    h("div", { class: "row" }, [exportButton, wipe]),
+    h("div", { class: "row", style: "gap: var(--sp-3); margin-bottom: var(--sp-4);" }, [exportButton, wipe]),
     list,
   ]);
 }
 
-function option(value: string, label: string) {
-  const el = h("option", { value }, [label]);
-  return el;
+// ----------------------------------------------------
+// HOW IT WORKS & PRIVACY
+// ----------------------------------------------------
+export function pagePrivacy(): HTMLElement {
+  const root = h("div", { class: "grid" });
+
+  const header = h("div", {}, [
+    h("h1", {}, ["How it works & privacy"]),
+    h("p", { class: "lede" }, [
+      "NXTL Shield is designed for zero-knowledge privacy: your links, messages, passwords, and files never leave your device.",
+    ]),
+  ]);
+
+  const privacyCard = h("section", { class: "card" }, [
+    h("h2", {}, ["Local, zero-knowledge processing"]),
+    h("p", {}, [
+      "All security checks run locally inside your web browser. When you check a link, scan a message, inspect a file, or generate a password, no data is sent to NXTL or any central server.",
+    ]),
+    h("p", { class: "muted" }, [
+      "There are no user accounts, no tracking cookies, no advertising beacons, and no telemetry.",
+    ]),
+  ]);
+
+  const sourcesCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
+    h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3);" }, [
+      h("h2", { style: "margin: 0;" }, ["Threat lists & sources"]),
+      h("span", { class: "pill ok" }, [`Lists updated: ${SNAPSHOT_MANIFEST.version}`]),
+    ]),
+    h("p", {}, [
+      "NXTL Shield bundles curated threat lists from trusted open-source security intelligence feeds. These are automatically updated and tested via scheduled builds:",
+    ]),
+    h("ul", { style: "line-height: 1.8; margin-left: var(--sp-4);" }, [
+      h("li", {}, [h("strong", {}, ["HaGeZi Multi PRO & TIF: "]), "High-confidence malicious domains, scam infrastructure, and tracking networks."]),
+      h("li", {}, [h("strong", {}, ["URLhaus / abuse.ch: "]), "Live verified malware distribution and ransomware domains."]),
+      h("li", {}, [h("strong", {}, ["AdGuard / EasyList: "]), "Advertising networks, analytics beacons, and cosmetic element filters."]),
+    ]),
+  ]);
+
+  const externalCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
+    h("h2", {}, ["External lookups (only when you click)"]),
+    h("p", {}, [
+      "Shield only touches the network when you explicitly trigger an external lookup:",
+    ]),
+    h("ul", { style: "line-height: 1.8; margin-left: var(--sp-4);" }, [
+      h("li", {}, [h("strong", {}, ["Password leak check: "]), "Uses k-anonymity to query api.pwnedpasswords.com with only the first 5 characters of the SHA-1 hash. Your password is never sent."]),
+      h("li", {}, [h("strong", {}, ["Connection Doctor: "]), "Queries api.ipify.org to display your public IP address only when you click 'Look up public IP'."]),
+      h("li", {}, [h("strong", {}, ["eSIM rates: "]), "Queries the nxtlsim.com pricing API when you look up rates for a destination."]),
+    ]),
+  ]);
+
+  const openSourceCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
+    h("h2", {}, ["Free & open source (GPLv3)"]),
+    h("p", {}, [
+      "NXTL Shield is 100% free software under the GNU General Public License v3.0. You can inspect every line of code, build it yourself, or contribute improvements.",
+    ]),
+    h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
+      h("a", {
+        class: "btn primary",
+        href: "https://github.com/nxtlsim/nxtl-shield",
+        target: "_blank",
+        rel: "noreferrer",
+      }, [
+        createIcon("external", 16),
+        "View source code on GitHub",
+      ]),
+    ]),
+  ]);
+
+  root.append(header, privacyCard, sourcesCard, externalCard, openSourceCard);
+  return root;
 }
