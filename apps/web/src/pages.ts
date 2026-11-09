@@ -877,10 +877,12 @@ export function pagePhoneProtection(): HTMLElement {
         copyToClipboard("dns.adguard-dns.com", copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
       });
 
-      const openSettingsBtn = h("a", {
-        class: "btn sm",
-        href: "intent:#Intent;action=android.settings.PRIVATE_DNS_SETTINGS;end",
-      }, [createIcon("arrow-right", 14), "Open Private DNS settings"]);
+      const openSettingsBtn = detectDevice().os === "android"
+        ? h("a", {
+            class: "btn sm",
+            href: "intent:#Intent;action=android.settings.PRIVATE_DNS_SETTINGS;end",
+          }, [createIcon("arrow-right", 14), "Open Private DNS settings"])
+        : "";
 
       contentArea.replaceChildren(
         h("section", { class: "card" }, [
@@ -2306,10 +2308,12 @@ export async function pageSetup(): Promise<HTMLElement> {
         copyToClipboard(resolver.dotHost, copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
       });
 
-      const openSettingsBtn = h("a", {
-        class: "btn sm",
-        href: "intent:#Intent;action=android.settings.PRIVATE_DNS_SETTINGS;end",
-      }, [createIcon("arrow-right", 14), "Open Private DNS settings"]);
+      const openSettingsBtn = detectDevice().os === "android"
+        ? h("a", {
+            class: "btn sm",
+            href: "intent:#Intent;action=android.settings.PRIVATE_DNS_SETTINGS;end",
+          }, [createIcon("arrow-right", 14), "Open Private DNS settings"])
+        : "";
 
       contentArea.replaceChildren(
         h("section", { class: "card" }, [
