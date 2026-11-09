@@ -1,0 +1,12 @@
+Windows Registry Editor Version 5.00
+
+; NXTL Shield - Restore Default Browser DNS
+; Removes the DNS-over-HTTPS policy settings for Google Chrome and Microsoft Edge.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+"DnsOverHttpsMode"=-
+"DnsOverHttpsTemplates"=-
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+"DnsOverHttpsMode"=-
+"DnsOverHttpsTemplates"=-
