@@ -14,7 +14,7 @@ const KEY =
 const shared = {
   manifest_version: 3,
   name: "NXTL Shield",
-  version: "0.1.1",
+  version: "0.2.0",
   description: "Free open-source browser protection by NXTL eSIM: known phishing and malware warnings, tracker blocking, link cleaning, and cookie-banner controls.",
   action: { default_popup: "popup.html", default_title: "NXTL Shield" },
   icons: { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" },
