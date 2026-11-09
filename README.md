@@ -58,7 +58,7 @@ Guidance and live rates for NXTL eSIM, an optional paid London-exit mobile conne
 | Chromium extension (threats, trackers, cleaning, location) | Works |
 | Firefox extension (threats, trackers, cleaning) | Works; location content setting unsupported |
 | Encrypted DNS profiles / Private DNS | Needs your setup steps |
-| Android native companion / call screening / antivirus | Not in this version |
+| Android native companion / call screening / malware content scan | Not in this version |
 
 Details: [docs/features.md](docs/features.md), [docs/support-matrix.md](docs/support-matrix.md).
 

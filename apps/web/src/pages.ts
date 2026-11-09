@@ -121,7 +121,7 @@ export async function pageHome(): Promise<HTMLElement> {
     ]),
     h("h1", {}, ["Check a link before you open it."]),
     h("p", { class: "lede" }, [
-      "Shield runs link, message, and file checks in this browser. Continuous blocking needs the extension or a DNS profile you install yourself. NXTL eSIM is an optional paid connection. It does not unlock Shield, and it is not shown as a VPN.",
+      "Shield runs link, message, and file checks in this browser. Continuous blocking needs the extension or a DNS profile you install yourself. NXTL eSIM is an optional paid connection and does not unlock Shield.",
     ]),
     h("div", { class: "row", style: "margin-bottom: var(--sp-5);" }, [
       h("a", { class: "btn primary lg", href: "#/check" }, [
@@ -532,7 +532,7 @@ export function pagePhoneProtection(): HTMLElement {
       "Step 3: Use Secure Share whenever you need to send passwords or sensitive documents.",
     ],
     limits: [
-      "Shield does not claim antivirus or app scanning on iOS/Android (mobile operating systems prohibit apps from scanning other apps).",
+      "Shield does not claim device-wide malware scanning on iOS/Android (mobile operating systems prohibit apps from scanning other apps).",
       "Safe DNS blocks known malicious domains; it cannot detect a new scam URL before it is listed.",
       "Location privacy settings must be configured in your phone's system settings.",
     ],
@@ -664,8 +664,8 @@ export function pagePhoneProtection(): HTMLElement {
       a: "No. Safe DNS uses standard DNS protocols already running on your phone, requiring zero extra background CPU cycles.",
     },
     {
-      q: "Is NXTL Shield an antivirus app?",
-      a: "No. Neither Android nor iOS allows third-party web apps to scan your device's memory or private app folders. Anyone claiming web-based antivirus on a phone is misleading you.",
+      q: "Does NXTL Shield scan my whole phone for malware?",
+      a: "No. Neither Android nor iOS allows third-party web apps to scan your device's memory or private app folders.",
     },
     {
       q: "Can I remove this at any time?",
@@ -695,8 +695,8 @@ export async function pageExtension(): Promise<HTMLElement> {
     ],
     limits: [
       "Protects only web pages opened inside that specific browser; does not filter traffic in external apps.",
-      "Threat lists are based on verified uAssets and HaGeZi snapshots; new zero-day threats may take time to be cataloged.",
-      "Does not provide a VPN or route your entire computer's internet connection.",
+      "Threat lists are bundled snapshots and are not auto-updated between releases; new threats may take time to appear.",
+      "Does not provide a network tunnel or route your entire computer's internet connection.",
     ],
   });
 
@@ -778,7 +778,7 @@ export async function pageExtension(): Promise<HTMLElement> {
       h("div", { class: "row", style: "margin: var(--sp-4) 0;" }, [
         h("a", {
           class: "btn primary lg",
-          href: "https://github.com/nxtlsim/nxtl-shield/releases/latest",
+          href: "https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-firefox.xpi",
           target: "_blank",
           rel: "noreferrer",
         }, [
@@ -812,7 +812,7 @@ export async function pageExtension(): Promise<HTMLElement> {
       h("div", { style: "margin: var(--sp-4) 0;" }, [
         h("a", {
           class: "btn primary lg",
-          href: "https://github.com/nxtlsim/nxtl-shield/releases/latest",
+          href: "https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-chromium.zip",
           target: "_blank",
           rel: "noreferrer",
         }, [
@@ -867,7 +867,7 @@ export async function pageCheck(tab = "link"): Promise<HTMLElement> {
     ],
     limits: [
       "Nothing you submit is uploaded or saved to any server; reputation checks run against the bundled local snapshot.",
-      "File inspection computes a cryptographic hash (SHA-256) locally; it is not a deep memory or antivirus scanner.",
+      "File inspection computes a cryptographic hash (SHA-256) locally; it is not a deep memory or malware content scanner.",
       "A 'clean' verdict indicates no match in known lists, but can never guarantee a brand-new threat is safe.",
     ],
   });
@@ -918,7 +918,7 @@ export async function pageCheck(tab = "link"): Promise<HTMLElement> {
     },
     {
       q: "How often are the threat lists updated?",
-      a: "Threat lists are updated with each release snapshot from verified sources like HaGeZi and uAssets badware.",
+      a: "Threat lists ship as a bundled snapshot with each release. See Sources for where they come from.",
     },
   ]);
   root.append(faqs);
@@ -1020,7 +1020,7 @@ function fileForm() {
     if (result.sha256) {
       card.append(h("p", { class: "mono", style: "margin-top: var(--sp-3);" }, [`SHA-256: ${result.sha256}`]));
     }
-    card.append(h("p", { class: "muted-soft" }, ["Not an antivirus or malware scan. The file was not uploaded."]));
+    card.append(h("p", { class: "muted-soft" }, ["Not a malware content scan. The file was not uploaded."]));
     out.replaceChildren(card);
   });
 
