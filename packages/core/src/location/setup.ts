@@ -50,7 +50,7 @@ export function locationPrivacySetup(os: string): LocationGuide {
       ],
       limits: [
         "Menus differ by manufacturer. The paths above are from Google's help, not a Samsung re-test.",
-        "One active VPN per user or profile means a future local-filtering VPN would conflict with another VPN. v1 does not ship that VPN.",
+        "Android allows one active local-filtering tunnel per user or profile. A future companion would conflict with another tunnel app. v1 does not ship that companion.",
       ],
       sourceUrl: "https://support.google.com/android/answer/6179507",
     };

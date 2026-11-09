@@ -173,7 +173,7 @@ export function checkText(input: string, reputation: Reputation, now = new Date(
     summary = "No link and no suspicious indicator were found in the paste. That is not proof the message is genuine.";
   }
   let uncertainty = "Heuristics miss new scams and can flag legitimate warnings. A result is a reason to pause, not a finding of guilt.";
-  if (reputation.stale) uncertainty += " Bundled lists are older than an upstream expiry hint and are not auto-updated.";
+  if (reputation.stale) uncertainty += " Bundled lists may be outdated and are not auto-updated.";
   const redactedUrls = urlVerdicts.map((item) => item.redacted).join(" ");
   return {
     verdict,

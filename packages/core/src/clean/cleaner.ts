@@ -195,7 +195,7 @@ function providerRules() {
 
 export function cleanUrl(input: string, now = new Date()): CleanResult {
   const scope =
-    "Local removal of a conservative tracking-parameter list, plus ClearURLs provider rules that do not match functional parameter names. Path rewriting is not applied. Signed, auth, and payment URLs are left unchanged.";
+    "Local removal of common tracking parameters. Signed, auth, and payment URLs are left unchanged. Path rewriting is not applied.";
   const base = {
     timestamp: now.toISOString(),
     transmission: "local" as const,

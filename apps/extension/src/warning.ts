@@ -27,7 +27,7 @@ async function main() {
     if (title) title.textContent = "NXTL Shield test rule";
     if (why) why.textContent = `${TEST} is a synthetic name used to test this extension. It is not a real-world threat listing.`;
   } else if (why) {
-    why.textContent = "This address matched the bundled threat ruleset (a size-capped copy of the uAssets badware and HaGeZi TIF snapshots). That is a list match, not a certification. Lists can be stale.";
+    why.textContent = "This address matched the bundled threat ruleset. That is a list match, not a certification. Lists can be outdated.";
   }
   document.querySelector("#back")?.addEventListener("click", () => history.length > 1 ? history.back() : window.close());
   document.querySelector("#once")?.addEventListener("click", () => chrome.runtime.sendMessage({ type: "proceedOnce", url }));

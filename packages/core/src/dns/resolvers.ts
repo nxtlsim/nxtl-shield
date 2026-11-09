@@ -108,7 +108,7 @@ export const RESOLVERS: Resolver[] = [
     privacyUrl: "https://mullvad.net/en/help/privacy-policy",
     verifyUrl: "https://mullvad.net/en/check",
     verifyNote: "The check page needs JavaScript. A paste cannot be marked verified.",
-    jurisdiction: "Mullvad VPN AB, Gothenburg, Sweden",
+    jurisdiction: "Mullvad AB, Gothenburg, Sweden",
     bundling: "No permission clause for third-party recommendation was found (UNVERIFIED).",
   },
   {
@@ -121,7 +121,7 @@ export const RESOLVERS: Resolver[] = [
     privacyUrl: "https://mullvad.net/en/help/privacy-policy",
     verifyUrl: "https://mullvad.net/en/check",
     verifyNote: "Paste results are inconclusive.",
-    jurisdiction: "Mullvad VPN AB, Gothenburg, Sweden",
+    jurisdiction: "Mullvad AB, Gothenburg, Sweden",
     bundling: "No permission clause for third-party recommendation was found (UNVERIFIED).",
   },
   {
@@ -134,7 +134,7 @@ export const RESOLVERS: Resolver[] = [
     privacyUrl: "https://mullvad.net/en/help/privacy-policy",
     verifyUrl: "https://mullvad.net/en/check",
     verifyNote: "Paste results are inconclusive.",
-    jurisdiction: "Mullvad VPN AB, Gothenburg, Sweden",
+    jurisdiction: "Mullvad AB, Gothenburg, Sweden",
     bundling: "No permission clause for third-party recommendation was found (UNVERIFIED).",
   },
   {

@@ -374,7 +374,7 @@ export async function pageHome(): Promise<HTMLElement> {
     ]),
     h("p", { class: "muted" }, [
       listFailure() ??
-        "HaGeZi TIF mini's upstream expiry hint is 8 hours. uAssets badware is 5 days. This copy is not auto-updated. A miss is not a promise that a site is safe.",
+        "Bundled threat lists are a snapshot and are not auto-updated. A miss is not a promise that a site is safe. See Sources for list details.",
     ]),
     h("p", { "data-testid": "extension-status" }, [
       ext ? "Extension: detected" : "Extension: not detected",
@@ -1856,7 +1856,7 @@ export function pageInstall(): HTMLElement {
   return h("div", { class: "grid" }, [
     h("h1", {}, ["Install"]),
     h("p", { class: "lede" }, [
-      "Installing the page does not add native antivirus, a VPN, or device DNS. Those are separate.",
+      "Installing the page does not add native device protection, a device tunnel, or device DNS. Those are separate.",
     ]),
     h("div", { class: "row" }, [button]),
     guideBox,

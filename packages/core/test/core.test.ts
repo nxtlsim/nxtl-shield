@@ -296,10 +296,10 @@ describe("text, files, dns, origin, eSIM", () => {
     expect(other.origin).not.toBe(maps.origin);
   });
 
-  it("explains routing without claiming a VPN connection, and rates need a payload", () => {
+  it("explains routing without claiming a tunnel connection, and rates need a payload", () => {
     const routing = explainNxtlRouting();
     expect(routing.summary).toContain("London");
-    expect(routing.summary.toLowerCase()).not.toContain("vpn connected");
+    expect(routing.summary.toLowerCase()).not.toMatch(/\bvpn\b/);
     expect(routing.points.join(" ").toLowerCase()).not.toContain("encrypts your traffic");
     expect(routing.points.join(" ")).not.toContain("no-logs");
     const missing = explainRates("Lithuania", null, null, "offline");

@@ -256,10 +256,10 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
     push(evidence, {
       id: "list-tif",
       title: "Threat-list match",
-      detail: `${listMatch.matchedHost} is on the bundled HaGeZi TIF mini host snapshot (retrieved ${reputation.retrieved}, version ${reputation.version}). Aggregated inputs have their own terms, which were UNVERIFIED per input. This is a list match, not a courtroom finding.`,
+      detail: `${listMatch.matchedHost} matched a bundled threat host list (retrieved ${reputation.retrieved}, version ${reputation.version}). This is a list match, not a courtroom finding.`,
       severity: "match",
       source: {
-        name: "HaGeZi TIF mini",
+        name: "Bundled threat hosts",
         retrieved: reputation.retrieved,
         licence: "GPL-3.0",
       },
@@ -268,10 +268,10 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
     push(evidence, {
       id: "list-badware",
       title: "Badware-risk list match",
-      detail: `${listMatch.matchedHost} is on the bundled uBlock badware-risk snapshot (${listMatch.tag === "doc" ? "upstream rule is document-level" : "host anchor"}). Those entries are sites documented as adware, crapware, or credential risk. Retrieved ${reputation.retrieved}.`,
+      detail: `${listMatch.matchedHost} matched a bundled badware-risk host list (${listMatch.tag === "doc" ? "document-level rule" : "host rule"}). Retrieved ${reputation.retrieved}.`,
       severity: "match",
       source: {
-        name: "uBlock uAssets badware",
+        name: "Bundled badware hosts",
         retrieved: reputation.retrieved,
         licence: "GPL-3.0",
       },
@@ -318,7 +318,7 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
 
   let uncertainty = "A short or new address can be dangerous with no indicator. A list miss is not a promise that the page is safe.";
   if (reputation.stale) {
-    uncertainty += " The bundled snapshot is older than at least one upstream expiry hint (HaGeZi TIF mini is 8 hours). It is not auto-updated in v1.";
+    uncertainty += " The bundled list snapshot may be outdated and is not auto-updated.";
   }
   if (allowlisted && listMatch) {
     uncertainty += " This host is also on the supplied allowlist. An extension following that allowlist would not block it. The list match is still shown.";

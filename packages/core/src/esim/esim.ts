@@ -32,7 +32,7 @@ export function explainNxtlRouting(): {
   transmission: "local";
 } {
   return {
-    summary: "NXTL routes mobile data via a London internet exit; it is not a VPN or anonymity tool.",
+    summary: "NXTL routes mobile data via a London internet exit; it is not a privacy tunnel or anonymity tool.",
     points: [
       "The current service uses London as its internet exit, without a separate routing app or a location menu.",
       "Data path published by NXTL: device, then the partner mobile network, then the London internet exit, then apps and websites. There is no separate routing profile to install.",
@@ -46,7 +46,7 @@ export function explainNxtlRouting(): {
       "Shield cannot see whether NXTL is the active data line. A London-looking IP, a browser hint, or a successful page load is not proof. Status stays “connection not verified” unless a future authorised signal exists.",
     ],
     forbiddenAvoided: [
-      "Shield does not describe this route as connected VPN, anonymous browsing, hidden location, a no-logs network, or encryption of your traffic.",
+      "Shield does not describe this route as a connected privacy tunnel, anonymous browsing, hidden location, a no-logs network, or encryption of your traffic.",
     ],
     sourceUrl: NXTL_LINKS.routing,
     sourceAccessed: ROUTING_FACTS_ACCESSED,

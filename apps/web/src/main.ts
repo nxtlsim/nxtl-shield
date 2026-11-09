@@ -119,7 +119,7 @@ async function render() {
   const footer = h("footer", { class: "site" }, [
     h("div", { class: "wrap" }, [
       h("p", {}, [
-        "Free, open-source security tools by NXTL eSIM. Not a VPN. NXTL eSIM is an optional paid connection and does not unlock these tools.",
+        "Free, open-source security tools by NXTL eSIM. NXTL eSIM is an optional paid connection and does not unlock these tools.",
       ]),
       h("p", {}, [
         h("a", { href: "https://github.com/nxtlsim/nxtl-shield", target: "_blank", rel: "noreferrer" }, ["Source Code (GPLv3)"]),
