@@ -1,0 +1,2 @@
+# NXTL Shield verified facts pack (2026-11-09)
+Files: nxtl-sources.md, brand.md, sources-registry.md, platform-facts.md, publishing.md, nord-features.md, dns-resolvers.md (incl. GCP/self-host + Apple/Android/Windows/Chrome/Firefox DNS). Raw evidence in raw/ (nxtl pages, sources/, platform/, hf/, dns/ incl. doh_test.py + doh_results.json, nord/ support pages, site-css/, site-img/). Logos: /workspace/nxtl-shield-assets (+previews/). Rule: anything marked UNVERIFIED must not be presented as fact or as working.

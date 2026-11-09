@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>NXTL Shield warning</title>
+    <style>
+      body { font: 16px/1.5 Inter, sans-serif; margin: 0; padding: 24px; background: #0a0c12; color: #fff; }
+      main { max-width: 640px; margin: 0 auto; }
+      a, button { min-height: 44px; }
+      button { border: 0; border-radius: 999px; padding: 0 16px; margin-right: 8px; background: #1d212e; color: #fff; }
+      button.primary { background: #d80044; }
+      code { overflow-wrap: anywhere; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 id="title">NXTL Shield stopped this page</h1>
+      <p id="why"></p>
+      <p><code id="url"></code></p>
+      <p id="missing" hidden>The original address was not captured. Use the browser back button and paste the link into NXTL Shield's checker.</p>
+      <button id="back" type="button">Go back</button>
+      <button id="once" class="primary" type="button">Proceed once</button>
+      <button id="always" type="button">Always allow this site</button>
+    </main>
+    <script type="module" src="warning.js"></script>
+  </body>
+</html>
