@@ -194,7 +194,7 @@ describe("passwords", () => {
       expect(generated.password).toMatch(/[a-z]/);
       expect(generated.password).toMatch(/[A-Z]/);
       expect(generated.password).toMatch(/[2-9]/);
-      expect(generated.password).toMatch(/[!@#$%^&*()\-=+[\]{}:,.?]/);
+      expect(generated.password).toMatch(/[!@#$%^&*()\-=+[\]{}:,.?_]/);
       expect(generated.password).not.toMatch(/[0OIl1]/);
       seen.add(generated.password);
     }
