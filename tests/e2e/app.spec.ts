@@ -48,6 +48,7 @@ test("manifest is installable metadata", async ({ request }) => {
 test("offline shell after one visit", async ({ page, context }) => {
   await page.goto("./");
   await page.waitForFunction(() => navigator.serviceWorker?.controller);
+  await page.reload();
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Check a link before you open it." })).toBeVisible();
