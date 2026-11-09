@@ -1,6 +1,7 @@
 import { generatePassword } from "@nxtl/core";
 import { field, h, introBlock, faqSection } from "./dom";
 import { createIcon } from "./icons";
+import { diagramShare } from "./diagrams";
 import type { ShareJob, ShareOk } from "./share-crypto";
 
 const LIMIT = 25 * 1024 * 1024;
@@ -97,7 +98,7 @@ export function pageShare(): HTMLElement {
       "Type a message or drop a file (up to 25 MB).",
       "Enter a strong shared password (or click Generate).",
       "Click Encrypt, then copy or share the protected result.",
-      "Send the password separately, e.g. by another app.",
+      "Send the password separately, for example in a call or a different chat.",
     ],
     limit: "Encryption happens on this device. If you lose the password, the data cannot be recovered.",
   });
@@ -110,7 +111,7 @@ export function pageShare(): HTMLElement {
   ]);
 
   // Mode Tabs
-  const encryptMode = h("button", { type: "button", "data-mode": "encrypt", "aria-pressed": "true", class: "btn" }, [
+  const encryptMode = h("button", { type: "button", "data-mode": "encrypt", "aria-pressed": "true", class: "btn primary" }, [
     createIcon("share-lock", 18),
     "Encrypt",
   ]);
@@ -128,28 +129,86 @@ export function pageShare(): HTMLElement {
     placeholder: "Type or paste the confidential message to encrypt...",
   });
 
-  const fileInput = h("input", { type: "file", "data-testid": "share-file" });
+  // Visually hidden file input
+  const fileInput = h("input", {
+    type: "file",
+    "data-testid": "share-file",
+    class: "sr-only",
+    tabindex: "-1",
+    "aria-hidden": "true",
+  }) as HTMLInputElement;
+
+  const dropZoneContent = h("div", { class: "file-drop-inner" });
+
+  function renderEmptyDropZone() {
+    dropZoneContent.replaceChildren(
+      h("span", { class: "file-drop-icon" }, [createIcon("file", 36)]),
+      h("div", { class: "file-drop-text" }, [
+        h("span", { class: "file-drop-title" }, ["Choose a file or drop it here"]),
+        h("span", { class: "file-drop-hint" }, ["Up to 25 MB"]),
+      ]),
+    );
+  }
+
+  function renderSelectedFile(name: string, sizeBytes: number) {
+    const sizeKb = Math.round(sizeBytes / 1024);
+    const sizeStr = sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb} KB`;
+
+    const removeBtn = h("button", {
+      type: "button",
+      class: "btn sm ghost",
+      style: "margin-left: auto;",
+      "aria-label": "Remove file",
+    }, [
+      createIcon("close", 14),
+      "Remove file",
+    ]);
+
+    removeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      file = null;
+      fileInput.value = "";
+      renderEmptyDropZone();
+      status.textContent = "File removed.";
+    });
+
+    dropZoneContent.replaceChildren(
+      h("span", { class: "file-drop-icon" }, [createIcon("check", 32)]),
+      h("div", { class: "file-drop-text" }, [
+        h("span", { class: "file-drop-title" }, [name]),
+        h("span", { class: "file-drop-hint" }, [`${sizeStr} · Attached`]),
+      ]),
+      removeBtn,
+    );
+  }
+
+  renderEmptyDropZone();
+
   const fileDropZone = h("div", {
-    class: "card",
-    style: "border: 2px dashed var(--line-strong); padding: var(--sp-4); text-align: center; cursor: pointer; transition: border-color 0.2s;",
-  }, [
-    h("div", { style: "display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);" }, [
-      createIcon("file", 28),
-      h("span", { style: "font-weight: 600;" }, ["Choose a file or drop it here"]),
-      h("span", { class: "muted-soft", style: "font-size: 0.85rem;" }, ["Any file up to 25 MB"]),
-    ]),
-  ]);
+    class: "file-drop",
+    tabindex: "0",
+    role: "button",
+    "aria-label": "Choose a file to attach, up to 25 MB",
+  }, [dropZoneContent]);
+
   fileDropZone.addEventListener("click", () => fileInput.click());
+  fileDropZone.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+
   fileDropZone.addEventListener("dragover", (e) => {
     e.preventDefault();
-    fileDropZone.style.borderColor = "var(--accent-coral)";
+    fileDropZone.classList.add("dragover");
   });
   fileDropZone.addEventListener("dragleave", () => {
-    fileDropZone.style.borderColor = "var(--line-strong)";
+    fileDropZone.classList.remove("dragover");
   });
   fileDropZone.addEventListener("drop", (e) => {
     e.preventDefault();
-    fileDropZone.style.borderColor = "var(--line-strong)";
+    fileDropZone.classList.remove("dragover");
     const dropped = e.dataTransfer?.files?.[0];
     if (dropped) handleFile(dropped);
   });
@@ -180,7 +239,7 @@ export function pageShare(): HTMLElement {
     style: "margin: var(--sp-3) 0;",
   }, ["Encrypts only what you type or choose here."]);
 
-  const actions = h("div", { class: "row", style: "margin-top: var(--sp-3);" });
+  const actions = h("div", { class: "row", style: "margin-top: var(--sp-3); flex-wrap: wrap; gap: var(--sp-2);" });
   const runButton = h("button", { class: "primary lg", type: "button", "data-testid": "share-run" }, [
     createIcon("share-lock", 20),
     "Encrypt message",
@@ -192,7 +251,7 @@ export function pageShare(): HTMLElement {
       createIcon(next === "encrypt" ? "share-lock" : "eye", 20),
       next === "encrypt" ? "Encrypt message" : "Decrypt message",
     );
-    input.placeholder = next === "encrypt" ? "Type or paste the confidential message to encrypt..." : "Paste an encrypted PGP message...";
+    input.placeholder = next === "encrypt" ? "Type or paste the confidential message to encrypt..." : "Paste an encrypted message...";
     encryptMode.setAttribute("aria-pressed", next === "encrypt" ? "true" : "false");
     decryptMode.setAttribute("aria-pressed", next === "decrypt" ? "true" : "false");
     encryptMode.className = `btn ${next === "encrypt" ? "primary" : ""}`;
@@ -203,17 +262,19 @@ export function pageShare(): HTMLElement {
     file = null;
     if (picked.size > LIMIT) {
       status.textContent = "This file is larger than 25 MB limit. It was not read.";
-      (fileInput as HTMLInputElement).value = "";
+      fileInput.value = "";
+      renderEmptyDropZone();
       return;
     }
     picked.arrayBuffer().then((buffer) => {
       file = { name: picked.name, bytes: new Uint8Array(buffer) };
+      renderSelectedFile(picked.name, picked.size);
       status.textContent = `File ready: ${picked.name} (${Math.round(picked.size / 1024)} KB). The text message box is ignored while a file is attached.`;
     });
   }
 
   fileInput.addEventListener("change", () => {
-    const picked = (fileInput as HTMLInputElement).files?.[0];
+    const picked = fileInput.files?.[0];
     if (picked) handleFile(picked);
   });
 
@@ -301,7 +362,7 @@ export function pageShare(): HTMLElement {
       share.addEventListener("click", () => shareOut(status, label, text));
 
       const trustedChannelNote = h("p", { class: "muted-soft", style: "width: 100%; margin-top: var(--sp-2);" }, [
-        "Send the password separately, e.g. by another app.",
+        "Send the password separately, for example in a call or a different chat.",
       ]);
 
       actions.append(copy, share, trustedChannelNote);
@@ -325,7 +386,7 @@ export function pageShare(): HTMLElement {
       share.addEventListener("click", () => shareOut(status, name, undefined, { name, bytes }));
 
       const trustedChannelNote = h("p", { class: "muted-soft", style: "width: 100%; margin-top: var(--sp-2);" }, [
-        "Send the password separately, e.g. by another app.",
+        "Send the password separately, for example in a call or a different chat.",
       ]);
 
       actions.append(save, share, trustedChannelNote);
@@ -348,11 +409,12 @@ export function pageShare(): HTMLElement {
     }
     input.value = "";
     (password as HTMLInputElement).value = "";
-    (fileInput as HTMLInputElement).value = "";
+    fileInput.value = "";
     file = null;
     output = null;
     resultBox.value = "";
     resultBox.hidden = true;
+    renderEmptyDropZone();
     actions.replaceChildren();
     armed = false;
     clear.replaceChildren(createIcon("trash", 16), "Clear");
@@ -367,7 +429,7 @@ export function pageShare(): HTMLElement {
     h("summary", {}, ["Advanced encryption settings"]),
     h("label", { class: "row", style: "margin-top: var(--sp-3);" }, [
       armor,
-      " Armored text (PGP ASCII block, easier to copy). Uncheck for raw binary .pgp file.",
+      " Armored text (easier to copy). Uncheck for raw binary file.",
     ]),
     h("p", { class: "muted-soft", style: "margin-top: var(--sp-2);" }, [
       "Messages and files are encrypted on this device with a password you choose. The password is never sent across the internet.",
@@ -377,12 +439,12 @@ export function pageShare(): HTMLElement {
   const formCard = h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
     tabs,
     field("Confidential text message", input, "Stays in this browser"),
-    h("div", {}, [
+    h("div", { class: "field-wrap" }, [
       h("label", { class: "field" }, [
-        h("span", { class: "label-text" }, ["Or attach a file", h("span", { class: "helper" }, ["Max 25 MB"])]),
+        h("span", { class: "label-text" }, ["Or attach a file"]),
         fileDropZone,
       ]),
-      h("div", { style: "display: none;" }, [fileInput]),
+      fileInput,
     ]),
     h("div", {}, [
       field("Shared secret password", password, "Must match exactly to decrypt"),
@@ -390,7 +452,7 @@ export function pageShare(): HTMLElement {
     ]),
     h("p", { class: "muted-soft" }, [
       createIcon("info", 16),
-      " Send the password through a separate trusted channel (e.g. Signal or SMS). Never send the password alongside the encrypted message.",
+      " Send the password separately, for example in a call or a different chat. Never send the password alongside the encrypted message.",
     ]),
     advanced,
     h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [runButton, clear]),
@@ -402,11 +464,11 @@ export function pageShare(): HTMLElement {
   const faqs = faqSection([
     {
       q: "Can anyone read this without the password?",
-      a: "No. The data is mathematically encrypted with AES-256-OCB and Argon2 password hashing. Without the exact passphrase, it cannot be decrypted.",
+      a: "No. It is locked with your password on this device. Nobody can open it without that exact password, including us.",
     },
     {
       q: "Does NXTL see my password or messages?",
-      a: "Never. Encryption and decryption run in this browser on your device. Nothing is sent to any server.",
+      a: "Never. Encryption and decryption run entirely in this browser on your device. Nothing is sent to any server.",
     },
     {
       q: "Can I open these files on other computers?",
@@ -414,6 +476,6 @@ export function pageShare(): HTMLElement {
     },
   ]);
 
-  root.append(header, intro, formCard, faqs);
+  root.append(header, intro, diagramShare(), formCard, faqs);
   return root;
 }

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>DNSSettings</key>
+      <dict>
+        <key>DNSProtocol</key>
+        <string>HTTPS</string>
+        <key>ServerURL</key>
+        <string>https://dns.adguard-dns.com/dns-query</string>
+      </dict>
+      <key>PayloadDescription</key>
+      <string>Enables encrypted DNS to block ads, trackers, and malicious sites across all apps.</string>
+      <key>PayloadDisplayName</key>
+      <string>NXTL Shield DNS — Block ads, trackers &amp; scams</string>
+      <key>PayloadIdentifier</key>
+      <string>com.nxtlsim.shield.dns.adguard-default</string>
+      <key>PayloadType</key>
+      <string>com.apple.dnsSettings.managed</string>
+      <key>PayloadUUID</key>
+      <string>3B2E929E-B4FE-48B8-9A74-D725C9E17242</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+    </dict>
+  </array>
+  <key>PayloadDescription</key>
+  <string>Enables encrypted DNS to block ads, trackers, and malicious sites across all apps.</string>
+  <key>PayloadDisplayName</key>
+  <string>NXTL Shield DNS — Block ads, trackers &amp; scams</string>
+  <key>PayloadIdentifier</key>
+  <string>com.nxtlsim.shield.dns.profile.adguard-default</string>
+  <key>PayloadRemovalDisallowed</key>
+  <false/>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadUUID</key>
+  <string>4DF90A93-A3FA-4DE1-9878-E9260172BA01</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+</dict>
+</plist>

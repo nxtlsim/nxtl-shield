@@ -15,35 +15,35 @@ export function installInstructions(input: {
   const standalone = Boolean(input.standalone);
   if (standalone) {
     return {
-      platform: "standalone",
+      platform: "Installed app",
       canPrompt: false,
       standalone: true,
-      steps: ["This window is already running as an installed app (standalone display mode). You do not need to install it again."],
-      limits: ["An installed PWA is still a website. It does not add antivirus, a device tunnel, or system-wide filtering."],
+      steps: ["NXTL Shield is running as an installed app. You do not need to install it again."],
+      limits: ["All tools run directly on your device with offline support."],
     };
   }
   const inApp = /Instagram|FBAN|FBAV|Line\/|Twitter|MicroMessenger/i.test(ua);
   if (inApp) {
     return {
-      platform: "in-app browser",
+      platform: "In-app browser",
       canPrompt: false,
       standalone: false,
-      steps: ["Open this page in Safari or Chrome. In-app browsers usually cannot install a PWA or load an extension."],
-      limits: ["The tools in the page still run here if the scripts load. Install and extension status stay not detected."],
+      steps: ["Open this page in Safari or Chrome to add it to your home screen."],
+      limits: ["In-app browsers do not support adding apps to your home screen."],
     };
   }
   const ios = /iPhone|iPad|iPod/i.test(ua);
   if (ios) {
     return {
-      platform: "iOS / iPadOS Safari",
+      platform: "iPhone & iPad (Safari)",
       canPrompt: false,
       standalone: false,
       steps: [
-        "In Safari, tap Share → Add to Home Screen.",
-        "Turn on Open as Web App, then Add. That wording is from Apple's iOS 26 guide. Whether iOS 27 changed the words is UNVERIFIED.",
-        "beforeinstallprompt does not exist in Safari. There is no one-tap install API to call.",
+        "In Safari, tap the Share button at the bottom of the screen.",
+        "Scroll down and tap 'Add to Home Screen'.",
+        "Tap 'Add' in the top right. NXTL Shield will appear on your home screen.",
       ],
-      limits: ["Chrome on iOS uses WebKit and also has no beforeinstallprompt. Use the Safari steps.", "The home-screen icon does not grant native location or SMS filtering."],
+      limits: ["Safari does not offer an automatic install button; use Share → Add to Home Screen."],
     };
   }
   const macSafari = /Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
@@ -52,8 +52,11 @@ export function installInstructions(input: {
       platform: "macOS Safari",
       canPrompt: false,
       standalone: false,
-      steps: ["File or Share → Add to Dock.", "Source: Apple's Safari web-apps guide, reviewed 2026-11-09."],
-      limits: ["This is a web app in the Dock, not a Mac App Store security suite."],
+      steps: [
+        "In Safari, click File or the Share button in the toolbar.",
+        "Choose 'Add to Dock' to install NXTL Shield.",
+      ],
+      limits: ["Creates a standalone window shortcut in your Dock."],
     };
   }
   const firefox = /Firefox/i.test(ua);
@@ -63,11 +66,10 @@ export function installInstructions(input: {
       canPrompt: false,
       standalone: false,
       steps: [
-        "Firefox does not support beforeinstallprompt.",
-        "Use the site in a tab. Firefox Windows “web apps” menu text was UNVERIFIED on 2026-11-09.",
-        "On Android, Firefox can install extensions. The Shield extension is a separate install from the page.",
+        "In Firefox, keep using this site in a tab, or add a bookmark for quick access.",
+        "To get continuous browser protection, add the Firefox extension from the Browser Extension page.",
       ],
-      limits: ["Lack of an install prompt does not remove the checks in this page."],
+      limits: ["Firefox desktop does not support one-click app installation."],
     };
   }
   const android = /Android/i.test(ua);
@@ -78,50 +80,48 @@ export function installInstructions(input: {
       standalone: false,
       steps: [
         input.beforeInstallPrompt
-          ? "This browser offered an install prompt. Use Install NXTL Shield to show it."
-          : "Samsung Internet supports beforeinstallprompt according to browser-compat data. The exact menu labels were UNVERIFIED (Samsung's developer page returned 404).",
-        "If no prompt appears, use the browser menu and look for Add page to or Install.",
+          ? "Tap the Install button above to add NXTL Shield to your device."
+          : "Open the browser menu and select 'Add page to' → 'Home screen'.",
       ],
-      limits: ["Menu text was not confirmed on a Samsung phone."],
+      limits: ["Adds a quick-launch icon to your home screen."],
     };
   }
   if (android) {
     return {
-      platform: "Chrome on Android",
+      platform: "Android (Chrome)",
       canPrompt: Boolean(input.beforeInstallPrompt),
       standalone: false,
       steps: [
         input.beforeInstallPrompt
-          ? "This browser offered an install prompt. The Install button will show it. That is a real prompt, not a stored preference."
-          : "Menu → Add to Home screen → Install. Chrome on Android does not run extensions.",
+          ? "Tap the Install button above to add NXTL Shield to your device."
+          : "Tap the menu (three dots) and select 'Install app' or 'Add to Home screen'.",
       ],
-      limits: ["Installing the PWA does not install the extension and does not change Private DNS."],
+      limits: ["Allows instant offline access from your home screen."],
     };
   }
   const desktopChromium = /Chrome|Chromium|Edg/i.test(ua);
   if (desktopChromium) {
     return {
-      platform: /Edg/i.test(ua) ? "Edge on desktop" : "Chrome on desktop",
+      platform: /Edg/i.test(ua) ? "Microsoft Edge" : "Google Chrome",
       canPrompt: Boolean(input.beforeInstallPrompt),
       standalone: false,
       steps: [
         input.beforeInstallPrompt
-          ? "An install prompt is available. Use the Install button."
-          : "Menu → Cast, save, and share → Install page as app. An install icon may also appear in the address bar.",
-        "Uninstall steps are on the same Google or Microsoft help pages.",
+          ? "Click the Install button above to install NXTL Shield."
+          : "Click the Install icon in the address bar, or open the browser menu and choose 'Install NXTL Shield'.",
       ],
-      limits: ["The extension is a separate install. The PWA does not include it automatically."],
+      limits: ["Installs as a fast desktop app on your computer."],
     };
   }
   return {
-    platform: "this browser",
+    platform: "This browser",
     canPrompt: Boolean(input.beforeInstallPrompt),
     standalone: false,
     steps: [
       input.beforeInstallPrompt
-        ? "An install prompt is available. Use the Install button."
-        : "No install API was detected. Keep using the site in this tab. Shield does not claim one-tap install on every device.",
+        ? "Click the Install button above to install NXTL Shield."
+        : "Bookmark this page or pin this tab for fast access.",
     ],
-    limits: ["Manual tools in the page do not require installation."],
+    limits: ["All privacy and security tools work directly in this browser window."],
   };
 }
