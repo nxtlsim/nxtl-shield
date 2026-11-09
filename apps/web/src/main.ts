@@ -38,6 +38,22 @@ function normHash(h: string): string {
 }
 const scrollMap = new Map<string, number>();
 let isPopState = false;
+let skipHashChange = false;
+
+function hashUrl(hash: string): string {
+  const nextHash = hash === "#" || hash === "" ? "#/" : hash;
+  return `${location.pathname}${location.search}${nextHash}`;
+}
+
+function navigateHash(hash: string): void {
+  const nextHash = hash === "#" || hash === "" ? "#/" : hash;
+  if (normHash(nextHash) === normHash(location.hash) && (nextHash.split("?")[1] || "") === (location.hash.split("?")[1] || "")) {
+    return;
+  }
+  skipHashChange = true;
+  history.pushState({ shield: true }, "", hashUrl(nextHash));
+  void render();
+}
 
 document.addEventListener("click", (e) => {
   if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
@@ -45,15 +61,14 @@ document.addEventListener("click", (e) => {
   const href = target?.getAttribute("href");
   if (!target || !href?.startsWith("#")) return;
   scrollMap.set(normHash(location.hash), window.scrollY);
-  const nextHash = href === "#" ? "#/" : href;
-  if (normHash(nextHash) !== normHash(location.hash) || (nextHash.split("?")[1] || "") !== (location.hash.split("?")[1] || "")) {
-    e.preventDefault();
-    location.hash = nextHash;
-  }
+  e.preventDefault();
+  navigateHash(href);
 }, true);
 
 window.addEventListener("popstate", () => {
   isPopState = true;
+  skipHashChange = true;
+  void render();
 });
 
 // Section 6: Persistent beforeinstallprompt listener
@@ -68,7 +83,7 @@ export function triggerInstallPrompt(): void {
   if (storedInstallPrompt) {
     storedInstallPrompt.prompt();
   } else {
-    location.hash = "#/install";
+    navigateHash("#/install");
   }
 }
 
@@ -192,8 +207,12 @@ async function render() {
     if (restore) {
       const targetY = scrollMap.get(normHash(location.hash)) ?? 0;
       window.scrollTo(0, targetY);
+      document.documentElement.scrollTop = targetY;
+      document.body.scrollTop = targetY;
     } else {
       window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
       const h1 = document.querySelector<HTMLElement>("main h1");
       if (h1) {
         h1.setAttribute("tabindex", "-1");
@@ -202,7 +221,12 @@ async function render() {
     }
   };
   applyScroll();
-  requestAnimationFrame(applyScroll);
+  requestAnimationFrame(() => {
+    applyScroll();
+    requestAnimationFrame(applyScroll);
+  });
+  window.setTimeout(applyScroll, 50);
+  window.setTimeout(applyScroll, 150);
 }
 
 function themeLabel(value: string): string {
@@ -397,6 +421,10 @@ async function pageFor(path: string, tab: string) {
 }
 
 window.addEventListener("hashchange", () => {
+  if (skipHashChange) {
+    skipHashChange = false;
+    return;
+  }
   if (!isPopState) {
     window.scrollTo(0, 0);
   }
