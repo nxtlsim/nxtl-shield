@@ -68,12 +68,13 @@ PARAMS = [
 
 def redirect(rule_id: int, host: str, priority: int = 10, regex: str | None = None) -> dict:
     if regex:
+        escaped_host = host.replace(".", r"\.")
         return {
             "id": rule_id,
             "priority": priority,
             "action": {"type": "redirect", "redirect": {"regexSubstitution": regex}},
             "condition": {
-                "regexFilter": f"^https?://{host.replace('.', r'\\.')}(?::\\d+)?(?:[/?#]|$)",
+                "regexFilter": f"^https?://{escaped_host}(?::\\d+)?(?:[/?#]|$)",
                 "resourceTypes": ["main_frame"],
             },
         }
