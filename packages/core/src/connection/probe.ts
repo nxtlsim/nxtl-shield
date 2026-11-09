@@ -136,6 +136,20 @@ export async function fetchConnectionInfo(forceRefresh = false): Promise<Connect
     }
   }
 
+  if (info && !info.ipv4) {
+    try {
+      const res4 = await fetchWithTimeout("https://api.ipify.org?format=json", 3000);
+      if (res4.ok) {
+        const data4 = await res4.json();
+        if (typeof data4?.ip === "string" && !data4.ip.includes(":")) {
+          info.ipv4 = data4.ip;
+        }
+      }
+    } catch {
+      /* ignore IPv4 secondary check */
+    }
+  }
+
   if (info) {
     sessionCache = info;
     return info;
@@ -154,9 +168,10 @@ export async function probeDns(options?: {
   timeoutMs?: number;
 }): Promise<DnsProbeResult> {
   const timeoutMs = options?.timeoutMs ?? 4000;
-  // Control: harmless known-good asset
-  const controlUrl = options?.controlUrl ?? "https://dns.google/resolve?name=example.com&type=A";
-  // Blocked host: standard ad host blocked by adguard-default / threat lists
+  // Control must be on the app CSP connect-src allow list (see apps/web/index.html).
+  const controlUrl = options?.controlUrl ?? "https://api.ipify.org?format=json";
+  // Known ad host blocked by the recommended Safe DNS profile. Also listed in CSP
+  // connect-src so a successful fetch is not mistaken for a DNS failure.
   const blockedUrl = options?.blockedUrl ?? "https://pagead2.googlesyndication.com/pagead/show_ads.js";
 
   let controlOk = false;
