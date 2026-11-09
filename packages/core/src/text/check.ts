@@ -6,19 +6,46 @@ import { checkUrl, type Reputation } from "../url/check";
 export interface TextCheck extends CheckBase {
   urlCount: number;
   urlVerdicts: Array<{ redacted: string; verdict: Verdict }>;
+  level?: "scam" | "careful" | "safe";
+  actionAdvice?: string;
 }
 
 const SHORTENERS = ["bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd", "cutt.ly", "rb.gy", "tiny.cc"];
 
-function extractUrls(text: string): string[] {
+const KNOWN_TLDS = new Set([
+  "com", "org", "net", "edu", "gov", "mil", "io", "co", "uk", "de", "ca", "au",
+  "fr", "lt", "eu", "me", "info", "biz", "xyz", "top", "online", "site", "app",
+  "live", "vip", "help", "tech", "club", "store", "shop", "icu", "space", "click",
+  "link", "cc", "nl", "se", "no", "fi", "es", "it", "pl", "ch", "at", "be", "dk",
+  "cz", "ie", "nz", "za", "in", "jp", "kr", "cn", "br", "mx", "ar", "cl", "tv", "ai"
+]);
+
+export function extractUrlsAndDomains(text: string): string[] {
   const found = new Set<string>();
-  const re = /https?:\/\/[^\s<>"'`]+/gi;
-  for (const match of text.matchAll(re)) {
+
+  // 1. Explicit http/https URLs
+  const urlRe = /https?:\/\/[^\s<>"'`]+/gi;
+  for (const match of text.matchAll(urlRe)) {
     let url = match[0] ?? "";
-    url = url.replace(/[),.;]+$/g, "");
+    url = url.replace(/[),.;:!]+$/g, "");
     if (url.length <= LIMITS.url) found.add(url);
     if (found.size >= 30) break;
   }
+
+  // 2. Bare domains (e.g. delfi.lt, appleid-secure-help.com, www.example.com/login)
+  const domainRe = /\b(?:www\.)?([a-z0-9][a-z0-9-]{0,62}\.)+([a-z]{2,24})(?::\d+)?(?:\/[^\s<>"'`]*)?/gi;
+  for (const match of text.matchAll(domainRe)) {
+    let raw = match[0] ?? "";
+    raw = raw.replace(/[),.;:!]+$/g, "");
+    const parts = raw.split("/")[0].split(":")[0].toLowerCase().split(".");
+    const tld = parts[parts.length - 1];
+    if (KNOWN_TLDS.has(tld)) {
+      const full = raw.startsWith("http://") || raw.startsWith("https://") ? raw : `https://${raw}`;
+      if (full.length <= LIMITS.url) found.add(full);
+    }
+    if (found.size >= 30) break;
+  }
+
   return [...found];
 }
 
@@ -37,7 +64,7 @@ function hrefMismatches(text: string): Evidence[] {
         evidence.push({
           id: "href-mismatch",
           title: "Link text points at a different host",
-          detail: `Visible host ${b.hostname} does not match href host ${a.hostname}. Pasted HTML cannot prove the message was really sent by either host.`,
+          detail: `Visible host ${b.hostname} does not match href host ${a.hostname}.`,
           severity: "indicator",
         });
       }
@@ -51,28 +78,37 @@ function hrefMismatches(text: string): Evidence[] {
 
 export function checkText(input: string, reputation: Reputation, now = new Date()): TextCheck {
   const timestamp = now.toISOString();
-  const scope = "The pasted text only. URLs inside it were checked locally. The message was not sent, and its sender was not contacted.";
+  const scope = "Pasted text and extracted links checked locally. No messages or personal details were sent.";
   if (typeof input !== "string" || !input.trim()) {
     return empty("unsupported", "Nothing to check.", "Paste a message, SMS, or email.", timestamp, scope, "");
   }
   if (tooBig(input, LIMITS.text)) {
     return empty(
       "unsupported",
-      "This text is longer than 100000 characters and was not checked.",
+      "This text is longer than 100,000 characters and was not checked.",
       "Paste a shorter excerpt. Nothing was uploaded.",
       timestamp,
       scope,
       input.slice(0, 80),
     );
   }
+
   const text = input.trim();
-  const evidence: Evidence[] = [];
   const lower = text.toLowerCase();
-  const urls = extractUrls(text);
+  const evidence: Evidence[] = [];
+  const urls = extractUrlsAndDomains(text);
+
   const urlVerdicts = urls.map((url) => {
     const result = checkUrl(url, reputation, { now });
-    return { redacted: result.inputRedacted, verdict: result.verdict, evidence: result.evidence, stale: result.staleLists };
+    return {
+      redacted: result.inputRedacted,
+      verdict: result.verdict,
+      evidence: result.evidence,
+      stale: result.staleLists,
+      hostname: result.hostname,
+    };
   });
+
   for (const result of urlVerdicts) {
     for (const item of result.evidence) {
       if (item.severity === "info") continue;
@@ -87,97 +123,186 @@ export function checkText(input: string, reputation: Reputation, now = new Date(
   evidence.push(...hrefMismatches(text));
 
   const hasUrl = urls.length > 0;
-  if (/\b(password|one-time code|passcode|otp|2fa code|seed phrase|recovery phrase|mnemonic)\b/i.test(text) && /\b(send|reply|enter|confirm|verify|click|link|http|code)\b/i.test(text)) {
-    evidence.push({
-      id: "credential-ask",
-      title: "Asks for a secret",
-      detail: "The text asks for a password, one-time code, or recovery phrase together with a link or a request to send it. Do not reply with that secret. Pasted text cannot prove who wrote it.",
-      severity: "indicator",
-    });
-  }
-  if (/\b(gift cards?|wire transfer|western union|bitcoin|crypto wallet|seed phrase|bank details|pay the fee)\b/i.test(lower)) {
-    evidence.push({
-      id: "payment-pressure",
-      title: "Payment pressure",
-      detail: "The text mentions gift cards, a wire, cryptocurrency, or a fee. That is a common scam pattern. It is not proof by itself.",
-      severity: "indicator",
-    });
-  }
-  const urgency = /\b(account (suspended|locked|disabled)|act now|immediately|within \d+ hours|unauthorized login|unusual activity)\b/i.test(text);
-  if (urgency) {
-    evidence.push({
-      id: "urgency",
-      title: "Urgency language",
-      detail: hasUrl
-        ? "The text combines urgency with a link. Pause and open the service from your own bookmark if you want to check."
-        : "The text uses urgency language. Without a link this is a weak signal, and it is not proof.",
-      severity: hasUrl ? "indicator" : "info",
-    });
-  }
-  if (/\b(you(?:'ve| have) won|lottery|inheritance|beneficiary|prize)\b/i.test(lower)) {
+  let strongScamFlag = false;
+  let actionAdvice = "Don't reply, don't click links, and don't send money or personal details.";
+
+  // 1. Prize, lottery, inheritance language (Strong flag even without a URL)
+  if (/\b(congratulations you(?:'ve| have)? won|you (?:have|are) (?:the )?winner|lottery|inheritance|beneficiary of (?:an? )?inheritance|claim (?:your )?prize|promising winnings|claim (?:your )?funds)\b/i.test(lower)) {
+    strongScamFlag = true;
+    actionAdvice = "Don't reply and don't pay. Real lotteries and inheritances never ask for fees or bank details by text.";
     evidence.push({
       id: "prize",
-      title: "Prize or inheritance language",
-      detail: "Unexpected prizes and inheritances are a common lure, especially next to a link or a payment request.",
-      severity: hasUrl ? "indicator" : "info",
+      title: "Promises unexpected winnings",
+      detail: "It promises prize money, a lottery payout, or an inheritance you did not enter or expect.",
+      severity: "indicator",
     });
   }
-  for (const url of urls) {
-    try {
-      const host = new URL(url).hostname.toLowerCase();
-      if (SHORTENERS.some((short) => host === short || host.endsWith(`.${short}`))) {
-        evidence.push({
-          id: `shortener-${host}`,
-          title: "Shortened link",
-          detail: `${host} hides the destination. Shield did not expand it, because that would contact the shortener.`,
-          severity: "indicator",
-        });
-        break;
-      }
-    } catch {
-      /* already handled by the URL checker */
+
+  // 2. Delivery / parcel release fee
+  if (/\b(delivery fee|customs fee|postage fee|release fee|pay (?:the )?fee|parcel (?:is )?waiting|pay(?:ment)? of [€$£]\d|pay to (?:release|collect|get your transfer))\b/i.test(lower)) {
+    strongScamFlag = true;
+    actionAdvice = "Don't reply and don't pay. If expecting a delivery, check the carrier's official website or app directly.";
+    evidence.push({
+      id: "parcel-fee",
+      title: "Delivery or release fee request",
+      detail: "It asks you to pay a delivery or customs fee to release a parcel or package.",
+      severity: "indicator",
+    });
+  }
+
+  // 3. Tax refund / government money
+  if (/\b(tax refund|due a (?:tax )?refund|hmrc|irs|claim refund|claim your tax|claim money)\b/i.test(lower)) {
+    strongScamFlag = true;
+    actionAdvice = "Don't reply and don't click. Tax agencies never notify about refunds or demand payment via text message.";
+    evidence.push({
+      id: "tax-refund",
+      title: "Government or tax refund lure",
+      detail: "It claims you are due a tax refund or government payment.",
+      severity: "indicator",
+    });
+  }
+
+  // 4. Crypto / wire / wallet pressure
+  if (/\b(double your (?:bitcoin|crypto)|crypto wallet|seed phrase|recovery phrase|western union|wire transfer|gift cards?)\b/i.test(lower)) {
+    strongScamFlag = true;
+    actionAdvice = "Don't send funds. Cryptocurrency transfers and gift cards cannot be reversed once sent.";
+    evidence.push({
+      id: "crypto-scam",
+      title: "Cryptocurrency or wire payment request",
+      detail: "It asks for payment via cryptocurrency, gift cards, or wire transfer, or promises unrealistic investment returns.",
+      severity: "indicator",
+    });
+  }
+
+  // 5. Code / OTP requests
+  const asksForSecret = /\b(password|one-time code|passcode|otp|2fa code|security code|verification code)\b/i.test(lower) &&
+    /\b(send|reply|forward|share with|tell me|give me|text me|reply with)\b/i.test(lower);
+  const legitOtpNotice = /\b(security code|verification code|one-time code)\b/i.test(lower) &&
+    /\b(do not share|never share|don't share|keep this safe)\b/i.test(lower) &&
+    !asksForSecret;
+
+  if (asksForSecret) {
+    strongScamFlag = true;
+    actionAdvice = "Don't send the code. Real banks and services never ask you to send or text back a login code.";
+    evidence.push({
+      id: "credential-ask",
+      title: "Asks for a login code or secret",
+      detail: "It asks you to send or reply with a password, security code, or one-time verification code.",
+      severity: "indicator",
+    });
+  }
+
+  // 6. Family impersonation ("Hi mum, new number")
+  if (/\b(i(?:'m| am| got a)? (?:your )?(?:mum|mom|dad|son|daughter)|new number)\b/i.test(lower) &&
+      /\b(need|send|bank details|money|code|transfer|urgent|help me|lost my phone)\b/i.test(lower)) {
+    strongScamFlag = true;
+    actionAdvice = "Call your family member on their known existing phone number before sending any money or codes.";
+    evidence.push({
+      id: "family-impersonation",
+      title: "Family impersonation scam",
+      detail: "It claims to be a relative with a new number asking for money, codes, or bank details.",
+      severity: "indicator",
+    });
+  }
+
+  // 7. Urgency language
+  const urgency = /\b(account (?:suspended|locked|disabled|closed)|act now|immediately|within \d+ hours|unauthorized login|unusual activity|verify immediately)\b/i.test(lower);
+  if (urgency) {
+    if (hasUrl) {
+      strongScamFlag = true;
+      actionAdvice = "Don't open the link. Navigate to the service from your own saved bookmark or official app.";
+      evidence.push({
+        id: "urgency-link",
+        title: "False urgency with a link",
+        detail: "It claims your account is locked or has unusual activity and includes a link to click.",
+        severity: "indicator",
+      });
+    } else {
+      evidence.push({
+        id: "urgency",
+        title: "Urgent pressure",
+        detail: "It uses urgent language to demand immediate action.",
+        severity: "info",
+      });
     }
   }
-  const from = text.match(/^from:\s*.*@([a-z0-9.-]+)/im)?.[1]?.toLowerCase();
-  const reply = text.match(/^reply-to:\s*.*@([a-z0-9.-]+)/im)?.[1]?.toLowerCase();
-  if (from && reply && from !== reply) {
-    evidence.push({
-      id: "from-reply",
-      title: "From and Reply-To domains differ",
-      detail: `From domain ${from} and Reply-To domain ${reply} differ. Mailing lists do this too. Pasted headers are not authenticated.`,
-      severity: "info",
-    });
-  }
-  evidence.push({
-    id: "authenticity",
-    title: "Pasted text is not authentication",
-    detail: "Shield cannot tell whether an email or SMS is genuine from the paste alone. There is no DKIM, SPF, or sender check.",
-    severity: "info",
-  });
 
+  // 8. Brand mention with lookalike domain
+  const brandKeywords = ["apple", "icloud", "amazon", "paypal", "netflix", "microsoft", "google", "bank", "dhl", "ups", "fedex"];
+  for (const b of brandKeywords) {
+    if (lower.includes(b)) {
+      for (const uv of urlVerdicts) {
+        if (uv.hostname && !uv.hostname.endsWith(`.${b}.com`) && uv.hostname !== `${b}.com` && uv.hostname.includes(b)) {
+          strongScamFlag = true;
+          actionAdvice = "Don't visit this link. It looks like an unofficial domain copying a well-known brand.";
+          evidence.push({
+            id: `brand-lookalike-${b}`,
+            title: `Impersonates ${b}`,
+            detail: `The text mentions ${b}, but the link (${uv.hostname}) is not on ${b}'s official domain.`,
+            severity: "indicator",
+          });
+        }
+      }
+    }
+  }
+
+  // 9. Shortened links
+  for (const uv of urlVerdicts) {
+    if (uv.hostname && SHORTENERS.some((s) => uv.hostname === s || uv.hostname?.endsWith(`.${s}`))) {
+      evidence.push({
+        id: `shortener-${uv.hostname}`,
+        title: "Shortened link",
+        detail: `${uv.hostname} hides the real destination address.`,
+        severity: "indicator",
+      });
+      if (strongScamFlag) {
+        actionAdvice = "Don't open shortened links from unexpected messages.";
+      }
+    }
+  }
+
+  // Determine final verdict and level
   const malicious = urlVerdicts.some((item) => item.verdict === "known_malicious_match");
   const indicators = evidence.some((item) => item.severity === "indicator");
   const listsDown = !reputation.available;
+
   let verdict: Verdict = "no_known_match";
-  let summary = "No known list match in the extracted links, and no suspicious indicator was found.";
-  if (malicious) {
-    verdict = "known_malicious_match";
-    summary = "At least one extracted link matched a bundled threat or badware snapshot.";
+  let summary = "No scam indicators or known dangerous links found in this message.";
+  let level: "scam" | "careful" | "safe" = "safe";
+
+  if (malicious || strongScamFlag) {
+    verdict = malicious ? "known_malicious_match" : "suspicious_indicators";
+    level = "scam";
+    summary = malicious
+      ? "Known dangerous link found in this message."
+      : "Likely scam message: contains common fraud patterns.";
   } else if (indicators) {
     verdict = "suspicious_indicators";
-    summary = "Suspicious indicators were found in the paste. This is not proof the sender is a scammer.";
+    level = "careful";
+    summary = "Be careful: contains shortened links or unusual indicators.";
+    actionAdvice = "Verify the sender through a trusted channel before taking action.";
   } else if (listsDown && urls.length) {
     verdict = "inconclusive";
-    summary = "Inconclusive: a link was found but reputation lists were unavailable.";
-  } else if (!urls.length && !indicators) {
-    summary = "No link and no suspicious indicator were found in the paste. That is not proof the message is genuine.";
+    level = "careful";
+    summary = "Inconclusive: a link was found but threat lists were temporarily unavailable.";
+    actionAdvice = "Check your connection and test the link again.";
+  } else if (legitOtpNotice) {
+    verdict = "no_known_match";
+    level = "safe";
+    summary = "Looks like a standard verification code notification.";
+    actionAdvice = "Keep this code private and never share it with anyone.";
   }
-  let uncertainty = "Checks text against known scam patterns. A brand-new scam variation may not be cataloged yet.";
+
+  const uncertainty = level === "safe"
+    ? "A brand-new trick might not be on the list yet."
+    : "";
+
   const redactedUrls = urlVerdicts.map((item) => item.redacted).join(" ");
+
   return {
     verdict,
     summary,
-    evidence: evidence.slice(0, 40),
+    evidence: evidence.slice(0, 10),
     scope,
     timestamp,
     inputRedacted: redactRaw(redactedUrls || text.slice(0, 180), 400),
@@ -185,7 +310,9 @@ export function checkText(input: string, reputation: Reputation, now = new Date(
     transmission: "local",
     staleLists: reputation.stale,
     urlCount: urls.length,
-    urlVerdicts: urlVerdicts.map(({ redacted, verdict: urlVerdict }) => ({ redacted, verdict: urlVerdict })),
+    urlVerdicts: urlVerdicts.map(({ redacted, verdict: uv }) => ({ redacted, verdict: uv })),
+    level,
+    actionAdvice,
   };
 }
 
@@ -202,5 +329,6 @@ function empty(verdict: Verdict, summary: string, uncertainty: string, timestamp
     staleLists: false,
     urlCount: 0,
     urlVerdicts: [],
+    level: "safe",
   };
 }

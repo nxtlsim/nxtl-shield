@@ -27,12 +27,16 @@ export interface UrlCheck extends CheckBase {
   };
   trackerMatch: string | null;
   blockingRecommendation: "block" | "allow_allowlist" | "none" | "lists_unavailable";
+  level?: "scam" | "careful" | "safe";
+  actionAdvice?: string;
 }
 
 export interface UrlCheckOptions {
   now?: Date;
   allowlist?: readonly string[];
 }
+
+const SHORTENERS = ["bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd", "cutt.ly", "rb.gy", "tiny.cc"];
 
 const BIDI = /[\u202A-\u202E\u2066-\u2069\u200B-\u200F\uFEFF]/;
 
@@ -219,6 +223,15 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
     });
   }
 
+  if (hostname && SHORTENERS.some((s) => hostname === s || hostname.endsWith(`.${s}`))) {
+    push(evidence, {
+      id: `shortener-${hostname}`,
+      title: "Shortened link",
+      detail: `${hostname} hides the real destination address. Be careful before opening unknown shortened links.`,
+      severity: "indicator",
+    });
+  }
+
   let listMatch: UrlCheck["listMatch"] = null;
   let trackerMatch: string | null = null;
   if (reputation.available && hostname && !ip) {
@@ -256,7 +269,7 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
     push(evidence, {
       id: "list-tif",
       title: "Threat-list match",
-      detail: `${listMatch.matchedHost} matched a bundled threat host list (retrieved ${reputation.retrieved}, version ${reputation.version}). This is a list match, not a courtroom finding.`,
+      detail: `${listMatch.matchedHost} matched a bundled threat host list (retrieved ${reputation.retrieved}, version ${reputation.version}).`,
       severity: "match",
       source: {
         name: "Bundled threat hosts",
@@ -281,12 +294,12 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
     push(evidence, {
       id: "tracker-host",
       title: "Tracker-host list",
-      detail: `${trackerMatch} is on the partial EasyPrivacy-derived tracker host list used by the optional extension ruleset. That is not a malware judgement and does not by itself change the verdict.`,
+      detail: `${trackerMatch} is on the tracker host list used by the optional extension ruleset.`,
       severity: "info",
       source: {
-        name: "EasyPrivacy token-filtered hosts",
+        name: "Tracker hosts",
         retrieved: reputation.retrieved,
-        licence: "GPL-3.0-or-later AND CC-BY-SA-3.0",
+        licence: "GPL-3.0-or-later",
       },
     });
   }
@@ -294,29 +307,40 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
     push(evidence, {
       id: "lists-unavailable",
       title: "Reputation lists unavailable",
-      detail: "The bundled snapshot failed to load or failed its integrity check. No list match can be claimed. The last good snapshot was not replaced.",
+      detail: "The bundled snapshot failed to load or failed its integrity check. Threat lists could not be checked.",
       severity: "info",
     });
   }
 
   const allowlisted = hostname ? hostMatchesAllowlist(hostname, options.allowlist ?? []) : false;
   let verdict: UrlCheck["verdict"] = "no_known_match";
-  let summary = "No known match in the bundled snapshots, and no suspicious indicator was found.";
+  let summary = "No known threats found on threat intelligence snapshots.";
+  let level: "scam" | "careful" | "safe" = "safe";
+  let actionAdvice = "Looks safe: no known threats found on bundled lists.";
+
   if (listMatch) {
     verdict = "known_malicious_match";
-    summary =
-      listMatch.sourceId === "hagezi-tif-mini"
-        ? "Known list match on the bundled threat-intelligence snapshot."
-        : "Known list match on the bundled badware-risk snapshot.";
+    level = "scam";
+    summary = "Known dangerous link: matched a threat intelligence snapshot.";
+    actionAdvice = "Don't open this link or enter personal details.";
+  } else if (evidence.some((item) => item.id === "userinfo" || item.id === "misleading-host" || item.id === "bidi")) {
+    verdict = "suspicious_indicators";
+    level = "scam";
+    summary = "Deceptive address: contains misleading or disguised characters.";
+    actionAdvice = "Don't open this link. It appears designed to mislead.";
   } else if (evidence.some((item) => item.severity === "indicator")) {
     verdict = "suspicious_indicators";
-    summary = "Suspicious indicators were found. This is not proof of fraud, and it is not a clean result.";
+    level = "careful";
+    summary = "Be careful: contains shortened or unusual address patterns.";
+    actionAdvice = "Check where this link leads before clicking.";
   } else if (!reputation.available) {
     verdict = "inconclusive";
-    summary = "Inconclusive: reputation lists were unavailable, and no heuristic indicator fired.";
+    level = "careful";
+    summary = "Inconclusive: threat lists were unavailable.";
+    actionAdvice = "Check your connection and test the link again.";
   }
 
-  let uncertainty = "Checks links against known scam lists. A new scam site may not be cataloged yet.";
+  let uncertainty = level === "safe" ? "A brand-new trick might not be on the list yet." : "";
   if (allowlisted && listMatch) {
     uncertainty += " This host is on your custom allowlist.";
   }
@@ -342,6 +366,8 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
     trackerMatch,
     blockingRecommendation,
     staleLists: reputation.stale,
+    level,
+    actionAdvice,
   };
 }
 
@@ -372,5 +398,7 @@ function finish(
     listMatch: null,
     trackerMatch: null,
     blockingRecommendation: reputation.available ? "none" : "lists_unavailable",
+    level: verdict === "no_known_match" ? "safe" : "careful",
+    actionAdvice: verdict === "no_known_match" ? "No known threats found." : "Check the address and try again.",
   };
 }
