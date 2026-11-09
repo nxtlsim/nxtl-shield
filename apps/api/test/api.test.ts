@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { once } from "node:events";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createApiServer } from "../src/http";
 import { toolCheckUrl } from "../src/logic";
@@ -51,9 +52,10 @@ describe("API contracts", () => {
 describe("MCP client", () => {
   it("calls check_url through the official SDK", async () => {
     const transport = new StdioClientTransport({
-      command: "npx",
-      args: ["tsx", "apps/api/src/mcp.ts"],
-      cwd: "/workspace",
+      command: process.execPath,
+      args: [join(process.cwd(), "node_modules/tsx/dist/cli.mjs"), join(process.cwd(), "apps/api/src/mcp.ts")],
+      cwd: process.cwd(),
+      env: process.env as Record<string, string>,
       stderr: "pipe",
     });
     const client = new Client({ name: "nxtl-shield-test", version: "0.1.0" });
