@@ -12,11 +12,20 @@ async function refresh() {
   }
   const status = await chrome.runtime.sendMessage({ type: "getStatus" });
   const engine = document.querySelector("#engine");
+  const pauseBtn = document.querySelector<HTMLElement>("#pause");
+  const resumeBtn = document.querySelector<HTMLElement>("#resume");
+
   if (engine) {
     engine.textContent = status.paused
-      ? `Paused until ${status.pauseUntil ? new Date(status.pauseUntil).toLocaleTimeString() : "a deadline"}. Rulesets: ${status.rulesets.join(", ") || "none"}.`
-      : `Rulesets on: ${status.rulesets.join(", ") || "none"}.`;
+      ? `Protection paused until ${status.pauseUntil ? new Date(status.pauseUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "5 minutes"}`
+      : "Shield is active and protecting your browsing";
   }
+
+  if (pauseBtn && resumeBtn) {
+    pauseBtn.hidden = Boolean(status.paused);
+    resumeBtn.hidden = !status.paused;
+  }
+
   for (const key of ["blocking", "trackers", "cleaning", "cosmetic"] as const) {
     const input = document.querySelector(`#${key}`) as HTMLInputElement | null;
     if (!input) continue;
@@ -31,7 +40,7 @@ async function refresh() {
   const location = document.querySelector("#location");
   if (location) {
     location.textContent = status.locationSupported
-      ? `Location setting read back: ${status.locationSetting}. Managed by Shield: ${status.locationManaged ? "yes" : "no"}.`
+      ? `Location permission: ${status.locationSetting}.`
       : "Location control is unsupported in this browser.";
   }
 }
@@ -43,5 +52,12 @@ document.querySelector("#pause")?.addEventListener("click", async () => {
 document.querySelector("#resume")?.addEventListener("click", async () => {
   await chrome.runtime.sendMessage({ type: "resume" });
   await refresh();
+});
+document.querySelector("#open-shield")?.addEventListener("click", () => {
+  if (typeof chrome !== "undefined" && chrome.tabs) {
+    chrome.tabs.create({ url: "https://nxtlsim.github.io/nxtl-shield/" });
+  } else {
+    window.open("https://nxtlsim.github.io/nxtl-shield/", "_blank");
+  }
 });
 void refresh();
