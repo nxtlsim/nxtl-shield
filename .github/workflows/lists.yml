@@ -1,0 +1,39 @@
+name: Update Threat Lists
+on:
+  schedule:
+    - cron: "0 4 * * 1" # Weekly every Monday at 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lists:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: npm ci
+      - name: Fetch and compile latest threat lists
+        run: python3 scripts/build_lists.py
+      - name: Rebuild extension rules
+        run: python3 scripts/build_extension_rules.py
+      - name: Verify types and unit tests
+        run: npm run typecheck && npm test
+      - name: Commit and push changes if updated
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [[ -n $(git status --porcelain packages/core/data/ apps/web/public/lists/) ]]; then
+            git add packages/core/data/ apps/web/public/lists/ apps/extension/
+            git commit -m "Auto-update threat lists and extension rules [skip ci]"
+            git push origin main
+          else
+            echo "No list updates detected."
+          fi
