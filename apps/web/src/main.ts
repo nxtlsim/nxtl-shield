@@ -40,9 +40,15 @@ const scrollMap = new Map<string, number>();
 let isPopState = false;
 
 document.addEventListener("click", (e) => {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
   const target = (e.target as HTMLElement)?.closest("a");
-  if (target && target.getAttribute("href")?.startsWith("#")) {
-    scrollMap.set(normHash(location.hash), window.scrollY);
+  const href = target?.getAttribute("href");
+  if (!target || !href?.startsWith("#")) return;
+  scrollMap.set(normHash(location.hash), window.scrollY);
+  const nextHash = href === "#" ? "#/" : href;
+  if (normHash(nextHash) !== normHash(location.hash) || (nextHash.split("?")[1] || "") !== (location.hash.split("?")[1] || "")) {
+    e.preventDefault();
+    location.hash = nextHash;
   }
 }, true);
 
@@ -180,18 +186,23 @@ async function render() {
   app?.replaceChildren(header, main, bottomNav, footer);
 
   // Section 8: Instant scroll-to-top or Back/Forward scroll restoration
-  if (isPopState) {
-    const targetY = scrollMap.get(normHash(location.hash)) ?? 0;
-    window.scrollTo({ top: targetY, left: 0, behavior: "instant" });
-    isPopState = false;
-  } else {
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-    const h1 = document.querySelector<HTMLElement>("main h1");
-    if (h1) {
-      h1.setAttribute("tabindex", "-1");
-      h1.focus({ preventScroll: true, focusVisible: false } as FocusOptions & { focusVisible?: boolean });
+  const restore = isPopState;
+  isPopState = false;
+  const applyScroll = () => {
+    if (restore) {
+      const targetY = scrollMap.get(normHash(location.hash)) ?? 0;
+      window.scrollTo(0, targetY);
+    } else {
+      window.scrollTo(0, 0);
+      const h1 = document.querySelector<HTMLElement>("main h1");
+      if (h1) {
+        h1.setAttribute("tabindex", "-1");
+        h1.focus({ preventScroll: true, focusVisible: false } as FocusOptions & { focusVisible?: boolean });
+      }
     }
-  }
+  };
+  applyScroll();
+  requestAnimationFrame(applyScroll);
 }
 
 function themeLabel(value: string): string {
@@ -387,7 +398,7 @@ async function pageFor(path: string, tab: string) {
 
 window.addEventListener("hashchange", () => {
   if (!isPopState) {
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    window.scrollTo(0, 0);
   }
   void render();
 });
