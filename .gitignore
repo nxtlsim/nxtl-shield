@@ -1,0 +1,13 @@
+node_modules/
+dist/
+apps/web/dist/
+apps/extension/dist-chromium/
+apps/extension/dist-firefox/
+apps/extension/generated/
+apps/api/dist/
+test-results/
+playwright-report/
+.DS_Store
+*.log
+.env
+coverage/

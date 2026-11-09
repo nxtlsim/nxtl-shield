@@ -1,0 +1,42 @@
+{
+  "name": "nxtl-shield",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Free, open-source security tools by NXTL eSIM.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/core",
+    "apps/web",
+    "apps/extension",
+    "apps/api"
+  ],
+  "scripts": {
+    "build": "npm run build -w @nxtl/web && npm run build -w @nxtl/extension && npm run build -w @nxtl/api && npm run build:hf-static",
+    "build:hf-static": "node scripts/build-hf-static.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test tests/e2e",
+    "test:extension": "playwright test tests/extension",
+    "lint": "eslint .",
+    "scan": "node scripts/scan.mjs",
+    "render:docs": "UPDATE_DOCS=1 vitest run packages/core/test/docs-contract.test.ts",
+    "lists:refresh": "python3 scripts/build_lists.py"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@eslint/js": "^9.16.0",
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^22.10.1",
+    "esbuild": "^0.24.2",
+    "eslint": "^9.16.0",
+    "playwright": "^1.49.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^2.1.8"
+  }
+}

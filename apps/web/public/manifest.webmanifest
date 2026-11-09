@@ -1,0 +1,17 @@
+{
+  "name": "NXTL Shield",
+  "short_name": "Shield",
+  "description": "Free, open-source security tools by NXTL eSIM.",
+  "id": "__NXTL_BASE__",
+  "start_url": "__NXTL_BASE__",
+  "scope": "__NXTL_BASE__",
+  "display": "standalone",
+  "background_color": "#0D1527",
+  "theme_color": "#0A0C12",
+  "lang": "en",
+  "icons": [
+    { "src": "__NXTL_BASE__icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "__NXTL_BASE__icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "__NXTL_BASE__icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
