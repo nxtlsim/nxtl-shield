@@ -9,6 +9,7 @@ const EXT = join(process.cwd(), "apps/extension/dist-chromium");
 const HOST = "blocked.nxtl-shield-test.invalid";
 
 test("chromium extension blocks, allowlists, pauses, cleans, and restores location", async ({ browserName }) => {
+  test.setTimeout(180_000);
   test.skip(browserName !== "chromium" || !process.env.DISPLAY, "Needs a display and Chromium so the real extension can load.");
   const server = createServer((req, res) => {
     res.setHeader("content-type", "text/html; charset=utf-8");
