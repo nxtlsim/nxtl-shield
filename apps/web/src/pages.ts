@@ -288,7 +288,9 @@ export async function pageHome(): Promise<HTMLElement> {
   const qrFileHidden = h("input", {
     type: "file",
     accept: "image/*",
-    style: "display: none;",
+    class: "sr-only",
+    tabindex: "-1",
+    "aria-hidden": "true",
     "aria-label": "Upload QR code image",
   }) as HTMLInputElement;
 
