@@ -84,3 +84,30 @@ test("ciphertext from Chromium decrypts in Firefox and WebKit", async ({ browser
     await other.close();
   }
 });
+
+test("file dropzone layout, hidden file input, and clean password hint", async ({ page }) => {
+  await page.goto("./#/share");
+
+  // 1. input[type=file] is not visible / is sr-only
+  const fileInput = page.locator('input[type="file"]');
+  const box = await fileInput.boundingBox();
+  expect(box === null || box.width <= 1 || box.height <= 1).toBe(true);
+
+  // 2. Page text must not contain native file chooser text
+  const bodyText = await page.innerText("body");
+  expect(bodyText).not.toContain("Choose File");
+  expect(bodyText).not.toContain("No file chosen");
+
+  // 3. Drop zone title and hint have vertical gap >= 6px and do not overlap
+  const titleBox = await page.locator(".file-drop-title").boundingBox();
+  const hintBox = await page.locator(".file-drop-hint").boundingBox();
+  expect(titleBox).not.toBeNull();
+  expect(hintBox).not.toBeNull();
+  const gap = hintBox!.y - (titleBox!.y + titleBox!.height);
+  expect(gap).toBeGreaterThanOrEqual(6);
+
+  // 4. Password hint does not mention other consumer brands (Signal, WhatsApp)
+  const fullHtml = await page.content();
+  expect(fullHtml).not.toContain("Signal");
+  expect(fullHtml).not.toContain("WhatsApp");
+});

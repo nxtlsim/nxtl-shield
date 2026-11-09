@@ -16,6 +16,7 @@ export * from "./dns/profiles";
 export * from "./dns/steps";
 export * from "./esim/esim";
 export * from "./connection/connection";
+export * from "./connection/probe";
 export * from "./location/setup";
 export * from "./install";
 export * from "./capabilities";

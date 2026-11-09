@@ -79,6 +79,16 @@ async function main() {
       await takeShot(vp, theme, "extension", `extension-page-${vp.name}-${theme}.png`, async (page) => {
         await page.waitForSelector("h1:has-text('Browser extension')");
       });
+
+      // 7. Your connection
+      await takeShot(vp, theme, "connection", `connection-${vp.name}-${theme}.png`, async (page) => {
+        await page.waitForSelector("h1:has-text('Your connection')");
+      });
+
+      // 8. Safe DNS Setup
+      await takeShot(vp, theme, "setup", `setup-${vp.name}-${theme}.png`, async (page) => {
+        await page.waitForSelector("h1:has-text('Safe DNS Setup')");
+      });
     }
   }
 
