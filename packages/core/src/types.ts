@@ -55,7 +55,6 @@ export type ImplementationStatus =
 export interface Capability {
   id: string;
   name: string;
-  nordFamily: boolean;
   userStatus: UserStatus;
   implementationStatus: ImplementationStatus;
   summary: string;

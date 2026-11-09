@@ -18,10 +18,12 @@ import {
   pageSetup,
   pageStatus,
 } from "./pages";
+import { pageShare } from "./share-page";
 
 const NAV = [
   ["", "Home"],
   ["check", "Check"],
+  ["share", "Share"],
   ["clean", "Clean"],
   ["password", "Password"],
   ["connection", "Connection"],
@@ -135,6 +137,8 @@ async function pageFor(path: string, tab: string) {
   switch (path) {
     case "check":
       return pageCheck(tab);
+    case "share":
+      return pageShare();
     case "clean":
       return pageClean();
     case "password":
