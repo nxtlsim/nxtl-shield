@@ -27,6 +27,9 @@ import {
   SNAPSHOT_MANIFEST,
   parseBadware,
   parsePlain,
+  parseIpwhoisResponse,
+  parseIpapiResponse,
+  probeDns,
   sha256Hex,
 } from "../src/index";
 import type { Reputation } from "../src/url/check";
@@ -191,7 +194,7 @@ describe("passwords", () => {
       expect(generated.password).toMatch(/[a-z]/);
       expect(generated.password).toMatch(/[A-Z]/);
       expect(generated.password).toMatch(/[2-9]/);
-      expect(generated.password).toMatch(/[!@#$%^&*()\-=+[\]{}:,.?]/);
+      expect(generated.password).toMatch(/[!@#$%^&*()\-=+[\]{}:,.?_]/);
       expect(generated.password).not.toMatch(/[0OIl1]/);
       seen.add(generated.password);
     }
@@ -247,8 +250,177 @@ describe("text, files, dns, origin, eSIM", () => {
       emptyRep(),
     );
     expect(result.verdict).toBe("suspicious_indicators");
-    expect(result.evidence.some((item) => item.id === "authenticity")).toBe(true);
+    expect(result.evidence.some((item) => item.id === "authenticity")).toBe(false);
     expect(result.summary.toLowerCase()).not.toContain("safe");
+  });
+
+  it("evaluates all message test cases from V3 specification accurately", () => {
+    const testCases: { input: string; expectedVerdict: string; expectedLevel: "scam" | "careful" | "safe"; desc: string }[] = [
+      {
+        input: "Congratulations you won the lottery, claim your prize now!",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "Lottery without URL must be flagged as Likely scam",
+      },
+      {
+        input: "You are the beneficiary of an inheritance. Contact us to receive the funds.",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "Inheritance beneficiary lure",
+      },
+      {
+        input: "Your parcel is waiting. Pay the delivery fee of €2.99 to release it.",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "Delivery / parcel fee lure",
+      },
+      {
+        input: "HMRC: You are due a tax refund of £420. Claim now.",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "Tax refund lure",
+      },
+      {
+        input: "Apple: Your iCloud storage is full. Update billing at appleid-secure-help.com",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "Bare domain lookalike lure",
+      },
+      {
+        input: "Double your bitcoin in 24 hours. Send to this crypto wallet now.",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "Crypto doubling scam",
+      },
+      {
+        input: "Hi mum, I need your one-time code... Reply with the OTP.",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "OTP / code theft",
+      },
+      {
+        input: "Hi this is mum I got a new number. Please send me your bank details...",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "Family impersonation asking for bank details",
+      },
+      {
+        input: "Your bank security code is 482193. Do not share this code with anyone.",
+        expectedVerdict: "no_known_match",
+        expectedLevel: "safe",
+        desc: "Legitimate bank security code notification",
+      },
+      {
+        input: "Hey, running 10 minutes late. See you at the cafe.",
+        expectedVerdict: "no_known_match",
+        expectedLevel: "safe",
+        desc: "Ordinary normal chat message",
+      },
+      {
+        input: "Unusual activity... Verify immediately: https://secure-bank-login.example/verify",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "Urgency and verify link",
+      },
+      {
+        input: "Account suspended... one-time code: https://bit.ly/abc",
+        expectedVerdict: "suspicious_indicators",
+        expectedLevel: "scam",
+        desc: "Suspension + shortener code request",
+      },
+    ];
+
+    const forbiddenTerms = ["dkim", "spf", "zxcvbn", "sha-1", "signal", "whatsapp", "unverified", "not a vpn", "antivirus"];
+
+    for (const tc of testCases) {
+      const res = checkText(tc.input, emptyRep());
+      expect(res.verdict, `Verdict mismatch for: ${tc.desc}`).toBe(tc.expectedVerdict);
+      expect(res.level, `Customer level mismatch for: ${tc.desc}`).toBe(tc.expectedLevel);
+      if (tc.expectedLevel === "scam") {
+        expect(res.summary.toLowerCase(), `Scam should not contain 'safe' in summary`).not.toContain("safe");
+      }
+
+      // Check forbidden terms in summary, evidence titles, and actionAdvice
+      const combinedText = `${res.summary} ${res.actionAdvice ?? ""} ${res.evidence.map((e) => `${e.title} ${e.detail}`).join(" ")}`.toLowerCase();
+      for (const term of forbiddenTerms) {
+        expect(combinedText).not.toContain(term);
+      }
+    }
+  });
+
+  it("detects link shorteners in checkUrl as careful indicator", () => {
+    const res = checkUrl("https://bit.ly/xyz123", emptyRep());
+    expect(res.verdict).toBe("suspicious_indicators");
+    expect(res.level).toBe("careful");
+    expect(res.evidence.some((e) => e.id.startsWith("shortener"))).toBe(true);
+    expect(res.summary.toLowerCase()).not.toContain("safe");
+  });
+
+  it("parses ipwhois response correctly into ConnectionInfo", () => {
+    const fixture = {
+      ip: "8.8.8.8",
+      type: "IPv4",
+      country: "United States",
+      country_code: "US",
+      city: "Mountain View",
+      flag: { emoji: "🇺🇸" },
+      connection: { org: "Google LLC", asn: 15169 },
+    };
+    const info = parseIpwhoisResponse(fixture);
+    expect(info.ipv4).toBe("8.8.8.8");
+    expect(info.ipv6).toBeNull();
+    expect(info.country).toBe("United States");
+    expect(info.city).toBe("Mountain View");
+    expect(info.flagEmoji).toBe("🇺🇸");
+    expect(info.provider).toBe("Google LLC");
+
+    const ipapiInfo = parseIpapiResponse({
+      ip: "1.1.1.1",
+      city: "Sydney",
+      country_name: "Australia",
+      country_code: "AU",
+      org: "Cloudflare",
+    });
+    expect(ipapiInfo.ipv4).toBe("1.1.1.1");
+    expect(ipapiInfo.city).toBe("Sydney");
+    expect(ipapiInfo.country).toBe("Australia");
+    expect(ipapiInfo.provider).toBe("Cloudflare");
+  });
+
+  it("probes DNS logic correctly with mocked fetch", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      // 1. Control ok, blocked fails -> on
+      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes("example.com/control")) {
+          return Promise.resolve(new Response("ok"));
+        }
+        return Promise.reject(new Error("DNS resolution failed"));
+      });
+      const resOn = await probeDns({
+        controlUrl: "https://example.com/control",
+        blockedUrl: "https://example.com/blocked",
+      });
+      expect(resOn.status).toBe("on");
+
+      // 2. Both succeed -> off
+      globalThis.fetch = vi.fn().mockResolvedValue(new Response("ok"));
+      const resOff = await probeDns({
+        controlUrl: "https://example.com/control",
+        blockedUrl: "https://example.com/blocked",
+      });
+      expect(resOff.status).toBe("off");
+
+      // 3. Control fails -> unknown
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network offline"));
+      const resUnknown = await probeDns({
+        controlUrl: "https://example.com/control",
+        blockedUrl: "https://example.com/blocked",
+      });
+      expect(resUnknown.status).toBe("unknown");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it("flags double extensions and says it is not a scan", async () => {

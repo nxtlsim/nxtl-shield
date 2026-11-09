@@ -28,29 +28,88 @@ import {
 } from "./pages";
 import { pageShare } from "./share-page";
 
+// Section 8: Scroll Restoration configuration
+if ("scrollRestoration" in history) {
+  history.scrollRestoration = "manual";
+}
+function normHash(h: string): string {
+  const path = (h || "").replace(/^#\/?/, "").split("?")[0];
+  return `#/${path}`;
+}
+const scrollMap = new Map<string, number>();
+let isPopState = false;
+let skipHashChange = false;
+
+function hashUrl(hash: string): string {
+  const nextHash = hash === "#" || hash === "" ? "#/" : hash;
+  return `${location.pathname}${location.search}${nextHash}`;
+}
+
+function navigateHash(hash: string): void {
+  const nextHash = hash === "#" || hash === "" ? "#/" : hash;
+  if (normHash(nextHash) === normHash(location.hash) && (nextHash.split("?")[1] || "") === (location.hash.split("?")[1] || "")) {
+    return;
+  }
+  skipHashChange = true;
+  history.pushState({ shield: true }, "", hashUrl(nextHash));
+  void render();
+}
+
+document.addEventListener("click", (e) => {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+  const target = (e.target as HTMLElement)?.closest("a");
+  const href = target?.getAttribute("href");
+  if (!target || !href?.startsWith("#")) return;
+  scrollMap.set(normHash(location.hash), window.scrollY);
+  e.preventDefault();
+  navigateHash(href);
+}, true);
+
+window.addEventListener("popstate", () => {
+  isPopState = true;
+  skipHashChange = true;
+  scheduleRender();
+});
+
+// Section 6: Persistent beforeinstallprompt listener
+export let storedInstallPrompt: any = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  storedInstallPrompt = e;
+  (window as any).__storedInstallPrompt = e;
+});
+
+export function triggerInstallPrompt(): void {
+  if (storedInstallPrompt) {
+    storedInstallPrompt.prompt();
+  } else {
+    navigateHash("#/install");
+  }
+}
+
+// Practical navigation order
 const DESKTOP_NAV = [
   ["", "Home"],
   ["check", "Check"],
+  ["setup", "Protect"],
   ["share", "Share"],
-  ["phone-protection", "Protect"],
-  ["extension", "Extension"],
 ];
 
 const ALL_NAV = [
   ["", "Home", "shield"],
-  ["check", "Check", "search"],
+  ["check", "Check link or message", "search"],
+  ["setup", "Safe DNS (whole device)", "dns"],
+  ["ad-blocker", "Ad & tracker blocker", "ad-block"],
+  ["extension", "Browser extension", "extension"],
+  ["password", "Password generator", "password"],
   ["share", "Secure Share", "share-lock"],
-  ["ad-blocker", "Ad Blocker", "ad-block"],
-  ["phone-protection", "Protect Phone", "phone"],
-  ["extension", "Browser Extension", "extension"],
-  ["setup", "Safe DNS Setup", "dns"],
-  ["clean", "Link Cleaner", "clean"],
-  ["password", "Password Tools", "password"],
-  ["connection", "Connection Doctor", "connection"],
-  ["location", "Location Privacy", "location"],
+  ["clean", "Link cleaner", "clean"],
+  ["connection", "Your connection", "connection"],
+  ["location", "Location privacy", "location"],
+  ["phone-protection", "Protect phone", "phone"],
+  ["install", "Install app", "install"],
   ["esim", "NXTL eSIM", "esim"],
   ["privacy", "How it works & privacy", "info"],
-  ["install", "Install App", "install"],
   ["settings", "Reports", "file"],
 ] as const;
 
@@ -78,8 +137,25 @@ function route() {
   return { path: path || "", tab: params.get("tab") || "link" };
 }
 
+let renderSeq = 0;
+
 async function render() {
+  const seq = ++renderSeq;
   const { path, tab } = route();
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+
+  const installBtn = h("button", {
+    type: "button",
+    class: "btn primary btn-sm",
+    "aria-label": isStandalone ? "App Installed" : "Install App",
+    disabled: isStandalone ? "true" : undefined,
+  }, [
+    createIcon("install", 16),
+    isStandalone ? "Installed" : "Install",
+  ]);
+  installBtn.addEventListener("click", () => {
+    if (!isStandalone) triggerInstallPrompt();
+  });
 
   const header = h("header", { class: "top" }, [
     h("div", { class: "wrap bar" }, [
@@ -96,16 +172,15 @@ async function render() {
       desktopNav(path),
       h("span", { class: "grow" }),
       themeControl(),
-      h("a", { class: "btn primary btn-sm", href: "#/install" }, [
-        createIcon("install", 16),
-        "Install",
-      ]),
+      installBtn,
       menuButton(path),
     ]),
   ]);
 
   const main = h("main", { id: "content", class: "wrap" });
   const page = await pageFor(path, tab);
+  if (seq !== renderSeq) return;
+  offline.hidden = navigator.onLine;
   main.append(offline, page);
 
   const bottomNav = mobileBottomNav(path);
@@ -128,6 +203,32 @@ async function render() {
   ]);
 
   app?.replaceChildren(header, main, bottomNav, footer);
+
+  // Section 8: Instant scroll-to-top or Back/Forward scroll restoration
+  const restore = isPopState;
+  isPopState = false;
+  const applyScroll = () => {
+    if (restore) {
+      const targetY = scrollMap.get(normHash(location.hash)) ?? 0;
+      window.scrollTo(0, targetY);
+      document.documentElement.scrollTop = targetY;
+      document.body.scrollTop = targetY;
+    } else {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      const h1 = document.querySelector<HTMLElement>("main h1");
+      if (h1) {
+        h1.setAttribute("tabindex", "-1");
+        h1.focus({ preventScroll: true, focusVisible: false } as FocusOptions & { focusVisible?: boolean });
+      }
+    }
+  };
+  applyScroll();
+  requestAnimationFrame(() => {
+    applyScroll();
+    requestAnimationFrame(applyScroll);
+  });
 }
 
 function themeLabel(value: string): string {
@@ -204,8 +305,8 @@ function mobileBottomNav(currentPath: string) {
   const tabs: Array<{ id: string; label: string; icon: IconName }> = [
     { id: "", label: "Home", icon: "shield" },
     { id: "check", label: "Check", icon: "search" },
+    { id: "setup", label: "Protect", icon: "phone" },
     { id: "share", label: "Share", icon: "share-lock" },
-    { id: "phone-protection", label: "Protect", icon: "phone" },
   ];
 
   for (const tab of tabs) {
@@ -274,7 +375,7 @@ function openFullNavDialog(currentPath: string) {
 
   dialog.append(header, navList);
   dialog.addEventListener("click", (event) => {
-    if ((event.target as HTMLElement).tagName === "A") dialog.close();
+    if ((event.target as HTMLElement).closest("a")) dialog.close();
   });
 
   document.body.append(dialog);
@@ -285,8 +386,10 @@ function openFullNavDialog(currentPath: string) {
 async function pageFor(path: string, tab: string) {
   switch (path) {
     case "ad-blocker":
+    case "adblock":
       return pageAdBlocker();
     case "phone-protection":
+    case "phone":
       return pagePhoneProtection();
     case "extension":
       return pageExtension();
@@ -319,7 +422,26 @@ async function pageFor(path: string, tab: string) {
   }
 }
 
-window.addEventListener("hashchange", () => void render());
+let renderQueued = false;
+function scheduleRender(): void {
+  if (renderQueued) return;
+  renderQueued = true;
+  queueMicrotask(() => {
+    renderQueued = false;
+    void render();
+  });
+}
+
+window.addEventListener("hashchange", () => {
+  if (skipHashChange) {
+    skipHashChange = false;
+    return;
+  }
+  if (!isPopState) {
+    window.scrollTo(0, 0);
+  }
+  scheduleRender();
+});
 window.addEventListener("online", () => {
   offline.hidden = true;
 });
