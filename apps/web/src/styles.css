@@ -317,10 +317,6 @@ header.top {
     height: 36px;
     font-size: 13px;
   }
-  .theme-picker-wrap {
-    width: 36px;
-    height: 36px;
-  }
   .menu-btn {
     padding: 0 8px;
     height: 36px;
@@ -579,6 +575,37 @@ label.field span.helper {
   cursor: pointer;
   outline: none;
   box-shadow: none;
+}
+
+@media (max-width: 480px) {
+  .theme-picker-wrap {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .theme-picker-wrap > :first-child {
+    pointer-events: none;
+  }
+
+  .theme-picker-wrap select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    opacity: 0;
+    font-size: 16px;
+    z-index: 1;
+  }
 }
 
 /* Cards & Layout */
