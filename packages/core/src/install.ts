@@ -19,7 +19,7 @@ export function installInstructions(input: {
       canPrompt: false,
       standalone: true,
       steps: ["This window is already running as an installed app (standalone display mode). You do not need to install it again."],
-      limits: ["An installed PWA is still a website. It does not add antivirus, a VPN, or system-wide filtering."],
+      limits: ["An installed PWA is still a website. It does not add antivirus, a device tunnel, or system-wide filtering."],
     };
   }
   const inApp = /Instagram|FBAN|FBAV|Line\/|Twitter|MicroMessenger/i.test(ua);
