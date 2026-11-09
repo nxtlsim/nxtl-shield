@@ -130,6 +130,12 @@ async function render() {
   app?.replaceChildren(header, main, bottomNav, footer);
 }
 
+function themeLabel(value: string): string {
+  if (value === "dark") return "Dark";
+  if (value === "light") return "Light";
+  return "System";
+}
+
 function themeControl() {
   const current = localStorage.getItem("nxtl-shield-theme") || "system";
   const icon = createIcon(current === "dark" ? "moon" : current === "light" ? "sun" : "auto", 16);
@@ -138,8 +144,8 @@ function themeControl() {
 
   const select = h("select", {
     "data-testid": "theme-toggle",
-    "aria-label": "Theme",
-  });
+    "aria-label": `Theme: ${themeLabel(current)}`,
+  }) as HTMLSelectElement;
 
   for (const [value, label] of [
     ["system", "System"],
@@ -151,11 +157,15 @@ function themeControl() {
     select.append(opt);
   }
 
-  select.addEventListener("change", () => {
-    const val = (select as HTMLSelectElement).value;
+  function syncTheme(val: string) {
     applyTheme(val);
+    select.setAttribute("aria-label", `Theme: ${themeLabel(val)}`);
     const newIcon = createIcon(val === "dark" ? "moon" : val === "light" ? "sun" : "auto", 16);
     wrap.firstElementChild?.replaceWith(newIcon);
+  }
+
+  select.addEventListener("change", () => {
+    syncTheme(select.value);
   });
 
   wrap.append(select);
