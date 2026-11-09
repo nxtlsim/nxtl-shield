@@ -68,7 +68,7 @@ document.addEventListener("click", (e) => {
 window.addEventListener("popstate", () => {
   isPopState = true;
   skipHashChange = true;
-  void render();
+  scheduleRender();
 });
 
 // Section 6: Persistent beforeinstallprompt listener
@@ -137,7 +137,10 @@ function route() {
   return { path: path || "", tab: params.get("tab") || "link" };
 }
 
+let renderSeq = 0;
+
 async function render() {
+  const seq = ++renderSeq;
   const { path, tab } = route();
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
 
@@ -176,6 +179,7 @@ async function render() {
 
   const main = h("main", { id: "content", class: "wrap" });
   const page = await pageFor(path, tab);
+  if (seq !== renderSeq) return;
   offline.hidden = navigator.onLine;
   main.append(offline, page);
 
@@ -225,8 +229,6 @@ async function render() {
     applyScroll();
     requestAnimationFrame(applyScroll);
   });
-  window.setTimeout(applyScroll, 50);
-  window.setTimeout(applyScroll, 150);
 }
 
 function themeLabel(value: string): string {
@@ -420,6 +422,16 @@ async function pageFor(path: string, tab: string) {
   }
 }
 
+let renderQueued = false;
+function scheduleRender(): void {
+  if (renderQueued) return;
+  renderQueued = true;
+  queueMicrotask(() => {
+    renderQueued = false;
+    void render();
+  });
+}
+
 window.addEventListener("hashchange", () => {
   if (skipHashChange) {
     skipHashChange = false;
@@ -428,7 +440,7 @@ window.addEventListener("hashchange", () => {
   if (!isPopState) {
     window.scrollTo(0, 0);
   }
-  void render();
+  scheduleRender();
 });
 window.addEventListener("online", () => {
   offline.hidden = true;
