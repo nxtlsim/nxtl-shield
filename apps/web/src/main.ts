@@ -55,6 +55,7 @@ export let storedInstallPrompt: any = null;
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   storedInstallPrompt = e;
+  (window as any).__storedInstallPrompt = e;
 });
 
 export function triggerInstallPrompt(): void {
@@ -188,7 +189,7 @@ async function render() {
     const h1 = document.querySelector<HTMLElement>("main h1");
     if (h1) {
       h1.setAttribute("tabindex", "-1");
-      h1.focus({ preventScroll: true });
+      h1.focus({ preventScroll: true, focusVisible: false } as FocusOptions & { focusVisible?: boolean });
     }
   }
 }

@@ -176,6 +176,10 @@ body {
   outline-offset: 3px;
 }
 
+main h1:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* Skip link */
 .skip {
   position: absolute;
