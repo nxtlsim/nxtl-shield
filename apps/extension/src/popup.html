@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NXTL Shield</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0c12;
+        --card: #161922;
+        --card-hover: #1a1e2b;
+        --raised: #1d212e;
+        --line: rgba(255, 255, 255, 0.08);
+        --line-strong: rgba(255, 255, 255, 0.16);
+        --text: #ffffff;
+        --muted: #949aa5;
+        --muted-soft: #636b78;
+        --accent-coral: #ff3d5a;
+        --accent-mag: #d80044;
+        --gradient: linear-gradient(135deg, #ff3d5a 0%, #d80044 100%);
+        --good: #2eca7f;
+        --good-bg: rgba(46, 202, 127, 0.12);
+        --warn: #e6c27a;
+        --warn-bg: rgba(230, 194, 122, 0.12);
+        --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      }
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0;
+        padding: 16px;
+        width: 360px;
+        background: var(--bg);
+        color: var(--text);
+        user-select: none;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .brand-lockup {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+        font-size: 16px;
+        letter-spacing: -0.02em;
+      }
+      .brand-badge {
+        background: var(--gradient);
+        color: #fff;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .engine-box {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 14px;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .toggles-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .toggle-item {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 52px;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+      }
+      .toggle-item:hover {
+        background: var(--card-hover);
+        border-color: var(--line-strong);
+      }
+      .toggle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .toggle-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .toggle-desc {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+        flex-shrink: 0;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: var(--raised);
+        border: 1px solid var(--line-strong);
+        transition: .2s cubic-bezier(0.16, 1, 0.3, 1);
+        border-radius: 24px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: .2s cubic-bezier(0.16, 1, 0.3, 1);
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background: var(--gradient);
+        border-color: transparent;
+      }
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+      input:focus-visible + .slider {
+        outline: 2px solid var(--accent-coral);
+        outline-offset: 2px;
+      }
+      .location-box {
+        background: var(--raised);
+        border-radius: 10px;
+        padding: 8px 12px;
+        margin-bottom: 12px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      button {
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        min-height: 40px;
+        flex: 1;
+        border-radius: 999px;
+        border: 1px solid var(--line-strong);
+        background: var(--raised);
+        color: var(--text);
+        cursor: pointer;
+        transition: background 0.15s, transform 0.1s;
+      }
+      button:hover {
+        background: var(--card-hover);
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+      button#resume {
+        background: var(--gradient);
+        color: #fff;
+        border: none;
+      }
+      .footer-note {
+        font-size: 11px;
+        color: var(--muted-soft);
+        text-align: center;
+        margin: 0;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="brand-lockup">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff3d5a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+        <span>NXTL</span>
+        <span class="brand-badge">Shield</span>
+      </div>
+    </div>
+
+    <div class="engine-box" id="engine">Reading extension status…</div>
+
+    <div class="toggles-list">
+      <label class="toggle-item" for="blocking">
+        <div class="toggle-info">
+          <span class="toggle-title">Threat blocking</span>
+          <span class="toggle-desc">Blocks known phishing and badware domains</span>
+        </div>
+        <div class="switch">
+          <input id="blocking" type="checkbox" />
+          <span class="slider"></span>
+        </div>
+      </label>
+
+      <label class="toggle-item" for="trackers">
+        <div class="toggle-info">
+          <span class="toggle-title">Tracker domains</span>
+          <span class="toggle-desc">Prevents advertising tracking scripts</span>
+        </div>
+        <div class="switch">
+          <input id="trackers" type="checkbox" />
+          <span class="slider"></span>
+        </div>
+      </label>
+
+      <label class="toggle-item" for="cleaning">
+        <div class="toggle-info">
+          <span class="toggle-title">URL cleaning</span>
+          <span class="toggle-desc">Strips surveillance query parameters</span>
+        </div>
+        <div class="switch">
+          <input id="cleaning" type="checkbox" />
+          <span class="slider"></span>
+        </div>
+      </label>
+
+      <label class="toggle-item" for="cosmetic">
+        <div class="toggle-info">
+          <span class="toggle-title">Hide cookie banners</span>
+          <span class="toggle-desc">Hides consent popups (does not accept)</span>
+        </div>
+        <div class="switch">
+          <input id="cosmetic" type="checkbox" />
+          <span class="slider"></span>
+        </div>
+      </label>
+    </div>
+
+    <div class="location-box" id="location">Checking location status…</div>
+
+    <div class="btn-row">
+      <button id="pause" type="button">Pause 5 minutes</button>
+      <button id="resume" type="button">Resume</button>
+    </div>
+
+    <p class="footer-note">Pause temporarily stops Shield's request rules. It does not alter your system DNS or location settings.</p>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

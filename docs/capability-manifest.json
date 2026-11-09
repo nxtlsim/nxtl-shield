@@ -1,0 +1,251 @@
+{
+  "version": "0.1.0",
+  "features": [
+    {
+      "id": "link-check",
+      "name": "Link check",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Parse a link locally and compare the host with the bundled snapshots.",
+      "scope": "The address you submit.",
+      "limitations": "A miss is not a promise that the page is safe. Lists are not auto-updated.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "message-check",
+      "name": "Message check",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Paste a message. Links inside it are checked locally.",
+      "scope": "This browser.",
+      "limitations": "Pasted text cannot prove who sent it. Shield does not read your SMS or email app.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "qr-check",
+      "name": "QR check",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Decode a QR image or the camera locally, then check the result before you open it.",
+      "scope": "This browser.",
+      "limitations": "The camera needs your permission. Shield does not open the link on its own.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "file-check",
+      "name": "File name and hash",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Local SHA-256, double-extension, and a few magic-byte checks.",
+      "scope": "This browser.",
+      "limitations": "This is not a malware scan.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "url-cleaner",
+      "name": "Link cleaner",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Remove a conservative set of tracking parameters, with undo.",
+      "scope": "This browser.",
+      "limitations": "Signed, login, and payment links are left unchanged.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "passwords",
+      "name": "Password tools",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Web Crypto passwords and passphrases, plus a local strength estimate.",
+      "scope": "This browser.",
+      "limitations": "The passphrase is not a wallet recovery phrase. The estimate is not a guarantee.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "pwned-range",
+      "name": "Breached-password range check",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Optional check of a five-character SHA-1 prefix against the Pwned Passwords range API.",
+      "scope": "This browser. The prefix is sent only if you ask.",
+      "limitations": "Not an email search. A miss is not proof of strength.",
+      "costOwner": "The range API is free to call. Shield adds no fee."
+    },
+    {
+      "id": "secure-share",
+      "name": "Secure Share",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Encrypt or decrypt a message or file you enter here, with a shared password.",
+      "scope": "This browser.",
+      "limitations": "Protects only that content. It does not encrypt other apps. GnuPG 2.4 cannot open what Shield writes. Shield can open passphrase messages from GnuPG 2.4.",
+      "sourceUrl": "https://github.com/openpgpjs/openpgpjs/releases/tag/v6.3.2",
+      "sourceAccessed": "2026-11-09",
+      "costOwner": "No fee. The library is LGPL-3.0-or-later."
+    },
+    {
+      "id": "connection",
+      "name": "Connection Doctor",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-but-not-device-verified",
+      "summary": "Browser hints, an optional public-IP lookup, and optional WebRTC candidate counts.",
+      "scope": "This browser, and only the lookups you start.",
+      "limitations": "These signals do not prove which SIM or tunnel is in use. Physical phones were not tested.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "location",
+      "name": "Location privacy",
+      "userStatus": "needs_setup",
+      "implementationStatus": "implemented-but-not-device-verified",
+      "summary": "Explains website permission, app permission, and IP-inferred location separately. The Chromium extension can block location and restore what it changed.",
+      "scope": "This browser.",
+      "limitations": "Firefox cannot set this from an extension. Phone app permissions are manual steps.",
+      "sourceUrl": "https://developer.chrome.com/docs/extensions/reference/api/contentSettings",
+      "sourceAccessed": "2026-11-09",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "esim",
+      "name": "NXTL eSIM guidance",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-but-not-device-verified",
+      "summary": "London-exit explanation, setup steps, and live EUR-per-GB rates.",
+      "scope": "This browser.",
+      "limitations": "Buying data is optional and unlocks nothing here. Shield cannot see whether the NXTL line is active.",
+      "sourceUrl": "https://nxtlsim.com/global-routing/",
+      "sourceAccessed": "2026-11-09",
+      "costOwner": "NXTL eSIM is a separate paid service."
+    },
+    {
+      "id": "dns",
+      "name": "Encrypted DNS setup",
+      "userStatus": "needs_setup",
+      "implementationStatus": "manual-only",
+      "summary": "Download an Apple DNS profile or follow Android, Windows, Chrome, and Firefox steps for a public resolver you choose.",
+      "scope": "This browser.",
+      "limitations": "A download is not an installed profile. Shield does not run a resolver.",
+      "costOwner": "Queries go to the resolver you pick."
+    },
+    {
+      "id": "extension-threats",
+      "name": "Threat blocking in the browser",
+      "userStatus": "needs_setup",
+      "implementationStatus": "implemented-but-not-device-verified",
+      "summary": "The extension can warn on a capped copy of the bundled threat lists.",
+      "scope": "This browser, after you turn the extension on.",
+      "limitations": "The manual checker uses the full snapshot. The extension stays under the browser’s static-rule budget.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "extension-trackers",
+      "name": "Tracker domains in the browser",
+      "userStatus": "needs_setup",
+      "implementationStatus": "implemented-but-not-device-verified",
+      "summary": "Optional off-by-default rules for tracker-like hosts.",
+      "scope": "This browser.",
+      "limitations": "Not a full cosmetic ad blocker, and not same-site ads.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "extension-clean",
+      "name": "Link cleaning in the browser",
+      "userStatus": "needs_setup",
+      "implementationStatus": "implemented-but-not-device-verified",
+      "summary": "The extension can strip the same conservative tracking parameters.",
+      "scope": "This browser.",
+      "limitations": "Signed-looking links are skipped when the rule matches.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "cookie-hide",
+      "name": "Cookie-banner hiding",
+      "userStatus": "needs_setup",
+      "implementationStatus": "implemented-but-not-device-verified",
+      "summary": "The extension can hide a short list of common banners.",
+      "scope": "This browser.",
+      "limitations": "Hiding is not rejecting consent.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "reports",
+      "name": "Reports, theme, and export",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Redacted check history stays in this browser. Light and dark follow the system or your choice.",
+      "scope": "This browser.",
+      "limitations": "Passwords and file bytes are not stored.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "install",
+      "name": "Install the page",
+      "userStatus": "works_automatically",
+      "implementationStatus": "implemented-and-verified",
+      "summary": "Use the browser install prompt when it exists, otherwise the steps for that browser.",
+      "scope": "This browser.",
+      "limitations": "Installing the page does not add system filtering or a tunnel.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "android-companion",
+      "name": "Android companion",
+      "userStatus": "needs_native",
+      "implementationStatus": "not-yet-implemented",
+      "summary": "A later signed app could add on-device filtering, call screening, and broader file checks.",
+      "scope": "This browser.",
+      "limitations": "No app is built in this version. See docs/android-companion.md.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "device-tunnel",
+      "name": "Device-wide encrypted tunnel",
+      "userStatus": "not_built",
+      "implementationStatus": "not-yet-implemented",
+      "summary": "Shield does not run a tunnel or choose an exit city.",
+      "scope": "This browser.",
+      "limitations": "NXTL mobile data has its own published London exit. That is a connection, not this feature.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "malware-scan",
+      "name": "File-content malware scan",
+      "userStatus": "not_built",
+      "implementationStatus": "not-yet-implemented",
+      "summary": "No antivirus engine is bundled.",
+      "scope": "This browser.",
+      "limitations": "The file tool only hashes and checks the name and a few leading bytes.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "call-screen",
+      "name": "Call screening",
+      "userStatus": "needs_native",
+      "implementationStatus": "not-yet-implemented",
+      "summary": "No call-screening role and no number list.",
+      "scope": "This browser.",
+      "limitations": "A website cannot screen calls.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "vault",
+      "name": "Password vault",
+      "userStatus": "not_built",
+      "implementationStatus": "not-yet-implemented",
+      "summary": "Shield does not store passwords.",
+      "scope": "This browser.",
+      "limitations": "Use a separate maintained vault if you need one.",
+      "costOwner": "No fee."
+    },
+    {
+      "id": "email-breach",
+      "name": "Email breach monitoring",
+      "userStatus": "unsupported",
+      "implementationStatus": "unavailable-data-source",
+      "summary": "Shield does not look up email addresses.",
+      "scope": "This browser.",
+      "limitations": "The password range check is not an email search.",
+      "costOwner": "No fee."
+    }
+  ]
+}
