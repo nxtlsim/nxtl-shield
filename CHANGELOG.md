@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+- Clearer verdicts when you check a link or message: Likely scam, Be careful, or Looks safe. Prize and similar scam texts are flagged even without a link.
+- Your connection shows the public IPv4 and IPv6 address, city, country, and network provider that websites can see, and checks whether Safe DNS looks on.
+- Safer, simpler setup: one-click Windows Safe DNS download, an Apple profile, and short steps for Android, Mac, and Linux.
+- Secure Share uses a single file drop zone. Moving between tools starts at the top of the page.
+- Short diagrams explain each tool, and motion respects reduced-motion settings.
+
 ## 0.3.0
 
 - Clearer setup and home layout, with square controls and a compact Shield mark in the header.
