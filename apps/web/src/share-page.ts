@@ -99,7 +99,7 @@ export function pageShare(): HTMLElement {
       "Click Encrypt, then copy or share the protected result.",
       "Send the password separately, e.g. by another app.",
     ],
-    limit: "Encryption happens locally in your browser with Web Crypto / OpenPGP. If you lose the password, the data cannot be recovered.",
+    limit: "Encryption happens on this device. If you lose the password, the data cannot be recovered.",
   });
 
   const header = h("div", {}, [
@@ -370,7 +370,7 @@ export function pageShare(): HTMLElement {
       " Armored text (PGP ASCII block, easier to copy). Uncheck for raw binary .pgp file.",
     ]),
     h("p", { class: "muted-soft", style: "margin-top: var(--sp-2);" }, [
-      "Shield uses OpenPGP SEIPDv2 with AES-256-OCB and Argon2 key derivation. Passwords are never sent across the internet.",
+      "Messages and files are encrypted on this device with a password you choose. The password is never sent across the internet.",
     ]),
   ]);
 
@@ -406,11 +406,11 @@ export function pageShare(): HTMLElement {
     },
     {
       q: "Does NXTL see my password or messages?",
-      a: "Never. All encryption and decryption runs entirely inside your browser's local Web Crypto engine. Nothing is sent to any server.",
+      a: "Never. Encryption and decryption run in this browser on your device. Nothing is sent to any server.",
     },
     {
       q: "Can I open these files on other computers?",
-      a: "Yes. Any computer running NXTL Shield or OpenPGP-compatible software supporting SEIPDv2 can decrypt the message with your password.",
+      a: "Yes. Anyone with NXTL Shield and the password can decrypt it on their own device.",
     },
   ]);
 
