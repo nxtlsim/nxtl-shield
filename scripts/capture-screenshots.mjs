@@ -21,10 +21,12 @@ async function main() {
   async function takeShot(vp, theme, hash, filename, action) {
     const context = await browser.newContext({
       viewport: { width: vp.width, height: vp.height },
+      serviceWorkers: "block",
     });
+    await context.setOffline(false);
     const page = await context.newPage();
     const url = hash ? `${BASE_URL}#/${hash}` : BASE_URL;
-    await page.goto(url);
+    await page.goto(url, { waitUntil: "networkidle" });
     await page.evaluate((th) => {
       localStorage.setItem("nxtl-shield-theme", th);
       const dark = th === "dark" || (th !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
@@ -36,8 +38,15 @@ async function main() {
     } else {
       await page.waitForSelector("main > div");
     }
+    await page.evaluate(() => {
+      const banner = document.querySelector('[data-testid="offline-banner"]');
+      if (banner) banner.hidden = true;
+      if (document.activeElement && document.activeElement !== document.body) {
+        document.activeElement.blur();
+      }
+    });
     await page.waitForTimeout(400);
-    await page.screenshot({ path: join(OUT_DIR, filename) });
+    await page.screenshot({ path: join(OUT_DIR, filename), fullPage: false });
     await context.close();
   }
 
@@ -50,12 +59,13 @@ async function main() {
         await page.waitForSelector(".tiles-grid");
       });
 
-      // 2. Check result
-      await takeShot(vp, theme, "check", `check-result-${vp.name}-${theme}.png`, async (page) => {
+      // 2. Check result — lottery SMS, Likely scam (the customer-facing verdict)
+      await takeShot(vp, theme, "check?tab=message", `check-result-${vp.name}-${theme}.png`, async (page) => {
         await page.waitForSelector('[data-testid="check-input"]');
-        await page.getByTestId("check-input").fill("https://verify-fake-login.example.com/login");
+        await page.getByTestId("check-input").fill("Congratulations you won the lottery, claim your prize now!");
         await page.getByTestId("check-run").click();
         await page.waitForSelector('[data-testid="verdict"]');
+        await page.getByTestId("verdict").scrollIntoViewIfNeeded();
       });
 
       // 3. Secure Share
@@ -63,6 +73,15 @@ async function main() {
         await page.waitForSelector('[data-testid="share-input"]');
         await page.getByTestId("share-input").fill("Confidential API keys and private backup codes");
         await page.getByTestId("share-password").fill("SuperSecretSharedPass123!");
+        await page.evaluate(() => {
+          if (document.activeElement) document.activeElement.blur();
+          const form = document.querySelector('[data-testid="share-input"]')?.closest(".card");
+          const headerH = document.querySelector("header")?.getBoundingClientRect().height || 64;
+          if (form) {
+            const y = form.getBoundingClientRect().top + window.scrollY - headerH - 8;
+            window.scrollTo(0, Math.max(0, y));
+          }
+        });
       });
 
       // 4. Phone Protect
@@ -83,11 +102,35 @@ async function main() {
       // 7. Your connection
       await takeShot(vp, theme, "connection", `connection-${vp.name}-${theme}.png`, async (page) => {
         await page.waitForSelector("h1:has-text('Your connection')");
+        const card = page.locator('[data-testid="connection-info-card"]');
+        await card.waitFor({ timeout: 20000 });
+        await page.evaluate(() => {
+          const card = document.querySelector('[data-testid="connection-info-card"]');
+          const headerH = document.querySelector("header")?.getBoundingClientRect().height || 64;
+          if (card) {
+            const y = card.getBoundingClientRect().top + window.scrollY - headerH - 12;
+            window.scrollTo(0, Math.max(0, y));
+          }
+        });
       });
 
       // 8. Safe DNS Setup
       await takeShot(vp, theme, "setup", `setup-${vp.name}-${theme}.png`, async (page) => {
         await page.waitForSelector("h1:has-text('Safe DNS Setup')");
+        const tabName = vp.name === "390" ? "iPhone & iPad" : "Windows";
+        await page.getByRole("tab", { name: tabName }).click();
+        const cta = vp.name === "390"
+          ? page.getByRole("link", { name: /profile|mobileconfig|Download/i }).first()
+          : page.getByRole("link", { name: "Download Windows setup (.cmd)" });
+        await cta.waitFor();
+        await page.evaluate(() => {
+          const tabs = document.querySelector(".tab-btn")?.closest('[role="tablist"]') || document.querySelector(".tab-btn");
+          const headerH = document.querySelector("header")?.getBoundingClientRect().height || 64;
+          if (tabs) {
+            const y = tabs.getBoundingClientRect().top + window.scrollY - headerH - 16;
+            window.scrollTo(0, Math.max(0, y));
+          }
+        });
       });
     }
   }
