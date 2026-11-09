@@ -3,7 +3,6 @@ import {
   IP_LOOKUP,
   NXTL_LINKS,
   RESOLVERS,
-  SNAPSHOT_MANIFEST,
   buildMobileconfig,
   checkText,
   checkUrl,
@@ -1448,14 +1447,14 @@ export function pagePassword(): HTMLElement {
   ]);
 
   const intro = introBlock({
-    what: "Generate cryptographically random passwords and passphrases entirely within your browser.",
+    what: "Create a strong password or passphrase on this device. Nothing is stored or sent unless you choose the optional leak check.",
     howSteps: [
-      "Choose your desired length and character options.",
-      "Click New password to generate.",
-      "Click Copy password to copy it to your password manager.",
+      "Choose your length and whether to include symbols.",
+      "Click New password to generate one.",
+      "Click Copy password, then save it in your password manager.",
     ],
-    limit: "Passwords are generated in Web Crypto and never leave your device.",
-    howItWorks: "All randomness uses crypto.getRandomValues(). The optional leak check uses k-anonymity, querying only the first 5 characters of the SHA-1 hash against haveibeenpwned. Your password is never sent.",
+    limit: "Passwords are created on this device and never leave it, unless you run the optional leak check.",
+    howItWorks: "The optional leak check only asks a public leak database whether a short, incomplete fingerprint of the password has been seen before. Your full password is never sent.",
   });
 
   // Slider & options
@@ -1893,7 +1892,9 @@ export async function pageSetup(): Promise<HTMLElement> {
           ? "ios"
           : device.os === "mac"
             ? "mac"
-            : "windows";
+            : device.os === "linux"
+              ? "linux"
+              : "windows";
 
   const tabContainer = h("div", { class: "tab-bar", role: "tablist", style: "margin-top: var(--sp-4);" });
   const tabs: [DeviceTab, string, IconName][] = [
@@ -1937,32 +1938,32 @@ export async function pageSetup(): Promise<HTMLElement> {
             h("span", { class: "pill ok" }, ["Reversible anytime"]),
           ]),
           h("p", { class: "muted" }, [
-            "Sets encrypted Safe DNS for your active network adapter and configures Chrome and Edge secure DNS policies.",
+            "The one-click setup uses the recommended profile: Block ads, trackers & scams. It sets Safe DNS on your active network connection and turns on encrypted DNS in Chrome and Edge.",
           ]),
           h("div", { style: "margin: var(--sp-4) 0;" }, [
             h("a", {
               class: "btn primary lg",
-              href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-windows-dns.cmd`,
-              download: "nxtl-shield-windows-dns.cmd",
+              href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-windows-setup.zip`,
+              download: "nxtl-shield-windows-setup.zip",
             }, [
               createIcon("download", 20),
               "Download Windows setup",
             ]),
           ]),
           h("ol", { class: "stepper-list" }, [
-            h("li", {}, ["Download the setup file above."]),
-            h("li", {}, ["Right-click and select Run as administrator (or double-click and allow UAC prompt)."]),
-            h("li", {}, ["Restart your browser. Your PC is now protected!"]),
+            h("li", {}, ["Download the setup folder (zip) above and unzip it."]),
+            h("li", {}, ["Double-click nxtl-shield-windows-dns.cmd and allow it to run as administrator."]),
+            h("li", {}, ["Restart your browser. Your PC is now protected."]),
           ]),
           h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--line);" }, [
-            h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
+            h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); flex-wrap: wrap;" }, [
               h("a", {
                 class: "btn sm ghost",
-                href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-browser-dns-undo.reg`,
-                download: "nxtl-shield-browser-dns-undo.reg",
+                href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-windows-dns-undo.cmd`,
+                download: "nxtl-shield-windows-dns-undo.cmd",
               }, [
                 createIcon("refresh", 14),
-                "Download Undo script",
+                "Undo system DNS",
               ]),
               h("a", {
                 class: "btn sm ghost",
@@ -1970,7 +1971,23 @@ export async function pageSetup(): Promise<HTMLElement> {
                 download: "nxtl-shield-browser-dns.reg",
               }, [
                 createIcon("file", 14),
-                "Browser policy (.reg) only",
+                "Chrome/Edge policy only",
+              ]),
+              h("a", {
+                class: "btn sm ghost",
+                href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-browser-dns-undo.reg`,
+                download: "nxtl-shield-browser-dns-undo.reg",
+              }, [
+                createIcon("refresh", 14),
+                "Undo Chrome/Edge policy",
+              ]),
+              h("a", {
+                class: "btn sm ghost",
+                href: `${import.meta.env.BASE_URL}downloads/windows/policies.json`,
+                download: "policies.json",
+              }, [
+                createIcon("file", 14),
+                "Firefox policy file",
               ]),
             ]),
             h("a", {
@@ -2129,10 +2146,10 @@ export async function pageSetup(): Promise<HTMLElement> {
         h("section", { class: "card" }, [
           h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
             createIcon("desktop", 28),
-            h("h2", { style: "margin: 0;" }, ["Linux: systemd-resolved or DoH"]),
+            h("h2", { style: "margin: 0;" }, ["Linux: Encrypted DNS"]),
           ]),
           h("p", { class: "muted" }, [
-            "Configure your Linux distribution's DNS resolver or browser with the secure DNS endpoint below:",
+            "Set this encrypted DNS address in your Linux network settings or in your browser:",
           ]),
           h("ol", { class: "stepper-list" }, [
             h("li", {}, [
@@ -2379,16 +2396,14 @@ export function pagePrivacy(): HTMLElement {
 
   const sourcesCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
     h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3);" }, [
-      h("h2", { style: "margin: 0;" }, ["Threat lists & sources"]),
-      h("span", { class: "pill ok" }, [`Lists updated: ${SNAPSHOT_MANIFEST.version}`]),
+      h("h2", { style: "margin: 0;" }, ["Threat lists"]),
     ]),
     h("p", {}, [
-      "NXTL Shield bundles curated threat lists from trusted open-source security intelligence feeds. These are automatically updated and tested via scheduled builds:",
+      "NXTL Shield ships with open threat lists used to flag scam, malware, and tracker domains. The lists come with the app and are updated over time.",
     ]),
     h("ul", { style: "line-height: 1.8; margin-left: var(--sp-4);" }, [
-      h("li", {}, [h("strong", {}, ["HaGeZi Multi PRO & TIF: "]), "High-confidence malicious domains, scam infrastructure, and tracking networks."]),
-      h("li", {}, [h("strong", {}, ["URLhaus / abuse.ch: "]), "Live verified malware distribution and ransomware domains."]),
-      h("li", {}, [h("strong", {}, ["AdGuard / EasyList: "]), "Advertising networks, analytics beacons, and cosmetic element filters."]),
+      h("li", {}, [h("strong", {}, ["Scam and malware domains: "]), "Known phishing sites, scam infrastructure, and harmful downloads."]),
+      h("li", {}, [h("strong", {}, ["Trackers and ads: "]), "Advertising and analytics domains used to follow you across sites."]),
     ]),
   ]);
 
@@ -2398,9 +2413,9 @@ export function pagePrivacy(): HTMLElement {
       "Shield only touches the network when you explicitly trigger an external lookup:",
     ]),
     h("ul", { style: "line-height: 1.8; margin-left: var(--sp-4);" }, [
-      h("li", {}, [h("strong", {}, ["Password leak check: "]), "Uses k-anonymity to query api.pwnedpasswords.com with only the first 5 characters of the SHA-1 hash. Your password is never sent."]),
-      h("li", {}, [h("strong", {}, ["Connection Doctor: "]), "Queries api.ipify.org to display your public IP address only when you click 'Look up public IP'."]),
-      h("li", {}, [h("strong", {}, ["eSIM rates: "]), "Queries the nxtlsim.com pricing API when you look up rates for a destination."]),
+      h("li", {}, [h("strong", {}, ["Password leak check: "]), "Only if you click the button. A short, incomplete fingerprint of the password is sent to a public leak database. Your password itself is never sent."]),
+      h("li", {}, [h("strong", {}, ["Public IP check: "]), "Only if you click Look up public IP. This asks a public address service what address the internet currently sees for you."]),
+      h("li", {}, [h("strong", {}, ["eSIM rates: "]), "Only if you look up rates for a destination. This fetches current NXTL eSIM plan prices."]),
     ]),
   ]);
 

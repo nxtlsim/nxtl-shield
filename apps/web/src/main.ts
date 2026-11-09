@@ -24,7 +24,6 @@ import {
   pagePhoneProtection,
   pageSettings,
   pageSetup,
-  pageStatus,
   pagePrivacy,
 } from "./pages";
 import { pageShare } from "./share-page";
@@ -50,7 +49,7 @@ const ALL_NAV = [
   ["connection", "Connection Doctor", "connection"],
   ["location", "Location Privacy", "location"],
   ["esim", "NXTL eSIM", "esim"],
-  ["status", "Capability Status", "info"],
+  ["privacy", "How it works & privacy", "info"],
   ["install", "Install App", "install"],
   ["settings", "Reports", "file"],
 ] as const;
@@ -60,7 +59,7 @@ if (!app) throw new Error("missing app");
 
 const offline = h("p", { class: "banner", "data-testid": "offline-banner", role: "status" }, [
   createIcon("alert", 16),
-  " You are offline. Saved pages and list snapshots can still open. New online lookups will fail.",
+  " You are offline. Saved pages and bundled lists can still open. New online lookups will fail.",
 ]);
 offline.hidden = navigator.onLine;
 
@@ -298,14 +297,13 @@ async function pageFor(path: string, tab: string) {
     case "setup":
       return pageSetup();
     case "status":
-      return pageStatus();
+    case "privacy":
+    case "sources":
+      return pagePrivacy();
     case "install":
       return pageInstall();
     case "settings":
       return pageSettings();
-    case "privacy":
-    case "sources":
-      return pagePrivacy();
     default:
       return pageHome();
   }

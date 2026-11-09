@@ -109,10 +109,10 @@ export function firefoxDohSteps(resolverId: string): SetupSteps {
 export function appleRemovalSteps(): string[] {
   return [
     "Install only if you downloaded the profile yourself. Shield never installs a profile onto a device.",
-    "iPhone: download from Safari. You are asked for permission to install the profile. View and remove under Settings > General > VPN & Device Management.",
+    "iPhone: download from Safari. You are asked for permission to install the profile. View and remove it later under Settings > General, in the device management or profiles list.",
     "If you delete a profile, all of the settings, apps, and data associated with the profile are also deleted. Source: Apple's iPhone guide, version picker shows iOS 27.",
     "The intermediate “Profile Downloaded” wording on iOS 27 is UNVERIFIED.",
-    "After install, the DNS entry is described under Settings > General > VPN & Device Management > DNS.",
+    "After install, you can review the DNS profile under Settings > General, in the device management or profiles list.",
     "macOS: System Settings → Privacy & Security → Profiles, or General → Device Management on newer macOS. The exact macOS 27 path is UNVERIFIED.",
   ];
 }
