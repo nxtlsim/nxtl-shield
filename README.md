@@ -1,47 +1,26 @@
-# NXTL Shield: free, open-source privacy and security tools
+# NXTL Shield
 
-## What is NXTL Shield?
+Free, open-source tools that help you block ads and trackers, check suspicious links, turn on encrypted DNS, protect your location, and encrypt files or messages. Built by NXTL eSIM. No account required. NXTL eSIM mobile data is optional and does not unlock these tools.
 
-NXTL Shield is a free, open-source set of privacy and security tools from NXTL eSIM. Use it in the browser as an installable web app, or add the browser extension for continuous controls. Every tool works without an account. NXTL eSIM mobile data is optional and does not unlock Shield.
+## What you can do
 
-## Features
+### Block ads and trackers
+Add the browser extension to stop known ad and tracker domains while you browse. Or set Safe DNS so every app on your phone or computer is filtered.
 
-### Phishing and scam link checker
-Paste a link before you open it. Shield checks the URL against bundled threat host lists and simple heuristics in your browser. A miss is not a promise that a page is safe.
+### Check a phishing or scam link
+Paste a link, a text message, or a QR code before you open it. Shield checks it on your device against bundled threat lists.
 
-### Message and SMS scam checker
-Paste a message. Shield extracts links and checks them the same way, without reading your inbox.
+### Turn on encrypted DNS
+Follow short steps for Windows, Android, iPhone, Mac, and Linux. On Windows you can download a one-click setup folder. You choose a public encrypted DNS service; Shield does not run the DNS service itself.
 
-### QR code safety check
-Decode a QR image locally, then decide whether to open the result.
+### Protect your location
+In Chromium browsers, the extension can block website location access, with exceptions you choose. Phone app permissions stay under your device settings.
 
-### Ad and tracker blocking (extension)
-Turn on tracker-domain blocking in the extension. This is not a full ad blocker; it targets tracker hosts from a bundled list.
+### Encrypt a file or message
+Secure Share encrypts text or a file on your device with a password you choose. Nothing is uploaded. Send the password through a different channel.
 
-### Link cleaner
-Remove common tracking parameters from a URL. Signed, login, and payment links are left alone. The extension can clean navigations when you enable that toggle.
-
-### Cookie-banner hiding (extension)
-Optionally hide some cookie banners. Shield does not reject consent for you.
-
-### Encrypted DNS setup
-Follow device-specific steps for Android Private DNS, iPhone/iPad/Mac configuration profiles, Windows, and browser DNS-over-HTTPS. You choose a public resolver; Shield does not run a resolver for you.
-
-### Location privacy controls (Chromium extension)
-Block website geolocation in Chromium and add exceptions (for example Google Maps on www.google.com). Firefox does not expose the same setting. Phone app permissions stay manual.
-
-### Secure Share
-Encrypt or decrypt a message or file you enter here with a shared password. Cryptography runs locally with OpenPGP.js. Nothing is uploaded. Send the password through a separate trusted channel.
-
-### Password generator and breach check
-Create passwords or passphrases on the device. An optional range check sends only the first five characters of a SHA-1 hash to the public HIBP API.
-
-### Connection Doctor
-Explain browser-visible connection signals and optional public-IP or pricing lookups you choose to run. It cannot prove which SIM is active.
-
-### Optional NXTL eSIM
-Guidance and live rates for NXTL eSIM, an optional paid London-exit mobile connection. It does not unlock Shield and is not described as a privacy tunnel.
-
+### Create a strong password
+Generate a password on your device, copy it in one tap, and optionally check whether it has appeared in known leaks. Your password itself is never sent.
 
 ## Screenshots
 
@@ -53,31 +32,26 @@ Guidance and live rates for NXTL eSIM, an optional paid London-exit mobile conne
 |---|---|
 | ![Secure Share](docs/screenshots/share-1280-dark.png) | ![Extension page](docs/screenshots/extension-page-1280-dark.png) |
 
-More captures (check result, ad blocker, phone protection, light/dark, 390/1280) live in [`docs/screenshots/`](docs/screenshots/).
+More captures (check result, ad blocker, phone protection, light and dark, 390 and 1280) are in [`docs/screenshots/`](docs/screenshots/).
 
 ## Install
 
-- **Web app:** open [https://nxtlsim.github.io/nxtl-shield/](https://nxtlsim.github.io/nxtl-shield/) and use Install / Add to Home Screen when your browser offers it.
-- **Hugging Face Space:** [https://huggingface.co/spaces/nxtl-esim/nxtl-shield](https://huggingface.co/spaces/nxtl-esim/nxtl-shield)
-- **Chromium extension:** download [nxtl-shield-chromium.zip](https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-chromium.zip) and load it unpacked (chrome://extensions → Developer mode → Load unpacked).
-- **Firefox extension:** install [nxtl-shield-firefox.xpi](https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-firefox.xpi) (signed, unlisted on addons.mozilla.org).
+- **Web app:** open [https://nxtlsim.github.io/nxtl-shield/](https://nxtlsim.github.io/nxtl-shield/) and use Install or Add to Home Screen when your browser offers it.
+- **Hugging Face Space:** [https://nxtl-esim-nxtl-shield.static.hf.space/](https://nxtl-esim-nxtl-shield.static.hf.space/)
+- **Chromium extension:** download [nxtl-shield-chromium.zip](https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-chromium.zip), then in chrome://extensions turn on Developer mode and choose Load unpacked.
+- **Firefox extension:** install the signed [nxtl-shield-firefox.xpi](https://github.com/nxtlsim/nxtl-shield/releases/latest/download/nxtl-shield-firefox.xpi).
 
-## Platform support
+## Windows one-click Safe DNS
 
-| Surface | Status |
-|---|---|
-| Web app (desktop & mobile browsers) | Works |
-| Installable PWA | Works where the browser supports it |
-| Chromium extension (threats, trackers, cleaning, location) | Works |
-| Firefox extension (threats, trackers, cleaning) | Works; location content setting unsupported |
-| Encrypted DNS profiles / Private DNS | Needs your setup steps |
-| Android native companion / call screening / malware content scan | Not in this version |
+1. On the [Safe DNS setup page](https://nxtlsim.github.io/nxtl-shield/#/setup), download the Windows setup folder and unzip it.
+2. Double-click `nxtl-shield-windows-dns.cmd` and allow it to run as administrator.
+3. Restart your browser.
 
-Details: [docs/features.md](docs/features.md), [docs/support-matrix.md](docs/support-matrix.md).
+The folder also includes an undo script, Chrome/Edge policy files, and a Firefox policy file. The one-click setup uses the recommended profile that blocks ads, trackers, and scams.
 
 ## Privacy
 
-Checks, Secure Share, and password generation run in your browser. Shield does not create an account. Optional lookups (breach range hash, public IP, NXTL pricing) only run when you choose them and are disclosed beside the action. See [docs/privacy.md](docs/privacy.md).
+Checks, encryption, and password generation run in your browser. Shield does not create an account and does not collect browsing history. Optional checks (leaked passwords, public IP, NXTL eSIM plan prices) run only when you choose them. See [docs/privacy.md](docs/privacy.md).
 
 ## FAQ
 
@@ -88,19 +62,16 @@ Yes. The web tools and extension are free. NXTL eSIM is an optional paid product
 No.
 
 **Does Shield collect my browsing history?**  
-No. Extension settings stay in the browser. Bundled lists ship with the app.
+No. Extension settings stay in the browser. Threat lists ship with the app.
 
 **Does Secure Share upload my files?**  
-No. Encryption and decryption stay on the device.
-
-**Is this a network tunnel?**  
-No. Shield does not choose an internet exit or run a tunnel. NXTL eSIM is a separate optional mobile connection.
+No. Encryption and decryption stay on your device.
 
 **Will it stop every scam?**  
-No. List misses and new sites happen. Treat results as guidance.
+No. New or unknown sites may be missed. Treat results as guidance.
 
 **Does location blocking work on Firefox?**  
-Not via the extension content setting. Use browser or OS permission controls.
+Not through the extension. Use your browser or device permission settings.
 
 **Where do I report a problem?**  
 [GitHub Issues](https://github.com/nxtlsim/nxtl-shield/issues).
@@ -112,7 +83,7 @@ Licence: GPL-3.0-or-later. Third-party lists and libraries keep their own licenc
 ## Links
 
 - Live web app: https://nxtlsim.github.io/nxtl-shield/
-- Hugging Face Space: https://huggingface.co/spaces/nxtl-esim/nxtl-shield
+- Hugging Face Space: https://nxtl-esim-nxtl-shield.static.hf.space/
 - Firefox add-on (unlisted): https://addons.mozilla.org/en-US/firefox/addon/nxtl-shield/
 - Source: https://github.com/nxtlsim/nxtl-shield
 - NXTL eSIM: https://nxtlsim.com

@@ -84,9 +84,7 @@ export function generatePassword(options: PasswordOptions = {}): GeneratedPasswo
     password: shuffle(chars).join(""),
     length,
     classes: sets.map((set) => set.name),
-    note: avoid
-      ? "Generated in this browser with Web Crypto. Ambiguous characters (0, O, 1, l, I) are left out, which slightly reduces the space. Requiring one character from each selected set also slightly reduces it. Nothing was stored or sent."
-      : "Generated in this browser with Web Crypto. Nothing was stored or sent.",
+    note: "Made on your device. Never stored or sent.",
   };
 }
 
@@ -102,7 +100,7 @@ export function generatePassphrase(wordCount = 6): GeneratedPassphrase {
     words: wordCount,
     wordlistSize: wordlist.length,
     bits,
-    note: `About ${bits} bits if each word is chosen uniformly from the ${wordlist.length}-word BIP39 English list (@scure/bip39, MIT) and the phrase stays secret. This is not a cryptocurrency recovery phrase. Do not import it into a wallet. Nothing was stored or sent.`,
+    note: "Generated on your device. This is not a cryptocurrency recovery phrase.",
   };
 }
 
@@ -119,9 +117,9 @@ export function passwordStrength(password: string): Strength {
     return {
       score: 0,
       guessesLabel: "not estimated",
-      warning: "This input is longer than 128 characters and was not estimated.",
+      warning: "Password exceeds 128 characters.",
       suggestions: [],
-      note: "The estimator did not run. The text was not sent.",
+      note: "Evaluated locally on your device.",
     };
   }
   const result = strengthChecker.check(password);
@@ -130,7 +128,7 @@ export function passwordStrength(password: string): Strength {
     guessesLabel: result.crackTimes.offlineSlowHashingXPerSecond.display,
     warning: result.feedback.warning ?? "",
     suggestions: result.feedback.suggestions ?? [],
-    note: "zxcvbn-ts score 0–4 is an estimate of guessability, not a guarantee and not proof the password is unbreached.",
+    note: "Evaluated locally on your device.",
   };
 }
 
@@ -220,7 +218,7 @@ export async function hibpLookup(password: string, fetchImpl: typeof fetch = fet
         suffixSent: false,
         requestUrl: request.url,
         paddedLines: parsed.lines,
-        summary: `This password appeared in the Pwned Passwords range response ${parsed.count} time${parsed.count === 1 ? "" : "s"}. Choose another.`,
+        summary: "Found in leaks, don't use it.",
         transmission: "third_party",
         scope,
       };
@@ -232,7 +230,7 @@ export async function hibpLookup(password: string, fetchImpl: typeof fetch = fet
       suffixSent: false,
       requestUrl: request.url,
       paddedLines: parsed.lines,
-      summary: "No matching suffix was in the range response. That is not proof the password is strong, and it is not an email or dark-web search.",
+      summary: "Not found in known leaks.",
       transmission: "third_party",
       scope,
     };
@@ -244,7 +242,7 @@ export async function hibpLookup(password: string, fetchImpl: typeof fetch = fet
       suffixSent: false,
       requestUrl: request.url,
       paddedLines: null,
-      summary: "The range API could not be reached. Nothing else was sent.",
+      summary: "Breach lookup unavailable. Please try again later.",
       transmission: "third_party",
       scope,
     };

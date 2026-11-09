@@ -316,12 +316,9 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
     summary = "Inconclusive: reputation lists were unavailable, and no heuristic indicator fired.";
   }
 
-  let uncertainty = "A short or new address can be dangerous with no indicator. A list miss is not a promise that the page is safe.";
-  if (reputation.stale) {
-    uncertainty += " The bundled list snapshot may be outdated and is not auto-updated.";
-  }
+  let uncertainty = "Checks links against known scam lists. A new scam site may not be cataloged yet.";
   if (allowlisted && listMatch) {
-    uncertainty += " This host is also on the supplied allowlist. An extension following that allowlist would not block it. The list match is still shown.";
+    uncertainty += " This host is on your custom allowlist.";
   }
 
   const blockingRecommendation: UrlCheck["blockingRecommendation"] = !reputation.available

@@ -24,7 +24,7 @@ import {
   pagePhoneProtection,
   pageSettings,
   pageSetup,
-  pageStatus,
+  pagePrivacy,
 } from "./pages";
 import { pageShare } from "./share-page";
 
@@ -32,11 +32,8 @@ const DESKTOP_NAV = [
   ["", "Home"],
   ["check", "Check"],
   ["share", "Share"],
-  ["ad-blocker", "Ad Blocker"],
-  ["phone-protection", "Phone"],
+  ["phone-protection", "Protect"],
   ["extension", "Extension"],
-  ["setup", "Safe DNS"],
-  ["password", "Password"],
 ];
 
 const ALL_NAV = [
@@ -52,7 +49,7 @@ const ALL_NAV = [
   ["connection", "Connection Doctor", "connection"],
   ["location", "Location Privacy", "location"],
   ["esim", "NXTL eSIM", "esim"],
-  ["status", "Capability Status", "info"],
+  ["privacy", "How it works & privacy", "info"],
   ["install", "Install App", "install"],
   ["settings", "Reports", "file"],
 ] as const;
@@ -62,7 +59,7 @@ if (!app) throw new Error("missing app");
 
 const offline = h("p", { class: "banner", "data-testid": "offline-banner", role: "status" }, [
   createIcon("alert", 16),
-  " You are offline. Saved pages and list snapshots can still open. New online lookups will fail.",
+  " You are offline. Saved pages and bundled lists can still open. New online lookups will fail.",
 ]);
 offline.hidden = navigator.onLine;
 
@@ -86,18 +83,15 @@ async function render() {
 
   const header = h("header", { class: "top" }, [
     h("div", { class: "wrap bar" }, [
-      h("a", { class: "brand", href: "#/" }, [
+      h("a", { class: "brand", href: "#/", "aria-label": "NXTL Shield Home" }, [
         h("img", {
-          class: "logo-dark",
-          src: `${import.meta.env.BASE_URL}brand/nxtl-esim-lockup-dark.png`,
-          alt: "NXTL eSIM",
+          class: "brand-icon",
+          src: `${import.meta.env.BASE_URL}icons/icon-32.png`,
+          width: "28",
+          height: "28",
+          alt: "",
         }),
-        h("img", {
-          class: "logo-light",
-          src: `${import.meta.env.BASE_URL}brand/nxtl-esim-lockup-light.png`,
-          alt: "NXTL eSIM",
-        }),
-        h("span", { class: "brand-badge" }, ["Shield"]),
+        h("span", { class: "brand-title" }, ["Shield"]),
       ]),
       desktopNav(path),
       h("span", { class: "grow" }),
@@ -124,7 +118,7 @@ async function render() {
       h("p", {}, [
         h("a", { href: "https://github.com/nxtlsim/nxtl-shield", target: "_blank", rel: "noreferrer" }, ["Source Code (GPLv3)"]),
         " · ",
-        h("a", { href: "#/status" }, ["Capability status"]),
+        h("a", { href: "#/privacy" }, ["How it works & privacy"]),
         " · ",
         h("a", { href: "#/setup" }, ["Safe DNS"]),
         " · ",
@@ -303,7 +297,9 @@ async function pageFor(path: string, tab: string) {
     case "setup":
       return pageSetup();
     case "status":
-      return pageStatus();
+    case "privacy":
+    case "sources":
+      return pagePrivacy();
     case "install":
       return pageInstall();
     case "settings":
