@@ -56,6 +56,7 @@ export async function pageHome(): Promise<HTMLElement> {
       ]),
       h("div", { class: "row" }, [
         h("a", { class: "btn primary", href: "#/check" }, ["Check a link, message or file"]),
+        h("a", { class: "btn", href: "#/share" }, ["Secure Share"]),
         h("a", { class: "btn", href: "#/install", "data-testid": "install-link" }, ["Install NXTL Shield"]),
       ]),
     ]),
@@ -69,6 +70,7 @@ export async function pageHome(): Promise<HTMLElement> {
       link("QR", "#/check?tab=qr"),
       link("File hash", "#/check?tab=file"),
       link("Clean a URL", "#/clean"),
+      link("Secure Share", "#/share"),
       link("Password", "#/password"),
     ]),
   ]);
@@ -313,9 +315,20 @@ export function pagePassword(): HTMLElement {
     current = "";
     generated.textContent = "Cleared from the page after the check.";
   });
+  const copyStatus = h("p", { class: "muted", role: "status" });
   const copy = h("button", { type: "button" }, ["Copy"]);
-  copy.addEventListener("click", () => {
-    if (generated.textContent) navigator.clipboard.writeText(generated.textContent).catch(() => undefined);
+  copy.addEventListener("click", async () => {
+    const value = generated.textContent ?? "";
+    if (!value || value.startsWith("Generate")) {
+      copyStatus.textContent = "Generate a password first.";
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      copyStatus.textContent = "Copied.";
+    } catch {
+      copyStatus.textContent = "The clipboard refused the copy. Select the password and use your device’s copy command.";
+    }
   });
   return h("div", { class: "grid" }, [
     h("h1", {}, ["Password tools"]),
@@ -324,6 +337,7 @@ export function pagePassword(): HTMLElement {
     h("label", { class: "row" }, [symbols, " Include symbols"]),
     h("div", { class: "row" }, [make, phrase, copy, check]),
     generated,
+    copyStatus,
     out,
     h("p", { class: "muted" }, ["The range check sends only the first five characters of the SHA-1 hash to api.pwnedpasswords.com, with Add-Padding. It is not an email breach search."]),
   ]);
@@ -399,7 +413,9 @@ export async function pageConnection(): Promise<HTMLElement> {
 }
 
 export function pageLocation(): HTMLElement {
+  const detected = /iPhone|iPad/.test(navigator.userAgent) ? "ios" : /Android/.test(navigator.userAgent) ? "android" : /Firefox/.test(navigator.userAgent) ? "firefox" : "chrome";
   const os = h("select", {}, [option("chrome", "This Chromium browser"), option("firefox", "Firefox"), option("ios", "iPhone or iPad"), option("android", "Android")]);
+  (os as HTMLSelectElement).value = detected;
   const out = h("div");
   const perm = h("p", {}, ["Website permission for Shield: not requested."]);
   if (navigator.permissions?.query) {
@@ -491,7 +507,19 @@ export function pageEsim(): HTMLElement {
 
 export async function pageSetup(): Promise<HTMLElement> {
   const ext = await queryExtension();
-  const root = h("div", { class: "grid" }, [h("h1", {}, ["Protection setup"])]);
+  const device = /iPhone|iPad/.test(navigator.userAgent)
+    ? "Apple"
+    : /Android/.test(navigator.userAgent)
+      ? "Android"
+      : /Windows/.test(navigator.userAgent)
+        ? "Windows"
+        : /Mac/.test(navigator.userAgent)
+          ? "Mac"
+          : "this computer";
+  const root = h("div", { class: "grid" }, [
+    h("h1", {}, ["Protection setup"]),
+    h("p", { class: "lede" }, [`Steps below include ${device}. Pick a resolver, then use the matching section. Nothing here turns on until you install it.`]),
+  ]);
   const engine = h("section", { class: "card" }, [h("h2", {}, ["This browser"])]);
   if (!ext) {
     engine.append(
@@ -625,7 +653,7 @@ export function pageStatus(): HTMLElement {
   for (const source of sourceStatus(false)) {
     sources.append(h("article", { class: "card" }, [h("h2", {}, [String(source.id)]), h("p", {}, [String(source.inputsNote ?? source.title)]), h("p", { class: "muted" }, [`Enabled: ${source.enabled}. Hosts: ${source.hosts}.`])]));
   }
-  return h("div", { class: "grid" }, [h("h1", {}, ["Capability status"]), h("p", { class: "lede" }, ["Generated from the capability manifest. Partial coverage is not full parity with any other product."]), list, h("h2", {}, ["Support matrix"]), matrix, h("h2", {}, ["Sources"]), sources]);
+  return h("div", { class: "grid" }, [h("h1", {}, ["Capability status"]), h("p", { class: "lede" }, ["What this version can do, and what still needs setup or a native app."]), list, h("h2", {}, ["Support matrix"]), matrix, h("h2", {}, ["Sources"]), sources]);
 }
 
 export function pageInstall(): HTMLElement {

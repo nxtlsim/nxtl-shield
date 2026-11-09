@@ -22,7 +22,7 @@ const config = {
   aeadProtect: true,
   preferredAEADAlgorithm: openpgp.enums.aead.ocb,
   preferredSymmetricAlgorithm: openpgp.enums.symmetric.aes256,
-  s2kType: openpgp.enums.s2k.argon2,
+  s2kType: openpgp.enums.s2k.argon2 as openpgp.enums.s2k.argon2,
 };
 
 export type ShareJob =
@@ -45,7 +45,7 @@ export function shareError(error: unknown): string {
   if (/misformed|parsing|armor|not conform|invalid|unknown/i.test(message)) {
     return "This is not a password-encrypted OpenPGP message Shield can read.";
   }
-  if (/larger than 25/i.test(message)) return message;
+  if (/larger than 25|enter the shared password|add a message|paste an encrypted/i.test(message)) return message;
   return "Shield could not finish that operation. Nothing was uploaded.";
 }
 
@@ -54,22 +54,37 @@ function assertSize(bytes: number) {
 }
 
 export async function runShare(job: ShareJob): Promise<ShareOk> {
+  try {
+  return await runShareInner(job);
+  } catch (error) {
+    throw new Error(shareError(error));
+  }
+}
+
+async function runShareInner(job: ShareJob): Promise<ShareOk> {
   if (!job.password) throw new Error("Enter the shared password first.");
   if (job.op === "encrypt-text") {
     if (!job.text) throw new Error("Add a message first.");
-    assertSize(new TextEncoder().encode(job.text).byteLength);
-    const message = await openpgp.createMessage({ text: job.text });
-    const encrypted = await openpgp.encrypt({ message, passwords: [job.password], format: job.armor ? "armored" : "binary", config });
-    if (job.armor) return { kind: "armored", text: String(encrypted) };
-    return { kind: "binary", bytes: new Uint8Array(encrypted as Uint8Array), filename: "message.pgp" };
+    const encoded = new TextEncoder().encode(job.text);
+    assertSize(encoded.byteLength);
+    const message = await openpgp.createMessage({ binary: encoded });
+    if (job.armor) {
+      const encrypted = await openpgp.encrypt({ message, passwords: [job.password], format: "armored", config });
+      return { kind: "armored", text: String(encrypted) };
+    }
+    const encrypted = await openpgp.encrypt({ message, passwords: [job.password], format: "binary", config });
+    return { kind: "binary", bytes: new Uint8Array(encrypted), filename: "message.pgp" };
   }
   if (job.op === "encrypt-file") {
     assertSize(job.bytes.byteLength);
     const message = await openpgp.createMessage({ binary: job.bytes, filename: job.name || "file" });
-    const encrypted = await openpgp.encrypt({ message, passwords: [job.password], format: job.armor ? "armored" : "binary", config });
     const base = (job.name || "file").replace(/[^\w.\- ]+/g, "_");
-    if (job.armor) return { kind: "armored", text: String(encrypted) };
-    return { kind: "binary", bytes: new Uint8Array(encrypted as Uint8Array), filename: `${base}.pgp` };
+    if (job.armor) {
+      const encrypted = await openpgp.encrypt({ message, passwords: [job.password], format: "armored", config });
+      return { kind: "armored", text: String(encrypted) };
+    }
+    const encrypted = await openpgp.encrypt({ message, passwords: [job.password], format: "binary", config });
+    return { kind: "binary", bytes: new Uint8Array(encrypted), filename: `${base}.pgp` };
   }
   const message = job.armored
     ? await openpgp.readMessage({ armoredMessage: job.armored })

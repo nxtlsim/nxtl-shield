@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
-  CAPABILITIES,
   applySnapshotUpdate,
   blockingDecision,
   buildHibpRequest,
@@ -21,7 +20,7 @@ import {
   inspectHostLiteral,
   interpretDnsCheckPaste,
   interpretHibpBody,
-  nordCapabilities,
+  getCapabilities,
   originException,
   passwordStrength,
   setupBundle,
@@ -317,13 +316,13 @@ describe("text, files, dns, origin, eSIM", () => {
     expect(found.minEurPerGb).toBe(1.2);
   });
 
-  it("publishes 57 Nord rows and distinct statuses", () => {
-    expect(nordCapabilities()).toHaveLength(57);
-    const ids = nordCapabilities().map((item) => item.id);
-    expect(new Set(ids).size).toBe(57);
-    for (const item of CAPABILITIES) {
-      expect(item.summary.toLowerCase()).not.toContain("full nordvpn parity");
+  it("publishes a distinct feature list", () => {
+    const items = getCapabilities();
+    expect(items.length).toBeGreaterThan(10);
+    expect(new Set(items.map((item) => item.id)).size).toBe(items.length);
+    for (const item of items) {
       expect(item.userStatus).toMatch(/works_automatically|needs_setup|needs_native|unsupported|not_built/);
+      expect(JSON.stringify(item).toLowerCase()).not.toMatch(/nord/);
     }
   });
 });
