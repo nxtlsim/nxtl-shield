@@ -1,0 +1,9 @@
+{
+  "policies": {
+    "DNSOverHTTPS": {
+      "Enabled": true,
+      "ProviderURL": "https://dns.adguard-dns.com/dns-query",
+      "Locked": false
+    }
+  }
+}
