@@ -52,7 +52,7 @@ export async function pageHome(): Promise<HTMLElement> {
       h("p", { class: "pill" }, ["Free, open-source security tools by NXTL eSIM"]),
       h("h1", {}, ["Check a link before you open it."]),
       h("p", { class: "lede" }, [
-        "Shield runs link, message, and file checks in this browser. Continuous blocking needs the extension or a DNS profile you install yourself. NXTL eSIM is an optional paid connection. It does not unlock Shield, and it is not shown as a VPN.",
+        "Shield runs link, message, and file checks in this browser. Continuous blocking needs the extension or a DNS profile you install yourself. NXTL eSIM is an optional paid connection and does not unlock Shield.",
       ]),
       h("div", { class: "row" }, [
         h("a", { class: "btn primary", href: "#/check" }, ["Check a link, message or file"]),
@@ -95,7 +95,7 @@ export async function pageHome(): Promise<HTMLElement> {
     h("p", { "data-testid": "snapshot-version" }, [`List snapshot ${SNAPSHOT_MANIFEST.version}, retrieved 2026-11-09.`]),
     h("p", { class: "muted" }, [
       listFailure() ??
-        "HaGeZi TIF mini's upstream expiry hint is 8 hours. uAssets badware is 5 days. This copy is not auto-updated. A miss is not a promise that a site is safe.",
+        "Bundled threat lists are a snapshot and are not auto-updated. A miss is not a promise that a site is safe. See Sources for list details.",
     ]),
     h("p", { "data-testid": "extension-status" }, [ext ? "Extension: detected" : "Extension: not detected"]),
   ]);
@@ -690,7 +690,7 @@ export function pageInstall(): HTMLElement {
   render();
   return h("div", { class: "grid" }, [
     h("h1", {}, ["Install"]),
-    h("p", { class: "lede" }, ["Installing the page does not add native antivirus, a VPN, or device DNS. Those are separate."]),
+    h("p", { class: "lede" }, ["Installing the page does not add native antivirus, a device tunnel, or device DNS. Those are separate."]),
     button,
     guideBox,
   ]);

@@ -25,14 +25,14 @@ export interface ConnectionExplanation {
 
 export function explainConnectionIssue(obs: ConnectionObservations, now = new Date()): ConnectionExplanation {
   const points: string[] = [];
-  points.push("Shield only explains the signals you supplied or that this browser exposed. It cannot see the SIM, the APN, the VPN state, or the operating-system DNS resolver.");
+  points.push("Shield only explains the signals you supplied or that this browser exposed. It cannot see the SIM, the APN, tunnel apps, or the operating-system DNS resolver.");
   if (obs.online === false) points.push("The browser reported offline. That is a local network hint, not a diagnosis of the SIM.");
   if (obs.online === true) points.push("The browser reported online. That does not identify which interface is carrying the traffic.");
   if (obs.effectiveType) {
     points.push(`The Network Information API reported “${obs.effectiveType}”. Chromium exposes this hint. It is not a measured speed and not proof of cellular or Wi-Fi.`);
   }
   if (obs.ipLookup === "ran" && obs.publicIp) {
-    points.push(`A disclosed lookup returned ${obs.publicIp}. That is the address the lookup service saw. It does not prove NXTL, a VPN, or a city. Shield does not add a geolocation database.`);
+    points.push(`A disclosed lookup returned ${obs.publicIp}. That is the address the lookup service saw. It does not prove NXTL, a tunnel, or a city. Shield does not add a geolocation database.`);
   } else if (obs.ipLookup === "failed") {
     points.push("The public-IP lookup failed. No address is invented.");
   } else {
@@ -68,5 +68,5 @@ export function explainConnectionIssue(obs: ConnectionObservations, now = new Da
 export const IP_LOOKUP = {
   url: "https://api.ipify.org?format=json",
   disclosure:
-    "If you choose Look up public IP, this browser sends a request to https://api.ipify.org (ipify). The response is a JSON IP address. Shield does not send your checks, passwords, or files with it. The address cannot prove NXTL or a VPN.",
+    "If you choose Look up public IP, this browser sends a request to https://api.ipify.org (ipify). The response is a JSON IP address. Shield does not send your checks, passwords, or files with it. The address cannot prove NXTL or a tunnel.",
 };

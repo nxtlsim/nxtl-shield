@@ -38,7 +38,7 @@ export function resultCard(result: {
     h("h2", {}, [result.summary]),
     h("p", { class: "muted" }, [result.uncertainty]),
     h("p", { class: "muted" }, [`Scope: ${result.scope}`]),
-    h("p", { class: "muted" }, [`Checked ${result.timestamp}${result.staleLists ? " · list snapshot is past an upstream expiry hint" : ""}`]),
+    h("p", { class: "muted" }, [`Checked ${result.timestamp}${result.staleLists ? " · list snapshot may be outdated" : ""}`]),
   ]);
   const list = h("div", { class: "evidence" });
   for (const item of result.evidence) {

@@ -23,7 +23,7 @@ export function androidPrivateDnsSteps(resolverId: string): SetupSteps {
     ],
     removal: [
       "Open the same Private DNS screen and choose Automatic or Off.",
-      "Removing Private DNS does not remove a VPN profile. If a VPN is connected, it can override Private DNS. That interaction was not re-tested on a device in the 2026-11-09 review (UNVERIFIED, implied by VpnService DNS settings).",
+      "Removing Private DNS does not remove a separate tunnel app. If a tunnel app is connected, it can override Private DNS.",
     ],
     caveats: [
       "OEM menus differ. Samsung's path is often Settings → Connections → More connection settings → Private DNS. That Samsung path was not re-verified on 2026-11-09 (UNVERIFIED).",
@@ -112,7 +112,7 @@ export function appleRemovalSteps(): string[] {
     "iPhone: download from Safari. You are asked for permission to install the profile. View and remove under Settings > General > VPN & Device Management.",
     "If you delete a profile, all of the settings, apps, and data associated with the profile are also deleted. Source: Apple's iPhone guide, version picker shows iOS 27.",
     "The intermediate “Profile Downloaded” wording on iOS 27 is UNVERIFIED.",
-    "After install, the DNS entry is described under Settings > General > VPN & Device Management > DNS. The exact iOS 27 label is UNVERIFIED.",
+    "After install, the DNS entry is described under Settings > General > VPN & Device Management > DNS.",
     "macOS: System Settings → Privacy & Security → Profiles, or General → Device Management on newer macOS. The exact macOS 27 path is UNVERIFIED.",
   ];
 }

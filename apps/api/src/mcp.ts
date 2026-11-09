@@ -30,11 +30,11 @@ export function createMcpServer() {
   server.registerTool("get_location_privacy_setup", { description: "Location privacy steps for an OS or browser.", inputSchema: { os: z.string().max(40).optional() } }, async ({ os }) => text(toolLocation(os || "browser")));
   server.registerTool("get_esim_compatibility_guidance", { description: "NXTL eSIM compatibility guidance. Does not decide a device.", inputSchema: {} }, async () => text(toolEsimGuidance()));
   server.registerTool("get_esim_coverage_and_rates", { description: "EUR per GB from the public NXTL pricing API for one country name.", inputSchema: { country: z.string().max(80) } }, async ({ country }) => text(await toolRates(country)));
-  server.registerTool("explain_nxtl_routing", { description: "Explain the published NXTL London internet exit. Not a VPN status.", inputSchema: {} }, async () => text(await toolRouting()));
+  server.registerTool("explain_nxtl_routing", { description: "Explain the published NXTL London internet exit. Not a tunnel status.", inputSchema: {} }, async () => text(await toolRouting()));
   server.registerTool(
     "explain_connection_issue",
     {
-      description: "Explain browser-visible or self-reported connection notes. Cannot verify NXTL or a VPN.",
+      description: "Explain browser-visible or self-reported connection notes. Cannot verify NXTL or a tunnel.",
       inputSchema: {
         online: z.boolean().nullable().optional(),
         reportedPublicWifi: z.enum(["yes", "no", "unknown"]).optional(),
