@@ -34,18 +34,18 @@
         min-height: 100vh;
       }
       main {
-        max-width: 580px;
+        max-width: 540px;
         width: 100%;
         background: var(--card);
         border: 1px solid var(--danger);
-        border-radius: 20px;
+        border-radius: 4px;
         padding: 32px;
         box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
       }
       .icon-shield {
         width: 52px;
         height: 52px;
-        border-radius: 14px;
+        border-radius: 2px;
         background: var(--danger-bg);
         color: var(--danger);
         display: flex;
@@ -54,7 +54,7 @@
         margin-bottom: 20px;
       }
       h1 {
-        font-size: 24px;
+        font-size: 26px;
         font-weight: 800;
         letter-spacing: -0.025em;
         margin: 0 0 12px;
@@ -69,7 +69,7 @@
         font-size: 14px;
         background: var(--raised);
         padding: 10px 14px;
-        border-radius: 8px;
+        border-radius: 2px;
         border: 1px solid var(--line);
         display: block;
         overflow-wrap: anywhere;
@@ -79,38 +79,55 @@
       }
       .actions {
         display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
         margin-top: 24px;
       }
       button {
         font-family: inherit;
         font-size: 15px;
-        font-weight: 600;
-        min-height: 44px;
-        padding: 0 20px;
-        border-radius: 999px;
+        font-weight: 700;
+        min-height: 48px;
+        padding: 0 24px;
+        border-radius: 2px;
         border: 1px solid var(--line);
         background: var(--raised);
         color: #fff;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         transition: background 0.15s, transform 0.1s;
       }
       button:hover {
         background: #272d3e;
       }
       button:active {
-        transform: scale(0.98);
+        transform: translateY(1px);
       }
       button#back {
         background: var(--gradient);
         border: none;
-        font-weight: 700;
+        color: #ffffff;
         box-shadow: 0 4px 16px rgba(216, 0, 68, 0.3);
+        width: 100%;
       }
-      button.primary {
-        background: var(--raised);
-        border: 1px solid var(--line);
+      button.text-link {
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+        padding: 4px 0;
+        min-height: auto;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        cursor: pointer;
+      }
+      button.text-link:hover {
+        background: transparent;
+        color: var(--text);
       }
     </style>
   </head>
@@ -123,14 +140,13 @@
           <line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
       </div>
-      <h1 id="title">NXTL Shield stopped this page</h1>
-      <p id="why"></p>
+      <h1 id="title">Dangerous website blocked</h1>
+      <p id="why">This website is cataloged as a known phishing or malware threat. Opening it could compromise your credentials or device.</p>
       <p><code id="url"></code></p>
-      <p id="missing" hidden>The original address was not captured. Use the browser back button and paste the link into NXTL Shield's checker.</p>
+      <p id="missing" hidden>The original address was not captured. Use your browser's back button.</p>
       <div class="actions">
-        <button id="back" type="button">Go back to safety</button>
-        <button id="once" class="primary" type="button">Proceed once</button>
-        <button id="always" type="button">Always allow this site</button>
+        <button id="back" type="button">Go back (recommended)</button>
+        <button id="once" class="text-link" type="button">Continue anyway</button>
       </div>
     </main>
     <script type="module" src="warning.js"></script>
