@@ -1,0 +1,23 @@
+{
+  "name": "@nxtl/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build && DIST=dist node ../../scripts/stamp-web.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.1.0",
+    "@fontsource/jetbrains-mono": "^5.1.0",
+    "@fontsource/plus-jakarta-sans": "^5.1.0",
+    "@nxtl/core": "0.1.0",
+    "@zxing/library": "0.23.0",
+    "openpgp": "^6.3.2"
+  },
+  "devDependencies": {
+    "vite": "^6.0.3"
+  }
+}
