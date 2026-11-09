@@ -185,7 +185,7 @@ export function explainRates(countryQuery: string, payload: PricingPayload | nul
     countryCount: payload.total ?? payload.countries.length,
     retrievedAt,
     sourceUrl,
-    note: "EUR per GB comes from min_eur and max_eur on the pricing endpoint. min_display and max_display are the visitor-currency strings NXTL returned for this request and are not a fixed catalogue price. min_usd in the sample payload was 0 while EUR and display fields were populated, so USD fields are not shown. Air and maritime coverage is conditional and is not satellite-to-phone.",
+    note: match.min_display ? `Plans start from ${match.min_display}/GB.` : `Plans start from €${match.min_eur}/GB.`,
     transmission: "nxtl",
   };
 }
