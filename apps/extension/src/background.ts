@@ -28,8 +28,11 @@ const DEFAULTS: Stored = {
 const lastMain = new Map<number, string>();
 
 function locationApi() {
-  const settings = (globalThis as unknown as { chrome?: typeof chrome }).chrome?.contentSettings;
-  return settings?.geolocation ?? null;
+  const settings = (globalThis as unknown as { chrome?: typeof chrome }).chrome?.contentSettings as
+    | { geolocation?: chrome.contentSettings.ContentSetting; location?: chrome.contentSettings.ContentSetting }
+    | undefined;
+  // Chromium builds expose either .geolocation (documented) or .location.
+  return settings?.geolocation ?? settings?.location ?? null;
 }
 
 async function stored(): Promise<Stored> {
@@ -304,10 +307,12 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 const testApi = {
   enableBlocking: () => setToggle("blocking", true),
+  setToggle: (key: ToggleKey, enabled: boolean) => setToggle(key, enabled),
   pauseFor: (ms: number) => pause(ms),
   resume,
   status,
   allow: (host: string) => allowAdd(host),
+  disallow: (host: string) => allowRemove(host),
   locationBlock,
   locationException,
   locationRestore,

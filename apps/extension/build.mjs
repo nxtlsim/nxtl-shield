@@ -14,11 +14,11 @@ const KEY =
 const shared = {
   manifest_version: 3,
   name: "NXTL Shield",
-  version: "0.1.0",
-  description: "Free, open-source link and tracker controls by NXTL eSIM. Not a VPN.",
+  version: "0.1.1",
+  description: "Free open-source browser protection by NXTL eSIM: known phishing and malware warnings, tracker blocking, link cleaning, and cookie-banner controls.",
   action: { default_popup: "popup.html", default_title: "NXTL Shield" },
   icons: { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" },
-  background: { service_worker: "background.js", type: "module" },
+  background: { service_worker: "background.js", scripts: ["background.js"], type: "module" },
   permissions: ["declarativeNetRequest", "storage", "alarms", "scripting", "tabs", "webRequest", "webNavigation"],
   host_permissions: ["<all_urls>"],
 };
@@ -49,7 +49,11 @@ function manifest(target) {
     body.externally_connectable = { matches: ["https://nxtlsim.github.io/*", "http://localhost/*", "http://127.0.0.1/*"] };
   } else {
     body.browser_specific_settings = {
-      gecko: { id: "nxtl-shield@nxtlsim.github.io", strict_min_version: "113.0" },
+      gecko: {
+        id: "nxtl-shield@nxtlsim.github.io",
+        strict_min_version: "113.0",
+        data_collection_permissions: { required: ["none"] },
+      },
       gecko_android: { strict_min_version: "113.0" },
     };
   }

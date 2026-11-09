@@ -73,7 +73,7 @@ def redirect(rule_id: int, host: str, priority: int = 10, regex: str | None = No
             "priority": priority,
             "action": {"type": "redirect", "redirect": {"regexSubstitution": regex}},
             "condition": {
-                "regexFilter": f"^https?://{host.replace('.', r'\\.')}(?::\\d+)?(?:[/?#]|$)",
+                "regexFilter": f"^https?://{host.replace('.', r'\.')}(?::\\d+)?(?:[/?#]|$)",
                 "resourceTypes": ["main_frame"],
             },
         }
@@ -167,24 +167,42 @@ def main() -> None:
         trackers.append(block(tid, host, 8))
         tid += 1
 
-    signed = {
-        "id": 1,
-        "priority": 6,
-        "action": {"type": "allow"},
-        "condition": {
-            "regexFilter": r"(?i)[?&](?:x-amz-signature|x-amz-credential|x-amz-security-token|x-amz-algorithm|payment_intent_client_secret|payment_intent|access_token|id_token|refresh_token|signature|token|sig)=",
-            "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest"],
-        },
-    }
+    # Chrome DNR RE2 rejects complex/long alternations; keep one simple allow rule per token.
+    signed_tokens = [
+        "x-amz-signature",
+        "x-amz-credential",
+        "x-amz-security-token",
+        "x-amz-algorithm",
+        "payment_intent_client_secret",
+        "payment_intent",
+        "access_token",
+        "id_token",
+        "refresh_token",
+        "signature",
+        "token",
+        "sig",
+    ]
     cleaning = [
-        signed,
         {
-            "id": 2,
+            "id": index,
+            "priority": 100,
+            "action": {"type": "allow"},
+            "condition": {
+                "regexFilter": rf"[?&]{token}=",
+                "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest"],
+            },
+        }
+        for index, token in enumerate(signed_tokens, start=1)
+    ]
+    cleaning.append(
+        {
+            "id": len(signed_tokens) + 1,
             "priority": 2,
             "action": {"type": "redirect", "redirect": {"transform": {"queryTransform": {"removeParams": PARAMS}}}},
             "condition": {"resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest"]},
-        },
-    ]
+        }
+    )
+
     (OUT / "threats.chromium.json").write_text(json.dumps(chrome_rules, separators=(",", ":")))
     (OUT / "threats.firefox.json").write_text(json.dumps(firefox_rules, separators=(",", ":")))
     (OUT / "trackers.json").write_text(json.dumps(trackers, separators=(",", ":")))
