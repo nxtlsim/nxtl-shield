@@ -1404,10 +1404,39 @@ function fileForm() {
     ]),
   ]);
 
-  const fileInfo = h("div", { class: "row", style: "display: none; align-items: center; justify-content: space-between; padding: var(--sp-3); background: var(--raised); border: 1px solid var(--line);" });
-  const fileNameSpan = h("span", { class: "mono", style: "font-weight: 600;" }, [""]);
-  const removeBtn = h("button", { type: "button", class: "btn ghost sm" }, [createIcon("trash", 14), "Remove"]);
-  fileInfo.append(fileNameSpan, removeBtn);
+  const filePickerContainer = h("div", { class: "file-picker-container" });
+  const out = h("div");
+
+  function renderEmpty() {
+    filePickerContainer.replaceChildren(dropZone);
+  }
+
+  function renderSelected(file: File) {
+    const removeBtn = h("button", {
+      type: "button",
+      class: "btn ghost sm",
+      "aria-label": "Remove",
+    }, [
+      createIcon("trash", 14),
+      "Remove",
+    ]);
+    removeBtn.addEventListener("click", () => {
+      fileInput.value = "";
+      renderEmpty();
+      out.replaceChildren();
+    });
+
+    const info = h("div", {
+      class: "file-selected-chip",
+      style: "display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3); background: var(--raised); border: 1px solid var(--line); border-radius: 2px;",
+    }, [
+      h("span", { class: "mono", style: "font-weight: 600;" }, [`${file.name} (${(file.size / 1024).toFixed(1)} KB)`]),
+      removeBtn,
+    ]);
+    filePickerContainer.replaceChildren(info);
+  }
+
+  renderEmpty();
 
   dropZone.addEventListener("click", () => fileInput.click());
   dropZone.addEventListener("keydown", (e) => {
@@ -1429,28 +1458,16 @@ function fileForm() {
     dropZone.classList.remove("dragover");
     if (e.dataTransfer?.files.length) {
       fileInput.files = e.dataTransfer.files;
-      handleFileSelected();
+      const file = fileInput.files?.[0];
+      if (file) renderSelected(file);
     }
   });
 
-  function handleFileSelected() {
+  fileInput.addEventListener("change", () => {
     const file = fileInput.files?.[0];
-    if (file) {
-      fileNameSpan.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-      fileInfo.style.display = "flex";
-      dropZone.style.display = "none";
-    }
-  }
-
-  fileInput.addEventListener("change", handleFileSelected);
-  removeBtn.addEventListener("click", () => {
-    fileInput.value = "";
-    fileInfo.style.display = "none";
-    dropZone.style.display = "block";
-    out.replaceChildren();
+    if (file) renderSelected(file);
   });
 
-  const out = h("div");
   const button = h("button", { class: "primary", type: "button", "data-testid": "check-run" }, [
     createIcon("search", 18),
     "Inspect file",
@@ -1458,7 +1475,10 @@ function fileForm() {
 
   button.addEventListener("click", async () => {
     const file = fileInput.files?.[0];
-    if (!file) return;
+    if (!file) {
+      out.replaceChildren(h("p", { class: "banner" }, ["Choose a file first."]));
+      return;
+    }
     button.disabled = true;
     out.replaceChildren(renderCheckingPlaceholder("Inspecting file type and structure..."));
     try {
@@ -1475,7 +1495,7 @@ function fileForm() {
   });
 
   return h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
-    field("File to inspect", h("div", {}, [fileInput, dropZone, fileInfo])),
+    field("File to inspect", h("div", {}, [fileInput, filePickerContainer])),
     h("div", { class: "row" }, [button]),
     out,
   ]);
@@ -1505,10 +1525,39 @@ function qrForm() {
     ]),
   ]);
 
-  const fileInfo = h("div", { class: "row", style: "display: none; align-items: center; justify-content: space-between; padding: var(--sp-3); background: var(--raised); border: 1px solid var(--line);" });
-  const fileNameSpan = h("span", { class: "mono", style: "font-weight: 600;" }, [""]);
-  const removeBtn = h("button", { type: "button", class: "btn ghost sm" }, [createIcon("trash", 14), "Remove"]);
-  fileInfo.append(fileNameSpan, removeBtn);
+  const qrPickerContainer = h("div", { class: "file-picker-container" });
+  const out = h("div");
+
+  function renderEmpty() {
+    qrPickerContainer.replaceChildren(dropZone);
+  }
+
+  function renderSelected(file: File) {
+    const removeBtn = h("button", {
+      type: "button",
+      class: "btn ghost sm",
+      "aria-label": "Remove",
+    }, [
+      createIcon("trash", 14),
+      "Remove",
+    ]);
+    removeBtn.addEventListener("click", () => {
+      fileInput.value = "";
+      renderEmpty();
+      out.replaceChildren();
+    });
+
+    const info = h("div", {
+      class: "file-selected-chip",
+      style: "display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3); background: var(--raised); border: 1px solid var(--line); border-radius: 2px;",
+    }, [
+      h("span", { class: "mono", style: "font-weight: 600;" }, [file.name]),
+      removeBtn,
+    ]);
+    qrPickerContainer.replaceChildren(info);
+  }
+
+  renderEmpty();
 
   dropZone.addEventListener("click", () => fileInput.click());
   dropZone.addEventListener("keydown", (e) => {
@@ -1530,28 +1579,16 @@ function qrForm() {
     dropZone.classList.remove("dragover");
     if (e.dataTransfer?.files.length) {
       fileInput.files = e.dataTransfer.files;
-      handleFileSelected();
+      const file = fileInput.files?.[0];
+      if (file) renderSelected(file);
     }
   });
 
-  function handleFileSelected() {
+  fileInput.addEventListener("change", () => {
     const file = fileInput.files?.[0];
-    if (file) {
-      fileNameSpan.textContent = file.name;
-      fileInfo.style.display = "flex";
-      dropZone.style.display = "none";
-    }
-  }
-
-  fileInput.addEventListener("change", handleFileSelected);
-  removeBtn.addEventListener("click", () => {
-    fileInput.value = "";
-    fileInfo.style.display = "none";
-    dropZone.style.display = "block";
-    out.replaceChildren();
+    if (file) renderSelected(file);
   });
 
-  const out = h("div");
   const button = h("button", { class: "primary", type: "button", "data-testid": "check-run" }, [
     createIcon("search", 18),
     "Read QR image",
@@ -1559,7 +1596,10 @@ function qrForm() {
 
   button.addEventListener("click", async () => {
     const file = fileInput.files?.[0];
-    if (!file) return;
+    if (!file) {
+      out.replaceChildren(h("p", { class: "banner" }, ["Choose a QR picture first."]));
+      return;
+    }
     button.disabled = true;
     out.replaceChildren(renderCheckingPlaceholder("Scanning QR code..."));
     try {
@@ -1606,7 +1646,7 @@ function qrForm() {
   });
 
   return h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
-    field("QR code picture", h("div", {}, [fileInput, dropZone, fileInfo])),
+    field("QR code picture", h("div", {}, [fileInput, qrPickerContainer])),
     h("div", { class: "row" }, [button]),
     out,
   ]);
