@@ -615,7 +615,7 @@ export async function pageHome(): Promise<HTMLElement> {
         h("div", { class: "esim-card-text" }, [
           h("h3", { style: "margin: 0; font-size: 1.15rem;" }, ["Share Shield"]),
           h("p", { class: "muted", style: "margin: 4px 0 0;" }, [
-            "Know someone who gets scam texts? Share Shield with them.",
+            "Free tools to check a link or message, block ads and trackers, and send a note that opens only once.",
           ]),
         ]),
       ]),
@@ -2910,14 +2910,14 @@ export function pageShareApp(): HTMLElement {
   const header = h("header", { class: "page-header" }, [
     h("h1", {}, ["Share Shield"]),
     h("p", { class: "lede" }, [
-      "Know someone who gets scam texts? Share Shield with them.",
+      "Free tools to check a link or message, block ads and trackers, and send a note that opens only once.",
     ]),
   ]);
 
   const APP_URL = "https://nxtlsim.github.io/nxtl-shield/";
-  const SHARE_TEXT = `Know someone who gets scam texts? Share Shield with them. ${APP_URL}`;
-  const EMAIL_SUBJECT = "A free tool that checks scam texts and links";
-  const EMAIL_BODY = `Know someone who gets scam texts? Share Shield with them.\n\n${APP_URL}`;
+  const SHARE_TEXT = `Free tools to check a link or message, block ads and trackers, and send a note that opens only once. ${APP_URL}`;
+  const EMAIL_SUBJECT = "Free tools from NXTL Shield";
+  const EMAIL_BODY = `Free tools to check a link or message, block ads and trackers, and send a note that opens only once.\n\n${APP_URL}`;
 
   const shareActions = h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" });
 
@@ -2935,7 +2935,7 @@ export function pageShareApp(): HTMLElement {
       try {
         await navigator.share({
           title: "NXTL Shield",
-          text: `Know someone who gets scam texts? Share Shield with them.`,
+          text: `Free tools to check a link or message, block ads and trackers, and send a note that opens only once.`,
           url: APP_URL,
         });
       } catch {

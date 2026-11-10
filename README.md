@@ -39,7 +39,7 @@ In Chromium browsers, the extension can block website location access, with exce
 Private messages & files encrypts text or a file on your device with a password you choose. Drop a file onto the page or type a message. Nothing is uploaded. Send the password through a different channel. You can also create a private link for a short message. That link works once, then the message is gone.
 
 ### Share Shield
-Know someone who gets scam texts? Share the official Shield link with them from the app, by copy, email, text message, or QR code.
+Free tools to check a link or message, block ads and trackers, and send a note that opens only once. Share the official Shield link from the app, by copy, email, text message, or QR code.
 
 ### Create a strong password
 Generate a password on your device, copy it in one tap, and optionally check whether it has appeared in known leaks. Your password itself is never sent.
