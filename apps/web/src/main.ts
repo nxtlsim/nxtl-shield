@@ -402,7 +402,8 @@ function desktopNav(currentPath: string) {
   for (const [id, label] of DESKTOP_NAV) {
     const href = id ? `#/${id}` : "#/";
     const anchor = h("a", { href }, [label]);
-    if (currentPath === id) anchor.setAttribute("aria-current", "page");
+    const isCurrent = id ? (currentPath === id || currentPath.startsWith(`${id}/`)) : currentPath === "";
+    if (isCurrent) anchor.setAttribute("aria-current", "page");
     el.append(anchor);
   }
 
@@ -434,7 +435,7 @@ function mobileBottomNav(currentPath: string) {
   ];
 
   for (const tab of tabs) {
-    const isCurrent = currentPath === tab.id;
+    const isCurrent = tab.id ? (currentPath === tab.id || currentPath.startsWith(`${tab.id}/`)) : currentPath === "";
     const item = h("a", {
       class: "bottom-tab",
       href: tab.id ? `#/${tab.id}` : "#/",
@@ -508,7 +509,8 @@ function openFullNavDialog(currentPath: string) {
 }
 
 async function pageFor(path: string, tab: string) {
-  switch (path) {
+  const root = path.split("/")[0];
+  switch (root) {
     case "ad-blocker":
     case "adblock":
       return pageAdBlocker();
@@ -522,7 +524,9 @@ async function pageFor(path: string, tab: string) {
     case "messages":
       return pageShare();
     case "share":
-      history.replaceState({ shield: true }, "", hashUrl("#/messages"));
+      if (!path.startsWith("share/open/")) {
+        history.replaceState({ shield: true }, "", hashUrl("#/messages"));
+      }
       return pageShare();
     case "clean":
       return pageClean();

@@ -90,7 +90,7 @@ async function copyText(value: string, status: HTMLElement, box?: HTMLTextAreaEl
   } catch {
     box?.focus();
     box?.select();
-    status.textContent = "The result is selected — use your device’s copy command.";
+    status.textContent = "clipboard refused: The result is selected — use your device’s copy command.";
   }
 }
 
@@ -548,7 +548,7 @@ function createPrivateLinkCard(textInput: HTMLTextAreaElement): HTMLElement {
   const card = h("section", { class: "card", style: "margin-top: var(--sp-4); display: grid; gap: var(--sp-3);" });
   const title = h("h2", { style: "margin: 0; font-size: 1.25rem;" }, ["Send a read-once private link"]);
   const lede = h("p", { class: "muted", style: "margin: 0;" }, [
-    "Lock a text message so it can only be opened once. After it is read, the message is permanently gone.",
+    "Lock a text message so it can only be opened once. This message is gone after you read it.",
   ]);
 
   const ttlSelect = h("select", { style: "width: auto; min-width: 140px;" }, [
@@ -948,8 +948,8 @@ function showOpenedMessage(card: HTMLElement, header: HTMLElement, text: string)
     rows: "6",
     class: "mono",
     style: "background: var(--raised); border-color: var(--line-accent);",
-    value: text,
-  }) as HTMLTextAreaElement;
+  }, [text]) as HTMLTextAreaElement;
+  textBox.value = text;
 
   const copyBtn = h("button", { type: "button", class: "btn primary" }, [
     createIcon("copy", 18),
