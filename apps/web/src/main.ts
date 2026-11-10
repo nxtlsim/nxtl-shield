@@ -25,6 +25,7 @@ import {
   pageSettings,
   pageSetup,
   pagePrivacy,
+  pageShareApp,
 } from "./pages";
 import { pageShare } from "./share-page";
 
@@ -109,6 +110,7 @@ const ALL_NAV = [
   ["phone-protection", "Protect phone", "phone"],
   ["install", "Install app", "install"],
   ["esim", "NXTL eSIM", "esim"],
+  ["share-app", "Share Shield", "shield"],
   ["privacy", "How it works & privacy", "info"],
   ["settings", "Reports", "file"],
 ] as const;
@@ -196,6 +198,8 @@ async function render() {
         h("a", { href: "#/privacy" }, ["How it works & privacy"]),
         " · ",
         h("a", { href: "#/setup" }, ["Safe DNS"]),
+        " · ",
+        h("a", { href: "#/share-app" }, ["Share Shield"]),
         " · ",
         h("a", { href: "#/settings" }, ["Reports"]),
       ]),
@@ -530,6 +534,8 @@ async function pageFor(path: string, tab: string) {
       return pageLocation();
     case "esim":
       return pageEsim();
+    case "share-app":
+      return pageShareApp();
     case "setup":
       return pageSetup();
     case "status":
