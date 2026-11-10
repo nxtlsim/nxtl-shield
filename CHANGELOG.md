@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0
+
+- Private messages & files can create a private link that is gone after it is opened. You can also require a password. The locked text is deleted when someone opens it, or after 1 hour, 1 day, or 7 days.
+- Share Shield lets you send the official app link by copy, email, text message, or QR code.
+- Coverage wording is 180+ countries, and the travel data card keeps the London routing sentence.
+- Check results are clearer: a lottery text is marked Likely scam, with a short headline and no fake buttons.
+- Layout and wording polish: badges sit with their labels, buttons line up, the dark theme menu stays readable, and file Remove appears only after you choose a file.
+
+
 ## 0.4.0
 
 - Clearer verdicts when you check a link or message: Likely scam, Be careful, or Looks safe. Prize and similar scam texts are flagged even without a link.
