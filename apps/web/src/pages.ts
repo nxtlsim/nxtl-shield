@@ -398,33 +398,80 @@ export async function pageHome(): Promise<HTMLElement> {
   hero.append(heroInputRow, heroResultContainer);
 
   // Real Protection Status Card
-  const dnsCluster = h("div", { class: "cluster" }, [
-    h("span", { class: "pill neutral" }, ["Checking..."]),
+  const dnsPill = h("span", { class: "pill neutral" }, [h("span", { class: "status-dot" }), "Not checked yet"]);
+  const dnsActionContainer = h("div", {});
+
+  const dnsRow = h("div", { class: "status-row" }, [
+    h("div", { class: "status-label-group" }, [
+      h("span", { class: "status-label" }, [
+        createIcon("dns", 18),
+        "Safe DNS protection",
+      ]),
+      dnsPill,
+    ]),
+    dnsActionContainer,
   ]);
 
   // Asynchronously probe real DNS status without faking
   probeDns().then((dns) => {
     if (dns.status === "on") {
-      dnsCluster.replaceChildren(
-        h("span", { class: "pill ok" }, [createIcon("check", 14), "On"]),
-      );
+      dnsPill.className = "pill ok";
+      dnsPill.replaceChildren(createIcon("check", 12), "On");
+      dnsActionContainer.replaceChildren();
     } else if (dns.status === "off") {
-      dnsCluster.replaceChildren(
-        h("span", { class: "pill neutral" }, ["Not active"]),
-        h("a", { class: "btn sm primary", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]),
+      dnsPill.className = "pill neutral";
+      dnsPill.replaceChildren(h("span", { class: "status-dot" }), "Off");
+      dnsActionContainer.replaceChildren(
+        h("a", { class: "btn primary", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]),
       );
     } else {
-      dnsCluster.replaceChildren(
-        h("span", { class: "pill neutral" }, ["Not checked yet"]),
-        h("a", { class: "btn sm", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]),
+      dnsPill.className = "pill neutral";
+      dnsPill.replaceChildren(h("span", { class: "status-dot" }), "Not checked yet");
+      dnsActionContainer.replaceChildren(
+        h("a", { class: "btn", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]),
       );
     }
   }).catch(() => {
-    dnsCluster.replaceChildren(
-      h("span", { class: "pill neutral" }, ["Not checked yet"]),
-      h("a", { class: "btn sm", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]),
+    dnsPill.className = "pill neutral";
+    dnsPill.replaceChildren(h("span", { class: "status-dot" }), "Not checked yet");
+    dnsActionContainer.replaceChildren(
+      h("a", { class: "btn", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]),
     );
   });
+
+  const extPill = ext
+    ? h("span", { class: "pill ok" }, [createIcon("check", 12), "On"])
+    : h("span", { class: "pill neutral" }, [h("span", { class: "status-dot" }), "Not added"]);
+
+  const extRow = h("div", { class: "status-row" }, [
+    h("div", { class: "status-label-group" }, [
+      h("span", { class: "status-label" }, [
+        createIcon("extension", 18),
+        "Browser extension",
+      ]),
+      extPill,
+    ]),
+    !ext
+      ? h("a", { class: "btn", href: "#/extension" }, ["Add extension", createIcon("arrow-right", 12)])
+      : "",
+  ]);
+
+  const appPill = standalone
+    ? h("span", { class: "pill ok" }, [createIcon("check", 12), "Installed"])
+    : h("span", { class: "pill neutral" }, [h("span", { class: "status-dot" }), "Using website"]);
+
+  const appRow = h("div", { class: "status-row" }, [
+    h("div", { class: "status-label-group" }, [
+      h("span", { class: "status-label" }, [
+        createIcon("install", 18),
+        "Offline app standby",
+      ]),
+      appPill,
+    ]),
+    !standalone
+      ? h("a", { class: "btn ghost", href: "#/install" }, ["Install app", createIcon("arrow-right", 12)])
+      : "",
+  ]);
 
   const statusSection = h("section", { class: "card", "data-testid": "protection-status" }, [
     h("div", { class: "row", style: "align-items: center; justify-content: space-between; margin-bottom: var(--sp-4);" }, [
@@ -432,41 +479,9 @@ export async function pageHome(): Promise<HTMLElement> {
       h("span", { class: "muted-soft", style: "font-size: 0.88rem;" }, ["Real-time device check"]),
     ]),
     h("div", { class: "status-list" }, [
-      h("div", { class: "status-row" }, [
-        h("span", { class: "status-label" }, [
-          createIcon("extension", 18),
-          "Browser extension",
-        ]),
-        h("div", { class: "cluster" }, [
-          ext
-            ? h("span", { class: "pill ok" }, [createIcon("check", 14), "Active"])
-            : h("span", { class: "pill neutral" }, ["Not detected"]),
-          !ext
-            ? h("a", { class: "btn sm", href: "#/extension" }, ["Add extension", createIcon("arrow-right", 12)])
-            : "",
-        ]),
-      ]),
-      h("div", { class: "status-row" }, [
-        h("span", { class: "status-label" }, [
-          createIcon("dns", 18),
-          "Safe DNS protection",
-        ]),
-        dnsCluster,
-      ]),
-      h("div", { class: "status-row" }, [
-        h("span", { class: "status-label" }, [
-          createIcon("install", 18),
-          "Offline app standby",
-        ]),
-        h("div", { class: "cluster" }, [
-          standalone
-            ? h("span", { class: "pill ok" }, [createIcon("check", 14), "Installed"])
-            : h("span", { class: "pill neutral" }, ["Web access"]),
-          !standalone
-            ? h("a", { class: "btn sm ghost", href: "#/install" }, ["Install", createIcon("arrow-right", 12)])
-            : "",
-        ]),
-      ]),
+      extRow,
+      dnsRow,
+      appRow,
     ]),
   ]);
 
@@ -565,7 +580,7 @@ export async function pageHome(): Promise<HTMLElement> {
   // eSIM Companion Card
   const esimCard = h("section", { class: "card esim-card", style: "margin-top: var(--sp-6);" }, [
     h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
-      h("div", style: "display: flex; align-items: center; gap: var(--sp-3);" }, [
+      h("div", { style: "display: flex; align-items: center; gap: var(--sp-3);" }, [
         h("div", { class: "tile-icon", style: "width: 44px; height: 44px; flex-shrink: 0;" }, [createIcon("esim", 24)]),
         h("div", {}, [
           h("h3", { style: "margin: 0; font-size: 1.15rem;" }, ["Traveling abroad? Connect with NXTL eSIM"]),
@@ -606,17 +621,39 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
   ]);
 
   // Real Status Card
+  const adBlockExtPill = h("span", { class: `pill ${ext?.blockingEnabled ? "ok" : "neutral"}` }, [
+    ext?.blockingEnabled ? createIcon("check", 12) : h("span", { class: "status-dot" }),
+    ext?.blockingEnabled ? "On" : "Not added",
+  ]);
+  const adDnsPill = h("span", { class: "pill neutral" }, [h("span", { class: "status-dot" }), "Not checked yet"]);
+  const adDnsAction = h("a", { class: "btn", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]);
+
+  probeDns().then(dns => {
+    if (dns.status === "on") {
+      adDnsPill.className = "pill ok";
+      adDnsPill.replaceChildren(createIcon("check", 12), "On");
+      adDnsAction.remove();
+    } else if (dns.status === "off") {
+      adDnsPill.className = "pill neutral";
+      adDnsPill.replaceChildren(h("span", { class: "status-dot" }), "Off");
+    }
+  }).catch(() => {});
+
   const statusCard = h("section", { class: "card", "data-testid": "adblocker-status" }, [
     h("h2", {}, ["Protection status"]),
     h("div", { class: "status-row" }, [
-      h("span", { class: "status-label" }, [createIcon("extension", 18), "Browser ad blocking"]),
-      h("span", { class: `pill ${ext?.blockingEnabled ? "ok" : "neutral"}` }, [
-        ext?.blockingEnabled ? "Active & blocking" : ext ? "Extension installed (blocking off)" : "Not installed",
+      h("div", { class: "status-label-group" }, [
+        h("span", { class: "status-label" }, [createIcon("extension", 18), "Browser ad blocking"]),
+        adBlockExtPill,
       ]),
+      !ext ? h("a", { class: "btn", href: "#/extension" }, ["Add extension", createIcon("arrow-right", 12)]) : "",
     ]),
     h("div", { class: "status-row" }, [
-      h("span", { class: "status-label" }, [createIcon("dns", 18), "Whole-device Safe DNS"]),
-      h("span", { class: "pill neutral" }, ["Device setting (set up below)"]),
+      h("div", { class: "status-label-group" }, [
+        h("span", { class: "status-label" }, [createIcon("dns", 18), "Whole-device Safe DNS"]),
+        adDnsPill,
+      ]),
+      adDnsAction,
     ]),
   ]);
 
@@ -851,20 +888,20 @@ export function pagePhoneProtection(): HTMLElement {
         const res = await probeDns();
         if (res.status === "on") {
           probeResultBox.replaceChildren(
-            h("div", { class: "banner ok" }, [createIcon("check", 14), " Safe DNS is on and actively blocking threats!"]),
+            h("div", { class: "banner ok" }, [createIcon("check", 14), " Safe DNS is on."]),
           );
         } else if (res.status === "off") {
           probeResultBox.replaceChildren(
-            h("div", { class: "banner alert" }, ["Safe DNS does not look on yet. Make sure you tapped Save, or try restarting your browser."]),
+            h("div", { class: "banner alert" }, ["Safe DNS is off. Finish setup, then check again."]),
           );
         } else {
           probeResultBox.replaceChildren(
-            h("div", { class: "banner" }, ["Could not reach test servers. Check your internet connection."]),
+            h("div", { class: "banner" }, ["Could not check yet. Check your internet and try again."]),
           );
         }
       } catch {
         probeResultBox.replaceChildren(
-          h("div", { class: "banner" }, ["Could not check DNS just now."]),
+          h("div", { class: "banner" }, ["Could not check yet. Check your internet and try again."]),
         );
       } finally {
         checkBtn.disabled = false;
@@ -1012,51 +1049,38 @@ export async function pageExtension(): Promise<HTMLElement> {
   ]);
 
   // Status card at top
-  const statusBox = h("section", { class: "card", "data-testid": "extension-status" }, [
-    h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
-      h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
-        h("span", { class: `pill ${ext ? "ok" : "neutral"}` }, [
-          createIcon(ext ? "check" : "info", 14),
-          ext ? "Active" : "Not detected",
-        ]),
-        h("span", { style: "font-weight: 600;" }, [
-          ext ? "NXTL Shield extension is running and protecting this browser." : "Extension is not yet installed in this browser.",
-        ]),
-      ]),
-    ]),
+  const extStatusPill = h("span", { class: `pill ${ext ? "ok" : "neutral"}` }, [
+    ext ? createIcon("check", 12) : h("span", { class: "status-dot" }),
+    ext ? "On" : "Not added",
   ]);
 
-  const checkAgainBtn = h("button", { class: "btn sm", type: "button" }, [
+  const checkAgainBtn = h("button", { class: "btn", type: "button" }, [
     createIcon("refresh", 16),
     "Check again",
   ]);
+
+  const statusBox = h("section", { class: "card", "data-testid": "extension-status" }, [
+    h("div", { class: "status-row" }, [
+      h("div", { class: "status-label-group" }, [
+        h("span", { class: "status-label" }, [createIcon("extension", 18), "Browser extension"]),
+        extStatusPill,
+      ]),
+      checkAgainBtn,
+    ]),
+  ]);
+
   checkAgainBtn.addEventListener("click", async () => {
+    checkAgainBtn.disabled = true;
     checkAgainBtn.textContent = "Checking...";
     const fresh = await queryExtension(1200);
+    checkAgainBtn.disabled = false;
     checkAgainBtn.replaceChildren(createIcon("refresh", 16), "Check again");
-    if (fresh) {
-      statusBox.replaceChildren(
-        h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
-          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
-            h("span", { class: "pill ok" }, [createIcon("check", 14), "Active"]),
-            h("span", { style: "font-weight: 600;" }, ["NXTL Shield extension is running and protecting this browser."]),
-          ]),
-          checkAgainBtn,
-        ]),
-      );
-    } else {
-      statusBox.replaceChildren(
-        h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
-          h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
-            h("span", { class: "pill neutral" }, [createIcon("info", 14), "Not detected"]),
-            h("span", { style: "font-weight: 600;" }, ["Extension is not yet detected. Follow the steps below."]),
-          ]),
-          checkAgainBtn,
-        ]),
-      );
-    }
+    extStatusPill.className = `pill ${fresh ? "ok" : "neutral"}`;
+    extStatusPill.replaceChildren(
+      fresh ? createIcon("check", 12) : h("span", { class: "status-dot" }),
+      fresh ? "On" : "Not added",
+    );
   });
-  statusBox.firstElementChild?.append(checkAgainBtn);
 
   // Cards per browser, detected browser first
   const isFirefox = device.browser === "firefox";
@@ -1894,24 +1918,27 @@ export async function pageConnection(): Promise<HTMLElement> {
       // Provider row
       const providerRow = h("div", { class: "status-row" }, [
         h("span", { class: "status-label" }, [createIcon("shield", 18), "Network provider"]),
-        h("span", { style: "font-weight: 600;" }, [conn.provider || "Not detected"]),
+        h("span", { style: "font-weight: 600;" }, [conn.provider || "Not seen"]),
       ]);
 
       // DNS row
       let dnsPill: HTMLElement;
       let dnsAction: HTMLElement | string = "";
       if (dns.status === "on") {
-        dnsPill = h("span", { class: "pill ok" }, [createIcon("check", 14), "Safe DNS looks on"]);
+        dnsPill = h("span", { class: "pill ok" }, [createIcon("check", 12), "On"]);
       } else if (dns.status === "off") {
-        dnsPill = h("span", { class: "pill neutral" }, ["Safe DNS does not look on"]);
-        dnsAction = h("a", { class: "btn sm primary", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]);
+        dnsPill = h("span", { class: "pill neutral" }, [h("span", { class: "status-dot" }), "Off"]);
+        dnsAction = h("a", { class: "btn primary", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 12)]);
       } else {
-        dnsPill = h("span", { class: "pill neutral" }, ["Could not check DNS"]);
+        dnsPill = h("span", { class: "pill neutral" }, [h("span", { class: "status-dot" }), "Not checked yet"]);
       }
 
       const dnsRow = h("div", { class: "status-row" }, [
-        h("span", { class: "status-label" }, [createIcon("dns", 18), "Safe DNS protection"]),
-        h("div", { class: "cluster" }, [dnsPill, dnsAction]),
+        h("div", { class: "status-label-group" }, [
+          h("span", { class: "status-label" }, [createIcon("dns", 18), "Safe DNS"]),
+          dnsPill,
+        ]),
+        dnsAction,
       ]);
 
       const card = h("section", { class: "card", "data-testid": "connection-info-card", style: "margin-top: var(--sp-4);" }, [
@@ -2207,20 +2234,20 @@ export async function pageSetup(): Promise<HTMLElement> {
         const res = await probeDns();
         if (res.status === "on") {
           probeResultBox.replaceChildren(
-            h("div", { class: "banner ok" }, [createIcon("check", 14), " Safe DNS is on and actively blocking threats!"]),
+            h("div", { class: "banner ok" }, [createIcon("check", 14), " Safe DNS is on."]),
           );
         } else if (res.status === "off") {
           probeResultBox.replaceChildren(
-            h("div", { class: "banner alert" }, ["Safe DNS does not look on yet. Make sure you applied settings, or restart your browser."]),
+            h("div", { class: "banner alert" }, ["Safe DNS is off. Finish setup, then check again."]),
           );
         } else {
           probeResultBox.replaceChildren(
-            h("div", { class: "banner" }, ["Could not reach test servers. Check your internet connection."]),
+            h("div", { class: "banner" }, ["Could not check yet. Check your internet and try again."]),
           );
         }
       } catch {
         probeResultBox.replaceChildren(
-          h("div", { class: "banner" }, ["Could not check DNS just now."]),
+          h("div", { class: "banner" }, ["Could not check yet. Check your internet and try again."]),
         );
       } finally {
         checkBtn.disabled = false;
