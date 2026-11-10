@@ -174,6 +174,12 @@ test("manifests have isolated background keys for Chromium and Firefox", () => {
   expect(ff.background.service_worker).toBeUndefined();
   expect(ff.browser_specific_settings.gecko.id).toBe("shield@nxtlsim.com");
   expect(ff.browser_specific_settings.gecko.strict_min_version).toBe("115.0");
+  expect(ch.content_scripts[0].matches).toContain("https://nxtl-esim-nxtl-shield.static.hf.space/*");
+  expect(ch.content_scripts[0].matches).toContain("https://huggingface.co/*");
+  expect(ch.externally_connectable.matches).toContain("https://nxtl-esim-nxtl-shield.static.hf.space/*");
+  expect(ch.externally_connectable.matches).toContain("https://huggingface.co/*");
+  expect(ff.content_scripts[0].matches).toContain("https://nxtl-esim-nxtl-shield.static.hf.space/*");
+  expect(ff.content_scripts[0].matches).toContain("https://huggingface.co/*");
 });
 
 test("tracker rules include major ad networks with block action", () => {
