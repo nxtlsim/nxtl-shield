@@ -162,7 +162,7 @@ test("your connection auto-runs and shows public IP and Safe DNS status", async 
   expect(cardText).not.toContain("Count WebRTC candidates");
   expect(cardText).toContain("IPv4 address");
   expect(cardText).toContain("203.0.113.195");
-  expect(cardText).toContain("Safe DNS protection");
+  expect(cardText).toContain("Safe DNS");
 });
 
 test("section 8 scroll tests: scroll to top on route change and restore on Back", async ({ page }) => {

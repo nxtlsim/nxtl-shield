@@ -6,7 +6,6 @@ import {
   checkText,
   checkUrl,
   cleanUrl,
-  explainNxtlRouting,
   explainRates,
   fetchConnectionInfo,
   generatePassword,
@@ -256,7 +255,7 @@ export async function pageHome(): Promise<HTMLElement> {
   const hero = h("section", { class: "hero-launcher" }, [
     h("h1", {}, ["Check a link before you open it."]),
     h("p", { class: "hero-lede" }, [
-      "Paste any suspicious web address, text message, or QR code to test against verified scam and malware databases.",
+      "Paste a link, message, or QR code before you open it.",
     ]),
   ]);
 
@@ -488,7 +487,7 @@ export async function pageHome(): Promise<HTMLElement> {
   const allTilesSection = h("section", { "aria-label": "All Protections and Tools" }, [
     h("h2", { style: "font-size: 1.35rem; margin-bottom: var(--sp-2);" }, ["All protections and tools"]),
     h("p", { class: "muted", style: "margin-bottom: var(--sp-4);" }, [
-      "Zero-knowledge privacy and protection tools for phone, desktop, and travel.",
+      "Privacy and protection tools for phone, desktop, and travel.",
     ]),
   ]);
 
@@ -775,7 +774,7 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
     const profile = buildMobileconfig("adguard-default");
     const downloadBtn = h("button", { class: "btn primary", type: "button" }, [
       createIcon("download", 18),
-      "Download Safe DNS Profile",
+      "Download Safe DNS profile",
     ]);
     downloadBtn.addEventListener("click", () => {
       const blob = new Blob([profile.plist], { type: "application/x-apple-aspen-config" });
@@ -786,7 +785,7 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
     });
 
     recommendedSection.append(
-      h("h2", {}, ["iPhone & iPad: Safe DNS Profile"]),
+      h("h2", {}, ["iPhone & iPad: Safe DNS profile"]),
       h("p", { class: "muted" }, ["Apple supports encrypted DNS profiles to block ads and malicious links in Safari and all apps."]),
       h("ol", { class: "stepper-list" }, [
         h("li", {}, [
@@ -804,7 +803,7 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
   } else {
     // Other / Linux
     recommendedSection.append(
-      h("h2", {}, ["Safe DNS Setup"]),
+      h("h2", {}, ["Safe DNS setup"]),
       h("p", { class: "muted" }, ["Set up Safe DNS on your system or router to block ads, trackers, and scam links device-wide."]),
       h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
         h("a", { class: "btn primary", href: "#/setup" }, [createIcon("dns", 18), "Set up Safe DNS"]),
@@ -817,7 +816,7 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
   const allWays = h("div", { class: "grid cards", style: "margin-top: var(--sp-6);" }, [
     h("article", { class: "card" }, [
       h("div", { class: "tile-icon", style: "margin-bottom: var(--sp-3);" }, [createIcon("extension", 24)]),
-      h("h3", {}, ["Way 1: Browser Extension"]),
+      h("h3", {}, ["Way 1: Browser extension"]),
       h("p", { class: "muted" }, [
         "Best for detailed ad-blocking on websites. Removes banner ads, blocks tracking scripts, and hides cookie consent banners.",
       ]),
@@ -827,7 +826,7 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
     ]),
     h("article", { class: "card" }, [
       h("div", { class: "tile-icon", style: "margin-bottom: var(--sp-3);" }, [createIcon("dns", 24)]),
-      h("h3", {}, ["Way 2: Whole-Device Safe DNS"]),
+      h("h3", {}, ["Way 2: Whole-device Safe DNS"]),
       h("p", { class: "muted" }, [
         "Best for blocking ads and trackers across your whole phone, tablet, or PC, including third-party apps.",
       ]),
@@ -955,7 +954,7 @@ export function pagePhoneProtection(): HTMLElement {
         h("section", { class: "card" }, [
           h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
             createIcon("android", 28),
-            h("h2", { style: "margin: 0;" }, ["Android Private DNS Setup"]),
+            h("h2", { style: "margin: 0;" }, ["Android private DNS setup"]),
           ]),
           h("p", { class: "muted" }, [
             "Android natively supports encrypted Private DNS. This blocks ads, trackers, and scam sites across Chrome, Samsung Internet, and all mobile apps.",
@@ -963,12 +962,14 @@ export function pagePhoneProtection(): HTMLElement {
           h("ol", { class: "stepper-list" }, [
             h("li", {}, [
               h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
-                h("span", {}, ["Copy this hostname:"]),
+                h("span", {}, ["Copy this hostname: "]),
                 h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, ["dns.adguard-dns.com"]),
-                h("div", { class: "row", style: "gap: var(--sp-2); flex-wrap: wrap;" }, [copyBtn, openSettingsBtn]),
+                h("div", { class: "row", style: "gap: var(--sp-2); flex-wrap: wrap;" }, [copyBtn, ...(openSettingsBtn ? [openSettingsBtn] : [])]),
               ]),
             ]),
-            h("li", {}, ["Tap 'Open Private DNS settings' above (or open Settings → Network & internet → Private DNS)."]),
+            openSettingsBtn
+              ? h("li", {}, ["Tap Open Private DNS settings, paste the hostname, and tap Save."])
+              : h("li", {}, ["On your Android phone, open Settings → Network & internet → Private DNS, paste the hostname, and tap Save."]),
             h("li", {}, ["Select 'Private DNS provider hostname'."]),
             h("li", {}, ["Paste dns.adguard-dns.com and tap Save. All internet lookups are now protected."]),
           ]),
@@ -992,7 +993,7 @@ export function pagePhoneProtection(): HTMLElement {
         h("section", { class: "card" }, [
           h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
             createIcon("apple", 28),
-            h("h2", { style: "margin: 0;" }, ["iPhone & iPad: Safe DNS Profile"]),
+            h("h2", { style: "margin: 0;" }, ["iPhone & iPad: Safe DNS profile"]),
           ]),
           h("p", { class: "muted" }, [
             "Apple iOS natively supports encrypted DNS profiles to protect Safari and all apps.",
@@ -1219,7 +1220,7 @@ export async function pageCheck(tab = "link"): Promise<HTMLElement> {
   const header = h("div", {}, [
     h("h1", {}, ["Check a link, message or file"]),
     h("p", { class: "lede" }, [
-      "Inspect links, text messages, files, and QR codes before opening them. Nothing you enter leaves your device.",
+      "Paste a link, message, or QR code before you open it.",
     ]),
   ]);
 
@@ -1231,7 +1232,7 @@ export async function pageCheck(tab = "link"): Promise<HTMLElement> {
     ["link", "Link", "link"],
     ["message", "Message", "message"],
     ["file", "File", "file"],
-    ["qr", "QR Code", "qr"],
+    ["qr", "QR code", "qr"],
   ] as const;
 
   for (const [id, label, icon] of names) {
@@ -1251,7 +1252,7 @@ export async function pageCheck(tab = "link"): Promise<HTMLElement> {
     tabs.append(button);
   }
 
-  root.append(header, intro, diagram, tabs, panel);
+  root.append(header, tabs, panel, intro, diagram);
   if (tab === "message") panel.append(messageForm());
   else if (tab === "file") panel.append(fileForm());
   else if (tab === "qr") panel.append(qrForm());
@@ -1675,16 +1676,15 @@ export function pageClean(): HTMLElement {
     createIcon("clean", 18),
     "Clean link",
   ]);
-  const undo = h("button", { type: "button", class: "btn ghost" }, [
+  const undo = h("button", { type: "button", class: "btn ghost", style: "display: none;" }, [
     createIcon("refresh", 16),
     "Undo",
   ]);
-  undo.disabled = true;
 
   button.addEventListener("click", () => {
     previous = input.value;
     const result = cleanUrl(input.value);
-    undo.disabled = !result.changed;
+    undo.style.display = result.changed ? "inline-flex" : "none";
 
     const copyBtn = h("button", { type: "button", class: "btn primary sm" }, [
       createIcon("copy", 16),
@@ -1706,7 +1706,7 @@ export function pageClean(): HTMLElement {
 
   undo.addEventListener("click", () => {
     input.value = previous;
-    undo.disabled = true;
+    undo.style.display = "none";
     out.replaceChildren();
   });
 
@@ -1723,12 +1723,12 @@ export function pageClean(): HTMLElement {
 
   root.append(
     header,
-    intro,
     h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
       field("URL to clean", input),
       h("div", { class: "row" }, [button, undo]),
       out,
     ]),
+    intro,
   );
   return root;
 }
@@ -1880,7 +1880,7 @@ export function pagePassword(): HTMLElement {
   generate();
 
   const diagram = diagramPassword();
-  root.append(header, intro, diagram, controls);
+  root.append(header, controls, intro, diagram);
   return root;
 }
 
@@ -2035,10 +2035,10 @@ export async function pageConnection(): Promise<HTMLElement> {
 
   root.append(
     header,
+    out,
+    h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [refreshBtn]),
     intro,
     diagram,
-    h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [refreshBtn]),
-    out,
     details,
   );
 
@@ -2062,25 +2062,16 @@ export function pageLocation(): HTMLElement {
 
   const os = h("select", { "aria-label": "Select your device" }, [
     h("option", { value: "chrome" }, ["Chrome / Edge / Brave"]),
-    h("option", { value: "firefox" }, ["Firefox"]),
+    h("option", { value: "firefox" }, ["Firefox and Safari"]),
     h("option", { value: "ios" }, ["iPhone or iPad"]),
     h("option", { value: "android" }, ["Android"]),
   ]);
   (os as HTMLSelectElement).value = device.os === "ios" ? "ios" : device.os === "android" ? "android" : device.browser === "firefox" ? "firefox" : "chrome";
 
   const out = h("div");
-  const perm = h("p", { class: "pill neutral" }, ["Website location permission: not requested"]);
-
-  if (navigator.permissions?.query) {
-    navigator.permissions.query({ name: "geolocation" }).then(
-      (status) => {
-        perm.textContent = `Browser location permission for Shield: ${status.state}. Shield never requests or reads your location.`;
-      },
-      () => {
-        // Ignore
-      },
-    );
-  }
+  const perm = h("p", { class: "banner" }, [
+    "Shield does not read your location. You can block websites from using your location in this browser.",
+  ]);
 
   function render() {
     const guide = locationPrivacySetup((os as HTMLSelectElement).value);
@@ -2111,12 +2102,12 @@ export function pageLocation(): HTMLElement {
 
   root.append(
     header,
-    intro,
     h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
       perm,
       field("Device or browser", os),
       out,
     ]),
+    intro,
   );
   return root;
 }
@@ -2177,14 +2168,16 @@ export function pageEsim(): HTMLElement {
     }
   });
 
-  const routing = explainNxtlRouting();
-
   const card = h("section", { class: "card" }, [
-    h("h2", {}, ["London exit & travel privacy"]),
-    ...routing.points.map((point) => h("p", { class: "muted" }, [point])),
+    h("p", {}, [
+      "NXTL eSIM is our travel data service. It is optional. You do not need it to use these free tools.",
+    ]),
+    h("p", { class: "muted" }, [
+      "Routes your traffic via London for consistent privacy abroad.",
+    ]),
     h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
       h("a", { class: "btn primary", href: NXTL_LINKS.pricing, target: "_blank", rel: "noreferrer" }, [
-        "See eSIM plans",
+        "Get NXTL eSIM",
         createIcon("external", 16),
       ]),
     ]),
@@ -2209,9 +2202,9 @@ export async function pageSetup(): Promise<HTMLElement> {
   const device = detectDevice();
 
   const header = h("div", {}, [
-    h("h1", {}, ["Safe DNS Setup"]),
+    h("h1", {}, ["Safe DNS setup"]),
     h("p", { class: "lede" }, [
-      "Block ads, trackers, and malicious scam links across your entire phone, tablet, or computer.",
+      "Block scam sites, ads, and trackers across your entire phone, tablet, or computer.",
     ]),
   ]);
 
@@ -2297,7 +2290,7 @@ export async function pageSetup(): Promise<HTMLElement> {
           h("div", { class: "row", style: "align-items: center; justify-content: space-between; margin-bottom: var(--sp-3);" }, [
             h("div", { class: "row", style: "align-items: center; gap: var(--sp-3);" }, [
               createIcon("desktop", 24),
-              h("h2", { style: "margin: 0;" }, ["Windows Setup"]),
+              h("h2", { style: "margin: 0;" }, ["Windows setup"]),
             ]),
             h("span", { class: "pill ok" }, ["Reversible anytime"]),
           ]),
@@ -2371,12 +2364,14 @@ export async function pageSetup(): Promise<HTMLElement> {
           h("ol", { class: "stepper-list" }, [
             h("li", {}, [
               h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
-                h("span", {}, ["Copy this hostname:"]),
+                h("span", {}, ["Copy this hostname: "]),
                 h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, [resolver.dotHost]),
-                h("div", { class: "row", style: "gap: var(--sp-2); flex-wrap: wrap;" }, [copyBtn, openSettingsBtn]),
+                h("div", { class: "row", style: "gap: var(--sp-2); flex-wrap: wrap;" }, [copyBtn, ...(openSettingsBtn ? [openSettingsBtn] : [])]),
               ]),
             ]),
-            h("li", {}, ["Tap 'Open Private DNS settings' above (or open Settings → Network & internet → Private DNS)."]),
+            openSettingsBtn
+              ? h("li", {}, ["Tap Open Private DNS settings, paste the hostname, and tap Save."])
+              : h("li", {}, ["On your Android phone, open Settings → Network & internet → Private DNS, paste the hostname, and tap Save."]),
             h("li", {}, ["Select 'Private DNS provider hostname'."]),
             h("li", {}, ["Paste the hostname and tap Save. All internet lookups are now protected."]),
           ]),
@@ -2399,7 +2394,7 @@ export async function pageSetup(): Promise<HTMLElement> {
         h("section", { class: "card" }, [
           h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
             createIcon("apple", 28),
-            h("h2", { style: "margin: 0;" }, ["iPhone & iPad: Safe DNS Profile"]),
+            h("h2", { style: "margin: 0;" }, ["iPhone & iPad: Safe DNS profile"]),
           ]),
           h("p", { class: "muted" }, [
             "Apple iOS natively supports encrypted DNS configuration profiles for Safari and all apps.",
@@ -2434,7 +2429,7 @@ export async function pageSetup(): Promise<HTMLElement> {
         h("section", { class: "card" }, [
           h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
             createIcon("apple", 28),
-            h("h2", { style: "margin: 0;" }, ["macOS: Safe DNS Profile"]),
+            h("h2", { style: "margin: 0;" }, ["macOS: Safe DNS profile"]),
           ]),
           h("p", { class: "muted" }, [
             "macOS supports encrypted DNS system-wide via configuration profiles.",
@@ -2510,7 +2505,7 @@ export async function pageSetup(): Promise<HTMLElement> {
   select.addEventListener("change", renderDeviceTab);
   renderDeviceTab();
 
-  root.append(header, intro, diagram, resolverCard, tabContainer, contentArea);
+  root.append(header, tabContainer, contentArea, intro, diagram, resolverCard);
   return root;
 }
 
@@ -2703,9 +2698,9 @@ export function pageSettings(): HTMLElement {
 
   render();
   return h("div", { class: "grid" }, [
-    h("h1", {}, ["Saved reports"]),
+    h("h1", {}, ["Reports"]),
     h("p", { class: "lede" }, [
-      "Recent security checks saved locally in this browser. Passwords and file contents are never stored.",
+      "Checks you run on this device can appear here. They stay in this browser.",
     ]),
     h("div", { class: "row", style: "gap: var(--sp-3); margin-bottom: var(--sp-4);" }, [exportButton, wipe]),
     list,
@@ -2721,12 +2716,12 @@ export function pagePrivacy(): HTMLElement {
   const header = h("div", {}, [
     h("h1", {}, ["How it works & privacy"]),
     h("p", { class: "lede" }, [
-      "NXTL Shield is designed for zero-knowledge privacy: your links, messages, passwords, and files never leave your device.",
+      "Checks, encryption, and passwords stay on your device. You do not need an account.",
     ]),
   ]);
 
   const privacyCard = h("section", { class: "card" }, [
-    h("h2", {}, ["Local, zero-knowledge processing"]),
+    h("h2", {}, ["What stays on your device"]),
     h("p", {}, [
       "All security checks run locally inside your web browser. When you check a link, scan a message, inspect a file, or generate a password, no data is sent to NXTL or any central server.",
     ]),

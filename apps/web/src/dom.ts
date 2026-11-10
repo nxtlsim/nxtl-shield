@@ -155,7 +155,7 @@ export function resultCard(result: CheckResultData): HTMLElement {
 
   const list = h("div", { class: "evidence" });
   if (filteredEvidence.length) {
-    const listHeader = h("h3", { style: "font-size: 0.95rem; margin-top: var(--sp-3); margin-bottom: var(--sp-2);" }, ["What we noticed:"]);
+    const listHeader = h("h3", { style: "font-size: 0.95rem; margin-top: var(--sp-3); margin-bottom: var(--sp-2);" }, ["What we noticed"]);
     list.append(listHeader);
     for (const item of filteredEvidence) {
       const cleanTitle = item.title
@@ -203,24 +203,24 @@ export function introBlock(options: {
   limits?: string | string[];
   howItWorks?: string;
 }): HTMLElement {
-  const block = h("section", { class: "tool-intro", "aria-label": "Tool Guide" }, [
-    h("p", { class: "lede", style: "margin-bottom: var(--sp-4);" }, [options.what]),
+  const body = h("div", { class: "details-body", style: "padding-top: var(--sp-2);" }, [
+    h("p", { style: "margin-bottom: var(--sp-3);" }, [options.what]),
   ]);
 
   if (options.when) {
     const whenItems = Array.isArray(options.when) ? options.when : [options.when];
     const whenSection = h("div", { class: "tool-intro-section", style: "margin-bottom: var(--sp-3);" }, [
-      h("div", { class: "tool-intro-title" }, [createIcon("info", 18), "When to use it"]),
+      h("div", { class: "tool-intro-title", style: "font-weight: 600; margin-bottom: var(--sp-1);" }, ["When to use it"]),
       h("ul", { style: "line-height: 1.6; margin: 0; padding-left: var(--sp-4);" }, whenItems.map((item) => h("li", {}, [item]))),
     ]);
-    block.append(whenSection);
+    body.append(whenSection);
   }
 
   const howSection = h("div", { class: "tool-intro-section", style: "margin-bottom: var(--sp-3);" }, [
-    h("div", { class: "tool-intro-title" }, [createIcon("check", 18), "How to use it"]),
+    h("div", { class: "tool-intro-title", style: "font-weight: 600; margin-bottom: var(--sp-1);" }, ["How to use it"]),
     h("ol", { class: "numbered-steps" }, options.howSteps.map((step) => h("li", {}, [step]))),
   ]);
-  block.append(howSection);
+  body.append(howSection);
 
   const lim = options.limit ?? options.limits;
   if (lim) {
@@ -230,18 +230,19 @@ export function introBlock(options: {
       " ",
       text,
     ]);
-    block.append(limitRow);
+    body.append(limitRow);
   }
 
   if (options.howItWorks) {
-    const details = h("details", { style: "margin-top: var(--sp-4);" }, [
-      h("summary", {}, ["How this works"]),
-      h("p", {}, [options.howItWorks]),
-    ]);
-    block.append(details);
+    body.append(h("p", { style: "margin-top: var(--sp-2);" }, [options.howItWorks]));
   }
 
-  return block;
+  const details = h("details", { class: "intro-details", style: "margin-top: var(--sp-4);" }, [
+    h("summary", {}, ["How this works"]),
+    body,
+  ]);
+
+  return details;
 }
 
 export function faqSection(faqs: { q: string; a: string }[]): HTMLElement {
