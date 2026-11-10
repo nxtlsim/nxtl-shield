@@ -545,7 +545,7 @@ export async function pageHome(): Promise<HTMLElement> {
       href: "#/esim",
       icon: "esim",
       title: "NXTL eSIM",
-      desc: "Travel data in 150+ countries with a privacy-preserving London internet exit.",
+      desc: "Travel data in 180+ countries. One eSIM and a balance that does not expire.",
     },
   ];
 
@@ -565,12 +565,12 @@ export async function pageHome(): Promise<HTMLElement> {
   // eSIM Companion Card
   const esimCard = h("section", { class: "card esim-card", style: "margin-top: var(--sp-6);" }, [
     h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
-      h("div", { style: "display: flex; align-items: center; gap: var(--sp-3);" }, [
+      h("div", style: "display: flex; align-items: center; gap: var(--sp-3);" }, [
         h("div", { class: "tile-icon", style: "width: 44px; height: 44px; flex-shrink: 0;" }, [createIcon("esim", 24)]),
         h("div", {}, [
           h("h3", { style: "margin: 0; font-size: 1.15rem;" }, ["Traveling abroad? Connect with NXTL eSIM"]),
           h("p", { class: "muted", style: "margin: 4px 0 0;" }, [
-            "Affordable travel data in 150+ countries. Routes your traffic via London for consistent privacy abroad.",
+            "Affordable travel data in 180+ countries. Routes your traffic via London for consistent privacy abroad.",
           ]),
         ]),
       ]),
@@ -2040,7 +2040,7 @@ export function pageEsim(): HTMLElement {
 
   const header = h("div", {}, [
     h("h1", {}, ["NXTL eSIM"]),
-    h("p", { class: "lede" }, ["International mobile data with a privacy-preserving London internet exit."]),
+    h("p", { class: "lede" }, ["Travel data in 180+ countries. One eSIM and a balance that does not expire."]),
   ]);
 
   const country = h("input", { type: "text", value: "Lithuania", "aria-label": "Country name" });
