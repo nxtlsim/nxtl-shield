@@ -14,7 +14,7 @@ const KEY =
 const shared = {
   manifest_version: 3,
   name: "NXTL Shield",
-  version: "0.6.0",
+  version: "0.6.1",
   description: "Free tools to check a link or message, block ads and trackers, and send a note that opens only once.",
   action: { default_popup: "popup.html", default_title: "NXTL Shield" },
   icons: { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" },
@@ -44,6 +44,7 @@ function manifest(target) {
         { id: "threats", enabled: true, path: "rules/threats.json" },
         { id: "trackers", enabled: true, path: "rules/trackers.json" },
         { id: "cleaning", enabled: true, path: "rules/cleaning.json" },
+        { id: "dns-probe", enabled: true, path: "rules/dns-probe.json" },
       ],
     },
     content_scripts: [
@@ -101,6 +102,7 @@ async function pack(target) {
   cpSync(join(here, "generated", rules), join(dist, "rules/threats.json"));
   cpSync(join(here, "generated/trackers.json"), join(dist, "rules/trackers.json"));
   cpSync(join(here, "generated/cleaning.json"), join(dist, "rules/cleaning.json"));
+  cpSync(join(here, "generated/dns-probe.json"), join(dist, "rules/dns-probe.json"));
   cpSync(join(here, "generated/meta.json"), join(dist, "rules/meta.json"));
   const artifactDir = join(root, "dist/artifacts");
   mkdirSync(artifactDir, { recursive: true });

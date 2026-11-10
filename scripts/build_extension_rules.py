@@ -249,10 +249,27 @@ def main() -> None:
         }
     )
 
+    # Always-on allow so the Safe DNS probe is not treated as "On" when this
+    # extension would itself block the advertising test URL. Keep host and path
+    # in sync with packages/core/src/connection/probe.ts (DNS_PROBE_BLOCKED_URL).
+    # Only the probe's fetch (XHR/other) is allowed; ad scripts stay blocked.
+    dns_probe = [
+        {
+            "id": 1,
+            "priority": 1000,
+            "action": {"type": "allow"},
+            "condition": {
+                "urlFilter": "||pagead2.googlesyndication.com/pagead/show_ads.js",
+                "resourceTypes": ["xmlhttprequest", "other"],
+            },
+        }
+    ]
+
     (OUT / "threats.chromium.json").write_text(json.dumps(chrome_rules, separators=(",", ":")))
     (OUT / "threats.firefox.json").write_text(json.dumps(firefox_rules, separators=(",", ":")))
     (OUT / "trackers.json").write_text(json.dumps(trackers, separators=(",", ":")))
     (OUT / "cleaning.json").write_text(json.dumps(cleaning, indent=2))
+    (OUT / "dns-probe.json").write_text(json.dumps(dns_probe, indent=2))
     meta = {
         "threatRules": len(chrome_rules),
         "trackerRules": len(trackers),

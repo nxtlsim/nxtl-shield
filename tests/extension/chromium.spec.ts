@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { chromium } from "playwright";
 import { createServer } from "node:http";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdtempSync, readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { extname, join } from "node:path";
 
 const EXT = join(process.cwd(), "apps/extension/dist-chromium");
 const HOST = "blocked.nxtl-shield-test.invalid";
@@ -286,3 +286,134 @@ test("lookalike detection flags typos of genuine brands and warns before navigat
   }
 });
 
+
+
+const WEB_DIST = join(process.cwd(), "apps/web/dist");
+const MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".json": "application/json",
+  ".woff2": "font/woff2",
+  ".ico": "image/x-icon",
+};
+
+/** Serve this checkout's web build so a stale preview on 4173 cannot fool the in-page check. */
+function serveWebDist(): Promise<{ url: string; close: () => void }> {
+  const server = createServer((req, res) => {
+    const raw = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
+    let pathname = raw.startsWith("/nxtl-shield/") ? raw.slice("/nxtl-shield".length) : raw;
+    if (pathname === "/" || pathname === "") pathname = "/index.html";
+    let file = join(WEB_DIST, pathname);
+    if (!file.startsWith(WEB_DIST) || !existsSync(file) || statSync(file).isDirectory()) {
+      file = join(WEB_DIST, "index.html");
+    }
+    res.setHeader("content-type", MIME[extname(file)] ?? "application/octet-stream");
+    createReadStream(file).pipe(res);
+  });
+  return new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", () => {
+      const addr = server.address();
+      const port = typeof addr === "object" && addr ? addr.port : 0;
+      resolve({ url: `http://127.0.0.1:${port}/nxtl-shield/`, close: () => server.close() });
+    });
+  });
+}
+
+function launchExt(extraArgs: string[] = []) {
+  return chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "nxtl-dns-")), {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [
+      `--load-extension=${EXT}`,
+      `--disable-extensions-except=${EXT}`,
+      "--disable-features=DisableLoadExtensionCommandLineSwitch",
+      "--no-proxy-server",
+      ...extraArgs,
+    ],
+  });
+}
+
+async function workerOf(context: Awaited<ReturnType<typeof launchExt>>) {
+  let worker = context.serviceWorkers()[0];
+  if (!worker) worker = await context.waitForEvent("serviceworker");
+  return worker;
+}
+
+async function fulfillControl(page: import("@playwright/test").Page) {
+  await page.route("https://api.ipify.org/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ip: "203.0.113.195" }),
+    }),
+  );
+}
+
+test("Safe DNS stays Off when the extension is blocking ads and Safe DNS is not set", async ({ browserName }) => {
+  test.skip(browserName !== "chromium" || !process.env.DISPLAY, "Needs a display and Chromium.");
+  test.setTimeout(60_000);
+  test.skip(!existsSync(join(WEB_DIST, "index.html")), "Needs a built web app at apps/web/dist.");
+  const web = await serveWebDist();
+  const context = await launchExt();
+  try {
+    const worker = await workerOf(context);
+    const rulesets = await worker.evaluate(async () => chrome.declarativeNetRequest.getEnabledRulesets());
+    expect(rulesets).toContain("trackers");
+    expect(rulesets).toContain("threats");
+    expect(rulesets).toContain("dns-probe");
+
+    const probeRules = JSON.parse(readFileSync(join(EXT, "rules/dns-probe.json"), "utf8")) as {
+      priority: number;
+      action: { type: string };
+      condition: { urlFilter: string };
+    }[];
+    expect(probeRules[0].action.type).toBe("allow");
+    expect(probeRules[0].priority).toBeGreaterThanOrEqual(1000);
+    expect(probeRules[0].condition.urlFilter).toContain("pagead2.googlesyndication.com/pagead/show_ads.js");
+
+    const extId = new URL(worker.url()).host;
+    const popup = await context.newPage();
+    await fulfillControl(popup);
+    await popup.route("https://pagead2.googlesyndication.com/**", (route) =>
+      route.fulfill({ status: 200, contentType: "text/javascript", body: "/* probe */" }),
+    );
+    await popup.goto(`chrome-extension://${extId}/popup.html`);
+    await expect(popup.locator("#dns-text")).not.toHaveText("Checking...", { timeout: 10_000 });
+    await expect(popup.locator("#dns-text")).toHaveText("Off");
+
+    const page = await context.newPage();
+    await fulfillControl(page);
+    await page.route("https://pagead2.googlesyndication.com/**", (route) =>
+      route.fulfill({ status: 200, contentType: "text/javascript", body: "/* probe */" }),
+    );
+    await page.goto(`${web.url}#/ad-blocker`);
+    const row = page.locator('[data-testid="adblocker-status"] .status-row', { hasText: "Whole-device Safe DNS" });
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await expect(row.locator(".pill")).toHaveText("Off", { timeout: 10_000 });
+  } finally {
+    await context.close();
+    web.close();
+  }
+});
+
+test("Safe DNS reads On when the probe domain fails to resolve", async ({ browserName }) => {
+  test.skip(browserName !== "chromium" || !process.env.DISPLAY, "Needs a display and Chromium.");
+  test.setTimeout(60_000);
+  const context = await launchExt([
+    "--host-resolver-rules=MAP pagead2.googlesyndication.com 0.0.0.0",
+  ]);
+  try {
+    const worker = await workerOf(context);
+    const extId = new URL(worker.url()).host;
+    const popup = await context.newPage();
+    await fulfillControl(popup);
+    await popup.goto(`chrome-extension://${extId}/popup.html`);
+    await expect(popup.locator("#dns-text")).not.toHaveText("Checking...", { timeout: 15_000 });
+    await expect(popup.locator("#dns-text")).toHaveText("On");
+  } finally {
+    await context.close();
+  }
+});

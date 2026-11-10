@@ -1,4 +1,4 @@
-# Chrome Web Store listing — NXTL Shield 0.6.0
+# Chrome Web Store listing — NXTL Shield 0.6.1
 
 Paste-ready text for the Chrome Web Store Developer Dashboard.
 
@@ -8,7 +8,7 @@ Build the store zip (no manifest `key` field) with:
 node apps/extension/build.mjs --store
 ```
 
-Then zip `apps/extension/dist-chromium/` with `manifest.json` at the root. Version is 0.6.0. The first upload receives a new item ID. After that ID is assigned, add `chrome-extension://<id>` to the message relay allowlist (see the relay repo `src/cors.ts`).
+Then zip `apps/extension/dist-chromium/` with `manifest.json` at the root. Version is 0.6.1. The first upload receives a new item ID. After that ID is assigned, add `chrome-extension://<id>` to the message relay allowlist (see the relay repo `src/cors.ts`).
 
 The default `npm run build -w @nxtl/extension` keeps the `key` so unpacked loads stay on the stable development ID. Do not upload that build to the store.
 

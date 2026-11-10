@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+- The Safe DNS check in the extension and on the site no longer reads On just because the extension blocked the test address. It only reads On when that address really fails to load.
+
+
 ## 0.6.0
 
 - Choose your protection level first. Windows, iPhone, Android, and Linux setup then follow that choice.

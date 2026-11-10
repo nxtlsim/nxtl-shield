@@ -158,9 +158,27 @@ export async function fetchConnectionInfo(forceRefresh = false): Promise<Connect
   throw new Error("Could not read connection details.");
 }
 
+/** Control lookup used by the Safe DNS probe. Must stay on the web app CSP connect-src list. */
+export const DNS_PROBE_CONTROL_URL = "https://api.ipify.org?format=json";
+
+/** Advertising test host blocked by common Safe DNS profiles. Keep in sync with scripts/build_extension_rules.py. */
+export const DNS_PROBE_BLOCKED_HOST = "pagead2.googlesyndication.com";
+export const DNS_PROBE_BLOCKED_PATH = "/pagead/show_ads.js";
+export const DNS_PROBE_BLOCKED_URL = `https://${DNS_PROBE_BLOCKED_HOST}${DNS_PROBE_BLOCKED_PATH}`;
+
+/** True when a request was blocked by this browser or extension, not by Safe DNS. */
+export function isExtensionClientBlock(error: unknown): boolean {
+  const text =
+    error instanceof Error
+      ? `${error.name} ${error.message} ${error.cause ?? ""}`
+      : String(error);
+  return /ERR_BLOCKED_BY_CLIENT|BLOCKED_BY_CLIENT|blocked by client/i.test(text);
+}
+
 /**
- * Tests whether Safe DNS / ad & scam blocking is actively filtering network requests.
- * Uses a control request vs a known blocked advertising test host.
+ * Tests whether Safe DNS is actively filtering network requests.
+ * Uses a control request vs a known advertising test host.
+ * A block by this extension itself is not treated as Safe DNS being on.
  */
 export async function probeDns(options?: {
   controlUrl?: string;
@@ -168,11 +186,8 @@ export async function probeDns(options?: {
   timeoutMs?: number;
 }): Promise<DnsProbeResult> {
   const timeoutMs = options?.timeoutMs ?? 4000;
-  // Control must be on the app CSP connect-src allow list (see apps/web/index.html).
-  const controlUrl = options?.controlUrl ?? "https://api.ipify.org?format=json";
-  // Known ad host blocked by the recommended Safe DNS profile. Also listed in CSP
-  // connect-src so a successful fetch is not mistaken for a DNS failure.
-  const blockedUrl = options?.blockedUrl ?? "https://pagead2.googlesyndication.com/pagead/show_ads.js";
+  const controlUrl = options?.controlUrl ?? DNS_PROBE_CONTROL_URL;
+  const blockedUrl = options?.blockedUrl ?? DNS_PROBE_BLOCKED_URL;
 
   let controlOk = false;
   let blockedOk = false;
@@ -209,9 +224,15 @@ export async function probeDns(options?: {
       cache: "no-store",
     });
     clearTimeout(blkTimer);
-    blockedOk = true; // Request succeeded -> blocking is NOT on
-  } catch {
-    blockedOk = false; // Request failed / rejected by DNS -> blocking IS ON
+    blockedOk = true; // Request reached the network -> Safe DNS is not blocking this host
+  } catch (error) {
+    if (isExtensionClientBlock(error)) {
+      return {
+        status: "unknown",
+        detail: "Could not check Safe DNS.",
+      };
+    }
+    blockedOk = false; // The test host failed to load, e.g. it did not resolve
   }
 
   if (!blockedOk) {
