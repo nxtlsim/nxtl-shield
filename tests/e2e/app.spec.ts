@@ -281,7 +281,7 @@ test("finishing touch UI checks: home steps, hero check button, eSIM card, share
   // 4. Share Shield card on Home
   const shareCard = page.locator(".share-shield-card");
   await expect(shareCard).toBeVisible();
-  expect(await shareCard.innerText()).toContain("Know someone who gets scam texts? Share Shield with them.");
+  expect(await shareCard.innerText()).toContain("Free tools to check a link or message, block ads and trackers, and send a note that opens only once.");
 
   // 5. Footer uses the new sentence and contains Share Shield
   const footer = page.locator("footer.site");
