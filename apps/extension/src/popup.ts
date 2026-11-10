@@ -16,9 +16,12 @@ async function refresh() {
   const resumeBtn = document.querySelector<HTMLElement>("#resume");
 
   if (engine) {
-    engine.textContent = status.paused
-      ? `Protection paused until ${status.pauseUntil ? new Date(status.pauseUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "5 minutes"}`
-      : "Shield is active and protecting your browsing";
+    if (status.paused) {
+      engine.textContent = `Protection paused until ${status.pauseUntil ? new Date(status.pauseUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "5 minutes"}`;
+    } else {
+      const anyOn = status.blockingEnabled || status.trackersEnabled || status.cleaningEnabled;
+      engine.textContent = anyOn ? "Shield is on in this browser." : "Shield is off in this browser.";
+    }
   }
 
   if (pauseBtn && resumeBtn) {
@@ -35,13 +38,17 @@ async function refresh() {
     input.onchange = async () => {
       const next = await chrome.runtime.sendMessage({ type: "setToggle", key, enabled: input.checked });
       input.checked = key === "cosmetic" ? next.cosmeticEnabled : key === "blocking" ? next.blockingEnabled : key === "trackers" ? next.trackersEnabled : next.cleaningEnabled;
+      const anyOn = next.blockingEnabled || next.trackersEnabled || next.cleaningEnabled;
+      if (engine && !next.paused) {
+        engine.textContent = anyOn ? "Shield is on in this browser." : "Shield is off in this browser.";
+      }
     };
   }
   const location = document.querySelector("#location");
   if (location) {
     location.textContent = status.locationSupported
       ? `Location permission: ${status.locationSetting}.`
-      : "Location control is unsupported in this browser.";
+      : "Location blocking is not available here.";
   }
 }
 

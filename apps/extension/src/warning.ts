@@ -28,7 +28,7 @@ async function main() {
     if (title) title.textContent = "NXTL Shield test rule";
     if (why) why.textContent = `${TEST} is a synthetic name used to test this extension.`;
   } else if (why) {
-    why.textContent = "This website is cataloged as a known phishing or malware threat. Opening it could compromise your credentials or device.";
+    why.textContent = "This address is on a known dangerous list. Going there could put your details or this device at risk.";
   }
   document.querySelector("#back")?.addEventListener("click", () => history.length > 1 ? history.back() : window.close());
   document.querySelector("#once")?.addEventListener("click", () => chrome.runtime.sendMessage({ type: "proceedOnce", url }));
