@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { chromium } from "playwright";
 import { createServer } from "node:http";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -34,9 +34,12 @@ test("chromium extension blocks, allowlists, pauses, cleans, and restores locati
     headless: false,
     geolocation: { latitude: 51.5, longitude: -0.12 },
     permissions: ["geolocation"],
+    ignoreDefaultArgs: ["--disable-extensions"],
     args: [
-      `--disable-extensions-except=${EXT}`,
       `--load-extension=${EXT}`,
+      `--disable-extensions-except=${EXT}`,
+      "--disable-features=DisableLoadExtensionCommandLineSwitch",
+      "--no-proxy-server",
       `--host-resolver-rules=MAP ${HOST} 127.0.0.1`,
       "--use-fake-ui-for-media-stream",
     ],
@@ -143,4 +146,15 @@ test("chromium extension blocks, allowlists, pauses, cleans, and restores locati
     await context.close();
     server.close();
   }
+});
+
+test("manifests have isolated background keys for Chromium and Firefox", () => {
+  const ch = JSON.parse(readFileSync(join(process.cwd(), "apps/extension/dist-chromium/manifest.json"), "utf8"));
+  const ff = JSON.parse(readFileSync(join(process.cwd(), "apps/extension/dist-firefox/manifest.json"), "utf8"));
+  expect(ch.background.service_worker).toBe("background.js");
+  expect(ch.background.scripts).toBeUndefined();
+  expect(ff.background.scripts).toEqual(["background.js"]);
+  expect(ff.background.service_worker).toBeUndefined();
+  expect(ff.browser_specific_settings.gecko.id).toBe("shield@nxtlsim.com");
+  expect(ff.browser_specific_settings.gecko.strict_min_version).toBe("115.0");
 });

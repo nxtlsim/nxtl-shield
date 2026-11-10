@@ -18,7 +18,6 @@ const shared = {
   description: "Free open-source browser protection by NXTL eSIM: known phishing and malware warnings, tracker blocking, link cleaning, and cookie-banner controls.",
   action: { default_popup: "popup.html", default_title: "NXTL Shield" },
   icons: { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" },
-  background: { service_worker: "background.js", scripts: ["background.js"], type: "module" },
   permissions: ["declarativeNetRequest", "storage", "alarms", "scripting", "tabs", "webRequest", "webNavigation"],
   host_permissions: ["<all_urls>"],
 };
@@ -27,6 +26,10 @@ function manifest(target) {
   const rules = target === "chromium" ? "threats.chromium.json" : "threats.firefox.json";
   const body = {
     ...shared,
+    background:
+      target === "chromium"
+        ? { service_worker: "background.js", type: "module" }
+        : { scripts: ["background.js"], type: "module" },
     permissions: target === "chromium" ? [...shared.permissions, "contentSettings"] : shared.permissions,
     declarative_net_request: {
       rule_resources: [
@@ -50,11 +53,11 @@ function manifest(target) {
   } else {
     body.browser_specific_settings = {
       gecko: {
-        id: "nxtl-shield@nxtlsim.github.io",
-        strict_min_version: "113.0",
+        id: "shield@nxtlsim.com",
+        strict_min_version: "115.0",
         data_collection_permissions: { required: ["none"] },
       },
-      gecko_android: { strict_min_version: "113.0" },
+      gecko_android: { strict_min_version: "115.0" },
     };
   }
   return { body, rules };
