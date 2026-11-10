@@ -526,9 +526,9 @@ export async function pageHome(): Promise<HTMLElement> {
       desc: "Create strong random passwords on your device and check if they appeared in leaks.",
     },
     {
-      href: "#/share",
+      href: "#/messages",
       icon: "share-lock",
-      title: "Secure Share",
+      title: "Private messages & files",
       desc: "Encrypt confidential text and files with a password before sending via chat or email.",
     },
     {
@@ -875,7 +875,7 @@ export function pagePhoneProtection(): HTMLElement {
     howSteps: [
       "Set up Safe DNS on your phone (3 taps on Android, 1 profile on iPhone).",
       "Check suspicious links or text messages before opening them.",
-      "Use Secure Share whenever you need to send sensitive messages or files.",
+      "Use Private messages & files whenever you need to send sensitive messages or files.",
     ],
     limit: "Checks links against known scam lists. A new scam site may not be listed yet.",
   });
@@ -1034,7 +1034,7 @@ export function pagePhoneProtection(): HTMLElement {
       h("h3", {}, ["Send passwords & files securely"]),
       h("p", { class: "muted" }, ["Encrypt text or files with a password before sending via chat or email."]),
       h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
-        h("a", { class: "btn sm", href: "#/share" }, ["Open Secure Share", createIcon("arrow-right", 14)]),
+        h("a", { class: "btn sm", href: "#/messages" }, ["Open Private messages & files", createIcon("arrow-right", 14)]),
       ]),
     ]),
   ]);

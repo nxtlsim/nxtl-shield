@@ -9,7 +9,7 @@ Shield is GPL-3.0-or-later. Bundled lists keep their own notices.
 | EasyPrivacy (host anchors whose names look like trackers) | 2026-11-09 | GPL-3.0-or-later and CC BY-SA 3.0 | Optional extension rules. Attribution: The EasyList authors (https://easylist.to/). |
 | ClearURLs rules | 2026-11-09 | LGPL-3.0-or-later | Scoped tracking-parameter rules. Path rewriting is not applied. |
 | Public Suffix List, via tldts 7.4.19 | PSL version dated 2026-11-08 | MPL-2.0 | Host parsing |
-| OpenPGP.js 6.3.2 | 2026-11-09 | LGPL-3.0-or-later | Secure Share. https://github.com/openpgpjs/openpgpjs |
+| OpenPGP.js 6.3.2 | 2026-11-09 | LGPL-3.0-or-later | Private messages & files. https://github.com/openpgpjs/openpgpjs |
 | @zxcvbn-ts/core 4.2.0 | | MIT | Password strength estimate |
 | @scure/bip39 2.4.0 | | MIT | Passphrase word list. Not a wallet seed. |
 | @zxing/library 0.23.0 | | Apache-2.0 | QR decoding |
