@@ -40,6 +40,13 @@ async function main() {
         }),
       })
     );
+    await page.route(/v1\/messages\//, (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "not_found" }),
+      })
+    );
     const url = hash ? `${BASE_URL}#/${hash}` : BASE_URL;
     await page.goto(url, { waitUntil: "networkidle" });
     await page.evaluate((th) => {
@@ -129,36 +136,73 @@ async function main() {
         });
       });
 
-      // 8. Safe DNS Setup
+      // 8. Safe DNS Setup (table above install)
       await takeShot(vp, theme, "setup", `setup-${vp.name}-${theme}.png`, async (page) => {
-        await page.waitForSelector("h1:has-text('Safe DNS')");
+        await page.waitForSelector(".protection-table");
         const tabName = vp.name === "390" ? "iPhone & iPad" : "Windows";
         await page.getByRole("tab", { name: tabName }).click();
-        const cta = vp.name === "390"
-          ? page.getByRole("link", { name: /profile|mobileconfig|Download/i }).first()
-          : page.getByRole("link", { name: "Download Windows setup (.cmd)" });
-        await cta.waitFor();
         await page.evaluate(() => {
-          const tabs = document.querySelector(".tab-btn")?.closest('[role="tablist"]') || document.querySelector(".tab-btn");
-          const headerH = document.querySelector("header")?.getBoundingClientRect().height || 64;
-          if (tabs) {
-            const y = tabs.getBoundingClientRect().top + window.scrollY - headerH - 16;
-            window.scrollTo(0, Math.max(0, y));
-          }
+          window.scrollTo(0, 0);
+        });
+      });
+
+      // 9. Share Shield
+      await takeShot(vp, theme, "share-app", `share-app-${vp.name}-${theme}.png`, async (page) => {
+        await page.waitForSelector("h1:has-text('Share Shield')");
+        await page.evaluate(() => {
+          window.scrollTo(0, 0);
+        });
+      });
+
+      // 10. Private message recipient / gone state with other tools
+      await takeShot(vp, theme, "messages/open/sample-id", `messages-open-${vp.name}-${theme}.png`, async (page) => {
+        await page.waitForSelector("h3:has-text('Other Shield tools')");
+        const openBtn = page.getByRole("button", { name: "Open private message" });
+        if (await openBtn.isVisible()) {
+          await openBtn.click();
+          await page.waitForSelector("h1:has-text('Message unavailable')", { timeout: 4000 }).catch(() => {});
+        }
+        await page.evaluate(() => {
+          window.scrollTo(0, 0);
         });
       });
     }
   }
 
-  // 7. Extension Popup
+  // 11. Extension Popup
   for (const theme of THEMES) {
-    const page = await browser.newPage({ viewport: { width: 360, height: 500 } });
+    const page = await browser.newPage({ viewport: { width: 360, height: 720 } });
     const popupPath = pathToFileURL(join(process.cwd(), "apps/extension/dist-chromium/popup.html")).href;
+    await page.addInitScript(() => {
+      window.chrome = {
+        runtime: {
+          sendMessage: async (msg) => {
+            if (msg.type === "getStatus") {
+              return {
+                browser: "chromium",
+                blockingEnabled: true,
+                trackersEnabled: true,
+                cleaningEnabled: true,
+                cosmeticEnabled: false,
+                paused: false,
+                locationSupported: true,
+                locationSetting: "ask",
+              };
+            }
+            return {};
+          },
+          getURL: (path) => path,
+        },
+        tabs: {
+          query: async () => [{ url: "https://nxtlsim.com" }],
+        },
+      };
+    });
     await page.goto(popupPath);
     await page.evaluate((th) => {
       document.documentElement.setAttribute("data-theme", th);
     }, theme);
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(400);
     await page.screenshot({ path: join(OUT_DIR, `extension-popup-${theme}.png`) });
     await page.close();
   }
