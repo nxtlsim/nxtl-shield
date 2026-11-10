@@ -2408,7 +2408,7 @@ export async function pageSetup(): Promise<HTMLElement> {
               download: "nxtl-shield-windows-setup.zip",
             }, [
               createIcon("file", 20),
-              "Download ZIP (includes undo)",
+              "Download ZIP bundle",
             ]),
           ]),
           h("ol", { class: "stepper-list" }, [

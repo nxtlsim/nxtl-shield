@@ -53,11 +53,11 @@ Generate a password on your device, copy it in one tap, and optionally check whe
 
 ## Windows one-click Safe DNS
 
-1. On the [Safe DNS setup page](https://nxtlsim.github.io/nxtl-shield/#/setup), download the Windows setup file (`.cmd`), or the ZIP if you also want the undo script.
+1. On the [Safe DNS setup page](https://nxtlsim.github.io/nxtl-shield/#/setup), download the Windows setup file (`.cmd`), or the undo script (`.cmd`) to revert anytime. Both work alone without extra files. A ZIP bundle is also available.
 2. Open the file and allow it to run as administrator.
 3. Restart your browser.
 
-The ZIP also includes an undo script, Chrome/Edge policy files, and a Firefox policy file. The one-click setup uses the recommended profile that blocks ads, trackers, and scams.
+The setup configures Safe DNS for your active network connections. It uses the recommended profile that blocks ads, trackers, and scams, and can be undone anytime.
 
 ## Privacy
 
