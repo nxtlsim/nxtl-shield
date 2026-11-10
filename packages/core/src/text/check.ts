@@ -267,19 +267,22 @@ export function checkText(input: string, reputation: Reputation, now = new Date(
   const listsDown = !reputation.available;
 
   let verdict: Verdict = "no_known_match";
-  let summary = "No scam indicators or known dangerous links found in this message.";
+  let summary = "No known dangerous signs were found.";
   let level: "scam" | "careful" | "safe" = "safe";
 
   if (malicious || strongScamFlag) {
     verdict = malicious ? "known_malicious_match" : "suspicious_indicators";
     level = "scam";
-    summary = malicious
-      ? "Known dangerous link found in this message."
-      : "Likely scam message: contains common fraud patterns.";
+    if (malicious) {
+      summary = "This looks like a dangerous link.";
+      actionAdvice = "Don't open this link or enter any details.";
+    } else {
+      summary = "This looks like a scam.";
+    }
   } else if (indicators) {
     verdict = "suspicious_indicators";
     level = "careful";
-    summary = "Be careful: contains shortened links or unusual indicators.";
+    summary = "Be careful with this.";
     actionAdvice = "Verify the sender through a trusted channel before taking action.";
   } else if (listsDown && urls.length) {
     verdict = "inconclusive";
