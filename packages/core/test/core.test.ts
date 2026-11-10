@@ -10,6 +10,8 @@ import {
   buildMobileconfig,
   buildWindowsCmd,
   buildWindowsUndoCmd,
+  buildWindowsSetupZip,
+  buildBrowserDnsReg,
   checkText,
   checkUrl,
   cleanUrl,
@@ -461,7 +463,7 @@ describe("text, files, dns, origin, eSIM", () => {
   });
 
   it("provides verified IPv4 and IPv6 addresses for every resolver", () => {
-    expect(RESOLVERS.length).toBe(11);
+    expect(RESOLVERS.length).toBe(8);
     for (const r of RESOLVERS) {
       expect(r.ipv4.length).toBeGreaterThanOrEqual(1);
       expect(r.ipv6.length).toBeGreaterThanOrEqual(1);
@@ -498,7 +500,23 @@ describe("text, files, dns, origin, eSIM", () => {
     expect(cmdFamily).toContain("https://family.adguard-dns.com/dns-query");
     expect(cmdFamily).not.toContain("94.140.14.14");
 
-    const undoCmd = buildWindowsUndoCmd();
+
+    expect(cmdDefault).toContain("AddressFamily IPv6");
+    expect(cmdDefault).toContain("fe80:");
+
+    const familyReg = buildBrowserDnsReg("adguard-family");
+    expect(familyReg).toContain("https://family.adguard-dns.com/dns-query");
+    expect(familyReg).not.toContain("https://dns.adguard-dns.com/dns-query");
+    expect(familyReg).toContain("\r\n");
+
+    const familyZip = buildWindowsSetupZip("adguard-family");
+    const zipText = new TextDecoder().decode(familyZip);
+    expect(zipText).toContain("nxtl-shield-windows-dns.cmd");
+    expect(zipText).toContain("94.140.14.15");
+    expect(zipText).toContain("https://family.adguard-dns.com/dns-query");
+    expect(zipText).not.toContain("https://dns.adguard-dns.com/dns-query");
+
+        const undoCmd = buildWindowsUndoCmd();
     expect(undoCmd).toContain("Start-Process -LiteralPath '%~f0' -Verb RunAs");
     expect(undoCmd).toContain("ResetServerAddresses");
     expect(undoCmd).toContain("dns-backup.json");
