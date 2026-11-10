@@ -870,6 +870,44 @@ main {
   gap: var(--sp-1);
 }
 
+/* eSIM Companion Card */
+.esim-card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  width: 100%;
+}
+
+.esim-card-content {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.esim-card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.esim-card-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .esim-card-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .esim-card-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* Two-column layout on desktop for tool pages */
 .two-col-layout {
   display: grid;
