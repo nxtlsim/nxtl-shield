@@ -209,9 +209,9 @@ export function introBlock(options: {
   }
 
   if (options.howItWorks) {
-    const details = h("details", { style: "margin-top: var(--sp-3); font-size: 0.9rem; color: var(--muted);" }, [
-      h("summary", { style: "cursor: pointer; font-weight: 600;" }, ["How it works & technical details"]),
-      h("p", { style: "margin-top: var(--sp-2);" }, [options.howItWorks]),
+    const details = h("details", { style: "margin-top: var(--sp-4);" }, [
+      h("summary", {}, ["How this works"]),
+      h("p", {}, [options.howItWorks]),
     ]);
     block.append(details);
   }
