@@ -426,7 +426,7 @@ export function pageShare(): HTMLElement {
   setMode("encrypt");
 
   const advanced = h("details", { class: "advanced-box" }, [
-    h("summary", {}, ["Advanced encryption settings"]),
+    h("summary", {}, ["Advanced settings"]),
     h("label", { class: "row", style: "margin-top: var(--sp-3);" }, [
       armor,
       " Armored text (easier to copy). Uncheck for raw binary file.",

@@ -1965,8 +1965,8 @@ export async function pageConnection(): Promise<HTMLElement> {
 
   // Collapsed "How this check works"
   const details = h("details", { style: "margin-top: var(--sp-4);" }, [
-    h("summary", { style: "cursor: pointer; font-weight: 600; color: var(--muted);" }, ["How this check works"]),
-    h("p", { class: "muted", style: "margin-top: var(--sp-2);" }, [
+    h("summary", {}, ["How this check works"]),
+    h("p", { class: "muted" }, [
       "The lookup goes to a public address service only when this page is open or refreshed. DNS testing checks whether known advertising and scam test domains are blocked.",
     ]),
   ]);
@@ -2448,8 +2448,8 @@ export async function pageSetup(): Promise<HTMLElement> {
       });
 
       const detailsAdvanced = h("details", { style: "margin-top: var(--sp-3);" }, [
-        h("summary", { style: "cursor: pointer; font-weight: 600; color: var(--muted);" }, ["Advanced: command-line setup (systemd-resolved)"]),
-        h("ol", { class: "stepper-list", style: "margin-top: var(--sp-2);" }, [
+        h("summary", {}, ["Command-line setup"]),
+        h("ol", { class: "stepper-list" }, [
           h("li", {}, ["In /etc/systemd/resolved.conf or NetworkManager, set the DNS address."]),
           h("li", {}, ["Restart systemd-resolved: sudo systemctl restart systemd-resolved"]),
         ]),
@@ -2517,7 +2517,7 @@ export async function pageSetup(): Promise<HTMLElement> {
   pasteBox.append(field("Pasted verification text", pasteInput), judgeBtn, pasteResult);
 
   const pasteDetails = h("details", { style: "margin-top: var(--sp-6);" }, [
-    h("summary", { style: "cursor: pointer; font-weight: 600; color: var(--muted);" }, ["Optional: Verify by pasting provider test page text"]),
+    h("summary", {}, ["Check Safe DNS another way"]),
     pasteBox,
   ]);
 

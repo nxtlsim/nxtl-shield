@@ -1146,49 +1146,93 @@ input, select, textarea {
   padding-top: var(--sp-5);
 }
 
-.faq-section details {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: var(--sp-3) var(--sp-4);
-  margin-bottom: var(--sp-3);
-  transition: border-color 0.15s ease;
-}
-
-.faq-section details[open] {
-  border-color: var(--line-strong);
-}
-
-.faq-section summary {
-  font-family: var(--font);
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--text);
-  cursor: pointer;
-  user-select: none;
-  padding: var(--sp-1) 0;
-}
-
-.faq-section details p {
-  margin-top: var(--sp-3);
-  color: var(--muted);
-}
-
-/* Advanced Settings Accordion */
-details.advanced-box {
+/* Disclosures & Accordions */
+details {
   background: var(--raised);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  padding: var(--sp-3) var(--sp-4);
-  margin: var(--sp-4) 0;
+  margin: var(--sp-3) 0;
+  overflow: hidden;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
-details.advanced-box summary {
+
+details[open] {
+  border-color: var(--line-strong);
+}
+
+summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: 48px;
+  padding: 12px 16px;
+  font-family: var(--font);
   font-weight: 600;
-  cursor: pointer;
-  color: var(--muted);
-}
-details.advanced-box summary:hover {
+  font-size: 0.95rem;
   color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  box-sizing: border-box;
+  transition: background-color 0.15s ease;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+summary::marker {
+  display: none;
+}
+
+summary::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+details[open] > summary::after {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  summary::after {
+    transition: none;
+  }
+}
+
+summary:hover {
+  background: var(--raised-hover);
+  color: var(--text);
+}
+
+summary:focus-visible {
+  outline: 3px solid #ff3d5a;
+  outline-offset: -2px;
+}
+
+details > :not(summary) {
+  padding: 0 16px 16px;
+}
+
+details[open] > summary {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+
+.faq-section details p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
 }
 
 /* Result Cards */
