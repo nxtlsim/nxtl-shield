@@ -22,6 +22,14 @@ const shared = {
   host_permissions: ["<all_urls>"],
 };
 
+const APP_ORIGINS = [
+  "https://nxtlsim.github.io/*",
+  "https://nxtl-esim-nxtl-shield.static.hf.space/*",
+  "https://huggingface.co/*",
+  "http://localhost/*",
+  "http://127.0.0.1/*",
+];
+
 function manifest(target) {
   const rules = target === "chromium" ? "threats.chromium.json" : "threats.firefox.json";
   const body = {
@@ -40,7 +48,7 @@ function manifest(target) {
     },
     content_scripts: [
       {
-        matches: ["https://nxtlsim.github.io/*", "http://localhost/*", "http://127.0.0.1/*"],
+        matches: APP_ORIGINS,
         js: ["bridge.js"],
         run_at: "document_start",
       },
@@ -49,7 +57,7 @@ function manifest(target) {
   };
   if (target === "chromium") {
     body.key = KEY;
-    body.externally_connectable = { matches: ["https://nxtlsim.github.io/*", "http://localhost/*", "http://127.0.0.1/*"] };
+    body.externally_connectable = { matches: APP_ORIGINS };
   } else {
     body.browser_specific_settings = {
       gecko: {
