@@ -3,12 +3,17 @@ import { originException } from "../../../packages/core/src/origin";
 const RULESETS = ["threats", "trackers", "cleaning"] as const;
 type ToggleKey = "blocking" | "trackers" | "cleaning" | "cosmetic";
 
+interface PausedSite {
+  host: string;
+  until: number;
+}
+
 interface Stored {
   blocking: boolean;
   trackers: boolean;
   cleaning: boolean;
   cosmetic: boolean;
-  pauseUntil: number | null;
+  pausedSites: PausedSite[];
   allowlist: string[];
   locationManaged: boolean;
   locationExceptions: { origin: string; pattern: string; setting: "ask" | "allow" }[];
@@ -19,7 +24,7 @@ const DEFAULTS: Stored = {
   trackers: true,
   cleaning: true,
   cosmetic: true,
-  pauseUntil: null,
+  pausedSites: [],
   allowlist: [],
   locationManaged: false,
   locationExceptions: [],
@@ -41,36 +46,70 @@ function locationApi(): ContentSettingApi | null {
 }
 
 async function stored(): Promise<Stored> {
-  const saved = await chrome.storage.local.get(DEFAULTS);
-  return { ...DEFAULTS, ...saved, allowlist: saved.allowlist ?? [], locationExceptions: saved.locationExceptions ?? [] };
+  const saved = await chrome.storage.local.get(null);
+  return {
+    ...DEFAULTS,
+    ...saved,
+    allowlist: saved.allowlist ?? [],
+    locationExceptions: saved.locationExceptions ?? [],
+    pausedSites: saved.pausedSites ?? [],
+  };
 }
 
 async function save(partial: Partial<Stored>) {
   await chrome.storage.local.set(partial);
 }
 
-async function expirePause(state: Stored): Promise<Stored> {
-  if (state.pauseUntil && Date.now() >= state.pauseUntil) {
-    state = { ...state, pauseUntil: null };
-    await save({ pauseUntil: null });
-    await chrome.alarms.clear("nxtl-pause");
+async function expirePausedSites(state: Stored): Promise<{ state: Stored; expired: boolean }> {
+  const now = Date.now();
+  const active = (state.pausedSites || []).filter((s) => s.until > now);
+  const expired = active.length !== (state.pausedSites || []).length;
+  if (expired) {
+    state = { ...state, pausedSites: active };
+    await save({ pausedSites: active });
   }
-  return state;
+  return { state, expired };
+}
+
+async function syncPausedRules(pausedSites: PausedSite[]) {
+  const existing: { id: number }[] = await chrome.declarativeNetRequest.getSessionRules();
+  const removeRuleIds = existing.filter((rule) => rule.id >= 8000 && rule.id < 9000).map((rule) => rule.id);
+  const addRules: any[] = [];
+  pausedSites.slice(0, 50).forEach((site, index) => {
+    addRules.push({
+      id: 8000 + index * 2,
+      priority: 60,
+      action: { type: "allow" as const },
+      condition: {
+        requestDomains: [site.host],
+        resourceTypes: ["main_frame", "sub_frame", "script", "xmlhttprequest", "image", "media", "font", "stylesheet", "ping", "websocket", "other", "object"],
+      },
+    });
+    addRules.push({
+      id: 8000 + index * 2 + 1,
+      priority: 60,
+      action: { type: "allow" as const },
+      condition: {
+        initiatorDomains: [site.host],
+        resourceTypes: ["sub_frame", "script", "xmlhttprequest", "image", "media", "font", "stylesheet", "ping", "websocket", "other", "object"],
+      },
+    });
+  });
+  await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds, addRules });
 }
 
 async function applyRulesets() {
-  let state = await expirePause(await stored());
-  const paused = Boolean(state.pauseUntil && Date.now() < state.pauseUntil);
+  const state = await stored();
   const enable: string[] = [];
-  if (!paused && state.blocking) enable.push("threats");
-  if (!paused && state.trackers) enable.push("trackers");
-  if (!paused && state.cleaning) enable.push("cleaning");
+  if (state.blocking) enable.push("threats");
+  if (state.trackers) enable.push("trackers");
+  if (state.cleaning) enable.push("cleaning");
   const current: string[] = await chrome.declarativeNetRequest.getEnabledRulesets();
   await chrome.declarativeNetRequest.updateEnabledRulesets({
     enableRulesetIds: enable.filter((id: string) => !current.includes(id)),
     disableRulesetIds: current.filter((id: string) => (RULESETS as readonly string[]).includes(id) && !enable.includes(id)),
   });
-  return { state, paused };
+  return { state };
 }
 
 async function syncAllowlist(hosts: string[]) {
@@ -100,55 +139,79 @@ async function readLocation(exceptions: Stored["locationExceptions"]) {
   return { supported: true, setting: main.setting, exceptions: read };
 }
 
-async function status() {
-  const applied = await applyRulesets();
+async function status(forHost?: string | null) {
+  let state = await stored();
+  const { state: activeState } = await expirePausedSites(state);
+  state = activeState;
+  await syncPausedRules(state.pausedSites || []);
+
+  const pausedList = state.pausedSites || [];
+  const matchedPause = forHost
+    ? pausedList.find((p) => p.host === forHost)
+    : pausedList[0];
+
   const rulesets = await chrome.declarativeNetRequest.getEnabledRulesets();
-  const location = await readLocation(applied.state.locationExceptions);
+  const location = await readLocation(state.locationExceptions);
+
   return {
     browser: locationApi() ? "chromium" : "firefox",
     blockingEnabled: rulesets.includes("threats"),
     trackersEnabled: rulesets.includes("trackers"),
     cleaningEnabled: rulesets.includes("cleaning"),
-    cosmeticEnabled: applied.state.cosmetic,
+    cosmeticEnabled: state.cosmetic,
     desired: {
-      blocking: applied.state.blocking,
-      trackers: applied.state.trackers,
-      cleaning: applied.state.cleaning,
+      blocking: state.blocking,
+      trackers: state.trackers,
+      cleaning: state.cleaning,
     },
-    paused: applied.paused,
-    pauseUntil: applied.state.pauseUntil,
-    allowlist: applied.state.allowlist,
+    paused: Boolean(matchedPause),
+    pausedHost: matchedPause?.host || null,
+    pauseUntil: matchedPause?.until || null,
+    pausedSites: pausedList,
+    allowlist: state.allowlist,
     locationSupported: location.supported,
     locationSetting: location.setting,
-    locationManaged: applied.state.locationManaged,
+    locationManaged: state.locationManaged,
     locationExceptions: location.exceptions,
     rulesets,
   };
 }
 
 async function setToggle(key: ToggleKey, enabled: boolean) {
-  const state = await expirePause(await stored());
-  if (state.pauseUntil && enabled && key !== "cosmetic") {
-    return status();
-  }
   await save({ [key]: enabled });
   if (key !== "cosmetic") await applyRulesets();
   return status();
 }
 
-async function pause(durationMs: number) {
+async function pause(input?: string, durationMs = 5 * 60 * 1000) {
+  const host = hostFrom(input || "") || "blocked.nxtl-shield-test.invalid";
   const until = Date.now() + Math.max(1000, durationMs);
-  await save({ pauseUntil: until });
-  await chrome.alarms.create("nxtl-pause", { when: until });
-  await applyRulesets();
-  return status();
+  let state = await stored();
+  const others = (state.pausedSites || []).filter((s) => s.host !== host && s.until > Date.now());
+  const updated: PausedSite[] = [...others, { host, until }];
+  await save({ pausedSites: updated });
+  await syncPausedRules(updated);
+  await chrome.alarms.create(`nxtl-pause-${host}`, { when: until });
+  return status(host);
 }
 
-async function resume() {
-  await save({ pauseUntil: null });
-  await chrome.alarms.clear("nxtl-pause");
-  await applyRulesets();
-  return status();
+async function resume(input?: string) {
+  const host = input ? hostFrom(input) : null;
+  let state = await stored();
+  const updated = host
+    ? (state.pausedSites || []).filter((s) => s.host !== host)
+    : [];
+  await save({ pausedSites: updated });
+  await syncPausedRules(updated);
+  if (host) {
+    await chrome.alarms.clear(`nxtl-pause-${host}`);
+  } else {
+    const alarms = await chrome.alarms.getAll();
+    for (const a of alarms) {
+      if (a.name.startsWith("nxtl-pause")) await chrome.alarms.clear(a.name);
+    }
+  }
+  return status(host);
 }
 
 function hostFrom(input: string): string | null {
@@ -221,15 +284,21 @@ async function onMessage(
   sender: { tab?: { id?: number } },
 ) {
   switch (message.type) {
-    case "getStatus":
-      return status();
+    case "getStatus": {
+      const host = message.url ? hostFrom(message.url) : null;
+      return status(host);
+    }
     case "setToggle":
       if (!message.key) return status();
       return setToggle(message.key, Boolean(message.enabled));
-    case "pause":
-      return pause(Number(message.durationMs) || 5 * 60 * 1000);
-    case "resume":
-      return resume();
+    case "pause": {
+      const host = message.url ? hostFrom(message.url) : null;
+      return pause(host || undefined, Number(message.durationMs) || 5 * 60 * 1000);
+    }
+    case "resume": {
+      const host = message.url ? hostFrom(message.url) : null;
+      return resume(host || undefined);
+    }
     case "allowAdd":
       return allowAdd(String(message.input || message.url || ""));
     case "allowRemove":
@@ -301,7 +370,11 @@ chrome.webNavigation.onCompleted.addListener(async (details: { frameId: number }
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm: { name: string }) => {
-  if (alarm.name === "nxtl-pause") await applyRulesets();
+  if (alarm.name.startsWith("nxtl-pause")) {
+    const state = await stored();
+    const { state: updated } = await expirePausedSites(state);
+    await syncPausedRules(updated.pausedSites || []);
+  }
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -324,9 +397,9 @@ void applyRulesets();
 const testApi = {
   enableBlocking: () => setToggle("blocking", true),
   setToggle: (key: ToggleKey, enabled: boolean) => setToggle(key, enabled),
-  pauseFor: (ms: number) => pause(ms),
-  resume,
-  status,
+  pauseFor: (ms: number, host = "blocked.nxtl-shield-test.invalid") => pause(host, ms),
+  resume: (host?: string) => resume(host),
+  status: (host?: string) => status(host),
   allow: (host: string) => allowAdd(host),
   disallow: (host: string) => allowRemove(host),
   locationBlock,

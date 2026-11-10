@@ -1,3 +1,24 @@
+async function getActiveTab(): Promise<{ url?: string; id?: number } | null> {
+  if (typeof chrome === "undefined" || !chrome.tabs?.query) return null;
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tabs[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+function getHostFromUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.protocol === "http:" || u.protocol === "https:") {
+      return u.hostname.toLowerCase();
+    }
+  } catch {}
+  return null;
+}
+
 async function refresh() {
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
     const engine = document.querySelector("#engine");
@@ -10,14 +31,19 @@ async function refresh() {
     if (loc) loc.textContent = "Location blocking is not available here.";
     return;
   }
-  const status = await chrome.runtime.sendMessage({ type: "getStatus" });
+  const tab = await getActiveTab();
+  const host = getHostFromUrl(tab?.url);
+  const status = await chrome.runtime.sendMessage({ type: "getStatus", url: host || undefined });
   const engine = document.querySelector("#engine");
   const pauseBtn = document.querySelector<HTMLElement>("#pause");
   const resumeBtn = document.querySelector<HTMLElement>("#resume");
 
   if (engine) {
     if (status.paused) {
-      engine.textContent = `Protection paused until ${status.pauseUntil ? new Date(status.pauseUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "5 minutes"}`;
+      const timeStr = status.pauseUntil
+        ? new Date(status.pauseUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "5 minutes";
+      engine.textContent = `Paused on this site until ${timeStr}`;
     } else {
       const anyOn = status.blockingEnabled || status.trackersEnabled || status.cleaningEnabled;
       engine.textContent = anyOn ? "Shield is on in this browser." : "Shield is off in this browser.";
@@ -53,11 +79,20 @@ async function refresh() {
 }
 
 document.querySelector("#pause")?.addEventListener("click", async () => {
-  await chrome.runtime.sendMessage({ type: "pause", durationMs: 5 * 60 * 1000 });
+  const tab = await getActiveTab();
+  const host = getHostFromUrl(tab?.url);
+  if (!host) {
+    const engine = document.querySelector("#engine");
+    if (engine) engine.textContent = "Open a website to pause Shield there.";
+    return;
+  }
+  await chrome.runtime.sendMessage({ type: "pause", url: host, durationMs: 5 * 60 * 1000 });
   await refresh();
 });
 document.querySelector("#resume")?.addEventListener("click", async () => {
-  await chrome.runtime.sendMessage({ type: "resume" });
+  const tab = await getActiveTab();
+  const host = getHostFromUrl(tab?.url);
+  await chrome.runtime.sendMessage({ type: "resume", url: host || undefined });
   await refresh();
 });
 document.querySelector("#open-shield")?.addEventListener("click", () => {
