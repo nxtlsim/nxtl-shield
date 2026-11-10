@@ -1,6 +1,6 @@
 # NXTL Shield
 
-Free, open-source tools that help you block ads and trackers, check suspicious links and messages, turn on encrypted DNS, see what websites see about your connection, protect your location, and encrypt files or messages. Built by NXTL eSIM. No account required. NXTL eSIM mobile data is optional and does not unlock these tools.
+Free, open-source tools that help you block ads and trackers, check suspicious links and messages, turn on encrypted DNS, see what websites see about your connection, protect your location, and encrypt files or messages. Built by NXTL eSIM. No account required. All tools are free. NXTL eSIM is our travel data service.
 
 ## Screenshots
 
@@ -24,7 +24,7 @@ More captures, including light and dark at 390 and 1280, are in [`docs/screensho
 Paste a link, a text message, or a QR code before you open it. Shield checks it on your device and gives a clear verdict: Likely scam, Be careful, or Looks safe.
 
 ### See your connection
-Your connection shows the public IPv4 and IPv6 address, city, country, and network provider that websites can see, and checks whether Safe DNS looks on.
+Your connection shows the public IPv4 and IPv6 address, city, country, and network provider that websites can see, and checks whether Safe DNS is on.
 
 ### Block ads and trackers
 Add the browser extension to stop known ad and tracker domains while you browse. Or set Safe DNS so every app on your phone or computer is filtered.
@@ -36,7 +36,10 @@ Follow short steps for Windows, Android, iPhone, Mac, and Linux. On Windows you 
 In Chromium browsers, the extension can block website location access, with exceptions you choose. Phone app permissions stay under your device settings.
 
 ### Encrypt a file or message
-Private messages & files encrypts text or a file on your device with a password you choose. Drop a file onto the page or type a message. Nothing is uploaded. Send the password through a different channel.
+Private messages & files encrypts text or a file on your device with a password you choose. Drop a file onto the page or type a message. Nothing is uploaded. Send the password through a different channel. You can also create a private link for a short message. That link works once, then the message is gone.
+
+### Share Shield
+Know someone who gets scam texts? Share the official Shield link with them from the app, by copy, email, text message, or QR code.
 
 ### Create a strong password
 Generate a password on your device, copy it in one tap, and optionally check whether it has appeared in known leaks. Your password itself is never sent.
@@ -63,7 +66,7 @@ Checks, encryption, and password generation run in your browser. Shield does not
 ## FAQ
 
 **Is NXTL Shield free?**  
-Yes. The web tools and extension are free. NXTL eSIM is an optional paid product.
+Yes. The web tools and extension are free. NXTL eSIM is our travel data service.
 
 **Do I need an NXTL eSIM?**  
 No.
@@ -72,7 +75,7 @@ No.
 No. Extension settings stay in the browser. Threat lists ship with the app.
 
 **Does Private messages & files upload my files?**  
-No. Encryption and decryption stay on your device.
+No. Password-protected files and messages stay on your device. A private link sends only the locked text, never the key or password, and that locked text is deleted when it is opened.
 
 **Will it stop every scam?**  
 No. New or unknown sites may be missed. Treat results as guidance.

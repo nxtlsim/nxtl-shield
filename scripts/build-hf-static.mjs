@@ -25,7 +25,7 @@ license: gpl-3.0
 app_file: index.html
 ---
 
-Free, open-source security tools by NXTL eSIM. Check a link or message, see your connection, turn on Safe DNS, and encrypt a file or message in your browser. No account required.
+Free, open-source security tools by NXTL eSIM. Check a link or message, see your connection, turn on Safe DNS, encrypt a file or message, or send a private link that is gone after it is opened. No account required.
 
 ## Screenshots
 
