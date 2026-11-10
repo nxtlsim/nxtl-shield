@@ -20,8 +20,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: npm ci
-      - name: Fetch and compile latest threat lists
-        run: python3 scripts/build_lists.py
+      - name: Fetch and compile latest threat and ad lists
+        run: NXTL_LIST_FETCH=force python3 scripts/build_lists.py
       - name: Rebuild extension rules
         run: python3 scripts/build_extension_rules.py
       - name: Verify types and unit tests

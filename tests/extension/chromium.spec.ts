@@ -184,10 +184,16 @@ test("manifests have isolated background keys for Chromium and Firefox", () => {
 
 test("tracker rules include major ad networks with block action", () => {
   const trackers = JSON.parse(readFileSync(join(process.cwd(), "apps/extension/dist-chromium/rules/trackers.json"), "utf8"));
-  const dc = trackers.find((r: any) => r.condition?.urlFilter === "||doubleclick.net^");
-  const gs = trackers.find((r: any) => r.condition?.urlFilter === "||googlesyndication.com^");
-  expect(dc?.action?.type).toBe("block");
-  expect(gs?.action?.type).toBe("block");
+  const needed = [
+    "||doubleclick.net^",
+    "||googlesyndication.com^",
+    "||googletagmanager.com^",
+    "||google-analytics.com^",
+    "||amazon-adsystem.com^",
+  ];
+  for (const filter of needed) {
+    expect(trackers.some((r: any) => r.condition?.urlFilter === filter && r.action?.type === "block")).toBe(true);
+  }
 });
 
 test("popup displays Safe DNS status, tools, and on-device check verdicts", async ({ browserName }) => {
