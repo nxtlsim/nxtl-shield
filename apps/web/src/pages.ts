@@ -86,7 +86,7 @@ export function normalizeCheckInput(raw: string): {
     };
   }
 
-  // 3. Sentence or text with a domain inside, e.g. "Please check delfi.lt/news for info"
+  // 3. Sentence or text with a domain inside, e.g. "Please check nxtlsim.com/news for info"
   const inlineDomainMatch = trimmed.match(/(?:[a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}(?::\d+)?(?:\/[^\s<>"'`]*)?/i);
   if (inlineDomainMatch && inlineDomainMatch[0].includes(".")) {
     const cleaned = inlineDomainMatch[0].replace(/[.,;:!?)]+$/, "");
@@ -1707,7 +1707,7 @@ export function pageClean(): HTMLElement {
   const input = h("textarea", {
     "data-testid": "check-input",
     rows: "3",
-    placeholder: "Paste a link with tracking tags here (e.g. https://example.com/item?utm_source=fb&fbclid=123)",
+    placeholder: "Paste a link with tracking tags here (e.g. https://nxtlsim.com/?utm_source=fb&fbclid=123)",
   });
   const out = h("div");
   let previous = "";

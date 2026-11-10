@@ -81,7 +81,11 @@ async function refresh() {
       if (input) input.checked = false;
     }
     const loc = document.querySelector("#location");
-    if (loc) loc.textContent = "Location blocking is not available here.";
+    const locText = document.querySelector("#location-text");
+    const locBtn = document.querySelector<HTMLButtonElement>("#location-btn");
+    if (locText) locText.textContent = "Location blocking is not available here.";
+    else if (loc) loc.textContent = "Location blocking is not available here.";
+    if (locBtn) locBtn.style.display = "none";
     return;
   }
   const tab = await getActiveTab();
@@ -124,11 +128,33 @@ async function refresh() {
     };
   }
 
-  const location = document.querySelector("#location");
-  if (location) {
-    location.textContent = status.locationSupported
-      ? `Location permission is set to ${status.locationSetting}.`
-      : "Location blocking is not available here.";
+  const locText = document.querySelector("#location-text");
+  const locBtn = document.querySelector<HTMLButtonElement>("#location-btn");
+  const locationEl = document.querySelector("#location");
+
+  if (!status.locationSupported) {
+    if (locText) locText.textContent = "Location blocking is not available here.";
+    else if (locationEl) locationEl.textContent = "Location blocking is not available here.";
+    if (locBtn) locBtn.style.display = "none";
+  } else {
+    const isBlocked = status.locationSetting === "block";
+    const text = isBlocked
+      ? "Location is blocked for all websites."
+      : "Websites ask before checking your location.";
+    if (locText) {
+      locText.textContent = text;
+    } else if (locationEl) {
+      locationEl.textContent = text;
+    }
+    if (locBtn) {
+      locBtn.style.display = "inline-flex";
+      locBtn.textContent = isBlocked ? "Allow sites to ask" : "Block location";
+      locBtn.onclick = async () => {
+        locBtn.disabled = true;
+        await chrome.runtime.sendMessage({ type: isBlocked ? "locationRestore" : "locationBlock" });
+        await refresh();
+      };
+    }
   }
 }
 
