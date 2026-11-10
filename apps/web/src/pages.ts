@@ -264,7 +264,7 @@ export async function pageHome(): Promise<HTMLElement> {
     type: "text",
     class: "hero-input",
     "data-testid": "check-input",
-    placeholder: "Paste a link, message or domain (e.g. delfi.lt)",
+    placeholder: "Paste a link, message or domain (e.g. nxtlsim.com)",
     "aria-label": "Check link, message or QR",
   }) as HTMLInputElement;
 
@@ -1288,7 +1288,7 @@ function linkForm() {
   const input = h("input", {
     type: "text",
     "data-testid": "check-input",
-    placeholder: "Paste or type a web address (e.g. delfi.lt)",
+    placeholder: "Paste or type a web address (e.g. nxtlsim.com)",
   }) as HTMLInputElement;
 
   const out = h("div");
