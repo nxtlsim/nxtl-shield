@@ -231,3 +231,46 @@ test("popup displays Safe DNS status, tools, and on-device check verdicts", asyn
     await context.close();
   }
 });
+
+test("lookalike detection flags typos of genuine brands and warns before navigation", async ({ browserName }) => {
+  test.skip(browserName !== "chromium" || !process.env.DISPLAY, "Needs a display and Chromium.");
+  const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "nxtl-lookalike-")), {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [
+      `--load-extension=${EXT}`,
+      `--disable-extensions-except=${EXT}`,
+      "--disable-features=DisableLoadExtensionCommandLineSwitch",
+      "--no-proxy-server",
+    ],
+  });
+
+  try {
+    let worker = context.serviceWorkers()[0];
+    if (!worker) worker = await context.waitForEvent("serviceworker");
+
+    const checkLookalike = async (host: string) => {
+      return worker.evaluate(async (h) => {
+        return (globalThis as unknown as { nxtlTest: { findLookalike: (x: string) => string | null } }).nxtlTest.findLookalike(h);
+      }, host);
+    };
+
+    expect(await checkLookalike("nxtls1m.com")).toBe("nxtlsim.com");
+    expect(await checkLookalike("nxxlsim.com")).toBe("nxtlsim.com");
+    expect(await checkLookalike("nxtlsim.com")).toBeNull();
+    expect(await checkLookalike("www.nxtlsim.com")).toBeNull();
+    expect(await checkLookalike("g00gle.com")).toBe("google.com");
+    expect(await checkLookalike("google.com")).toBeNull();
+
+    // Verify warning page renders lookalike heading and buttons
+    const warnPage = await context.newPage();
+    await warnPage.goto(`chrome-extension://aihdikogmaekjmanjhdmeanhhfhiblmm/warning.html?url=https%3A%2F%2Fnxtls1m.com&lookalike=1&genuine=nxtlsim.com`);
+    await expect(warnPage.locator("#title")).toContainText("This address looks like a lookalike of nxtlsim.com.");
+    await expect(warnPage.locator("#why")).toContainText("Check the address bar before you continue.");
+    await expect(warnPage.locator("#back")).toHaveText("Back to safety");
+    await expect(warnPage.locator("#once")).toHaveText("Continue");
+  } finally {
+    await context.close();
+  }
+});
+
