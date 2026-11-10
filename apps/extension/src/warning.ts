@@ -9,8 +9,14 @@ function hostOf(url: string): string {
 }
 
 async function main() {
+  const fromQuery = new URLSearchParams(location.search).get("url") || "";
   const fromHash = decodeURIComponent(location.hash.replace(/^#/, ""));
-  const pending = fromHash.startsWith("http") ? { url: fromHash } : await chrome.runtime.sendMessage({ type: "getPending" });
+  let pending: { url?: string } | undefined;
+  if (fromQuery.startsWith("http")) pending = { url: fromQuery };
+  else if (fromHash.startsWith("http")) pending = { url: fromHash };
+  else if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+    pending = await chrome.runtime.sendMessage({ type: "getPending" });
+  }
   const url = pending?.url as string | undefined;
   const title = document.querySelector("#title");
   const why = document.querySelector("#why");
