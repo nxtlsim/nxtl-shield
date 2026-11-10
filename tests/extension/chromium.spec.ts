@@ -40,7 +40,7 @@ test("chromium extension blocks, allowlists, pauses, cleans, and restores locati
       `--disable-extensions-except=${EXT}`,
       "--disable-features=DisableLoadExtensionCommandLineSwitch",
       "--no-proxy-server",
-      `--host-resolver-rules=MAP ${HOST} 127.0.0.1`,
+      `--host-resolver-rules=MAP ${HOST} 127.0.0.1, MAP 007itshop.com 127.0.0.1`,
       "--use-fake-ui-for-media-stream",
     ],
   });
@@ -78,11 +78,18 @@ test("chromium extension blocks, allowlists, pauses, cleans, and restores locati
     await expect(page.locator("#body")).toContainText("ORIGIN");
     await worker.evaluate(async (host) => (globalThis as unknown as { nxtlTest: { disallow: (h: string) => Promise<unknown> } }).nxtlTest.disallow(host), HOST);
 
-    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { pauseFor: (ms: number) => Promise<unknown> } }).nxtlTest.pauseFor(1500));
+    const HOST2 = "007itshop.com";
+    await worker.evaluate(async (h) => (globalThis as unknown as { nxtlTest: { pauseFor: (ms: number, host?: string) => Promise<unknown> } }).nxtlTest.pauseFor(1500, h), HOST);
     await page.goto(`http://${HOST}:${port}/paused`);
     await expect(page.locator("#body")).toContainText("ORIGIN");
+
+    const page2 = await context.newPage();
+    await page2.goto(`http://${HOST2}:${port}/blocked-check`);
+    await expect(page2.locator("h1")).toContainText(/test rule|This site is blocked/i);
+    await page2.close();
+
     await page.waitForTimeout(1800);
-    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { status: () => Promise<unknown> } }).nxtlTest.status());
+    await worker.evaluate(async (h) => (globalThis as unknown as { nxtlTest: { status: (host?: string) => Promise<unknown> } }).nxtlTest.status(h), HOST);
     await page.goto(`http://${HOST}:${port}/after`);
     await expect(page.locator("h1")).toContainText(/test rule/i);
 
