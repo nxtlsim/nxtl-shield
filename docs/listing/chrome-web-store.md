@@ -1,85 +1,163 @@
-# Chrome Web Store listing (draft, not submitted)
+# Chrome Web Store listing — NXTL Shield 0.6.0
 
-This listing is ready to paste into the Chrome Web Store Developer Dashboard. Publishing needs a one-time Chrome Web Store developer registration, which has to be completed by the account owner.
+Paste-ready text for the Chrome Web Store Developer Dashboard.
+
+Build the store zip (no manifest `key` field) with:
+
+```bash
+node apps/extension/build.mjs --store
+```
+
+Then zip `apps/extension/dist-chromium/` with `manifest.json` at the root. Version is 0.6.0. The first upload receives a new item ID. After that ID is assigned, add `chrome-extension://<id>` to the message relay allowlist (see the relay repo `src/cors.ts`).
+
+The default `npm run build -w @nxtl/extension` keeps the `key` so unpacked loads stay on the stable development ID. Do not upload that build to the store.
+
+---
 
 ## Name
+
 NXTL Shield
 
-## Short description (132 characters max)
-Free protection by NXTL eSIM: warn on known phishing sites, block trackers, clean tracking links, and hide cookie banners.
+## Summary (132 characters or less)
+
+Free tools to check a link or message, block ads and trackers, and send a note that opens only once.
 
 ## Detailed description
-NXTL Shield is a free, open-source Chrome extension from NXTL eSIM. It helps you stay safer while you browse.
 
-What it can do
-• Warn you before you open a known phishing or malware site, using lists that ship with the extension
-• Optionally block tracker domains
-• Clean common tracking parameters from links, while leaving signed, login, and payment links alone
-• Hide some cookie banners (it does not change your consent choice for you)
-• Block website location access, with exceptions you choose
-• Work alongside the free NXTL Shield web app for link checks, encrypted file sharing, and Safe DNS setup
-• No account required
+NXTL Shield is a free, open-source Chrome extension from NXTL eSIM.
 
-Who it is for
-• People who want a quick extra check before opening a link, including when travelling or on public Wi-Fi
-• Anyone who wants fewer trackers and cleaner links in the browser
-• Users who prefer free, open-source tools they can inspect
+It can:
 
-Privacy
-The extension runs in your browser. There is no NXTL account, and NXTL does not collect your browsing history through this add-on. Threat and tracker lists ship with the package. Optional web tools such as a leaked-password check, a public IP lookup, or NXTL eSIM plan prices are separate browser features on the Shield site. You do not need them to use this extension.
+• Block ads and trackers while you browse
+• Warn you if an address looks like a lookalike of a site you know, such as nxtlsim.com
+• Warn you before you open a known harmful site, using lists that come with the extension
+• Clean common tracking from links
+• Hide some cookie banners (it does not choose consent for you)
+• Block websites from using your location, or let them ask again
+• Check a link or a message, including a lottery text, right in the popup
+• Create a private note that is locked on your device and opens only once
+• Pause protection on the current site for five minutes, without turning it off everywhere
 
-FAQ
+You do not need an account. The extension keeps its settings in your browser. It does not collect personal data, and it does not use analytics.
+
+The Shield website has more free tools, including Safe DNS setup for your device. You do not need those tools, or an NXTL eSIM, to use this extension.
+
 Is it free?
-Yes. The extension and the web tools are free. NXTL eSIM mobile data is an optional paid product and does not unlock Shield.
+Yes. The extension and the website tools are free. NXTL eSIM travel data is a separate paid service and does not unlock Shield.
 
 Does it collect my browsing data?
-No. Settings stay in the browser. Lists are included in the add-on package.
+No. Settings stay in your browser. Lists of known harmful sites, ads, and trackers come with the extension.
 
-Do I need an NXTL eSIM?
-No.
-
-Where do I get help?
+Need help?
 https://github.com/nxtlsim/nxtl-shield/issues
 
-Links
-Web app: https://nxtlsim.github.io/nxtl-shield/
+Website: https://nxtlsim.github.io/nxtl-shield/
 Source: https://github.com/nxtlsim/nxtl-shield
 NXTL eSIM: https://nxtlsim.com
 
 ## Category
+
 Privacy & Security
 
 ## Language
+
 English
 
-## Single-purpose statement
-This extension protects your browsing: it warns on known harmful sites, can block trackers, can clean tracking parameters from links, can hide cookie banners, and can control website location access.
+## Homepage URL
+
+https://nxtlsim.github.io/nxtl-shield/
+
+## Support URL
+
+https://github.com/nxtlsim/nxtl-shield/issues
+
+## Privacy policy URL
+
+https://nxtlsim.github.io/nxtl-shield/privacy.html
+
+(Also available in the app at https://nxtlsim.github.io/nxtl-shield/#/privacy)
+
+---
+
+## Single purpose statement
+
+This extension helps you browse more privately and safely: it blocks ads and trackers, warns you about lookalike and known harmful sites, can clean tracking from links, can hide cookie banners, can block location access, and lets you check a link or send a note that opens only once.
+
+---
 
 ## Permission justifications
 
-- declarativeNetRequest: Used to block known harmful and tracker domains in the lists that ship with the extension, when you turn those protections on.
-- storage: Used to remember your on/off settings and site exceptions in this browser.
-- alarms: Used to automatically resume protection after you pause it for a short time.
-- scripting: Used to hide cookie banners when that option is on, and to let the NXTL Shield web app detect that the extension is installed.
-- tabs: Used to know the current site so Pause on this site and the warning page can work.
-- webRequest: Used to apply link cleaning and protection as pages load, when those options are on.
-- webNavigation: Used to notice when you move to a new page so link cleaning and warnings can run at the right time.
-- contentSettings: Used to block or allow website location access, including exceptions you choose.
-- host permissions for all sites: Needed so protection can cover the sites you visit, not only a short list of domains.
+declarativeNetRequest
+Used to block ads, trackers, and known harmful sites from the lists that come with the extension, and to clean tracking from links. Also used to pause protection on the current site, and to allow a site once if you continue past a warning.
 
-## Privacy practices (answers)
+storage
+Used to remember your on and off settings, paused sites, and exceptions in this browser. This data stays on your device.
 
-- Collects user data: No
-- Collects personally identifiable information: No
-- Collects browsing history: No
-- Collects website content or activity: No
-- Account required: No
-- Remote code: No
-- Data used for sale, credit, or unrelated advertising: No
-- Data shared with third parties: No, not for this extension. Optional checks you run in the web app are described on the Shield site and are not part of this extension.
+alarms
+Used to turn protection back on when a short pause on the current site ends.
 
-## Support URL
-https://github.com/nxtlsim/nxtl-shield/issues
+tabs
+Used to know the site in the current tab so “Pause on this site” and the warning page can work, and to open Shield or a link you asked to check.
 
-## Homepage
-https://nxtlsim.github.io/nxtl-shield/
+webRequest
+Used only to remember the address that was about to open, so the warning page can show it. It does not block requests.
+
+webNavigation
+Used to notice when you go to a new page so the extension can warn you about a lookalike address, and to clear a one-time allow after you continue.
+
+contextMenus
+Used to add “Check this link with Shield” when you right-click a link.
+
+contentSettings
+Used to block websites from using your location, or to let them ask again, when you choose that in the popup.
+
+Host permission for all sites
+Needed so ad, tracker, and harmful-site blocking, link cleaning, lookalike warnings, and cookie-banner hiding can work on the sites you visit, not only a short list of domains.
+
+---
+
+## Remote code
+
+No. I am not using remote code.
+
+All code ships in the package. Lists of sites come with the extension. When you create a private note, the extension sends only locked text to the message server; it does not load or run code from that server.
+
+---
+
+## Data usage / privacy practices
+
+Collects user data: No
+
+Leave every data-type checkbox unchecked:
+
+- Personally identifiable information: No
+- Health information: No
+- Financial and payment information: No
+- Authentication information: No
+- Personal communications: No
+- Location: No
+- Web history: No
+- User activity: No
+- Website content: No
+
+Account required: No
+
+Certifications — check all three:
+
+- I do not sell or transfer user data to third parties, outside of the approved use cases.
+- I do not use or transfer user data for purposes that are unrelated to my item's single purpose.
+- I do not use or transfer user data to determine creditworthiness or for lending purposes.
+
+Notes for the form, if asked to explain:
+
+The extension does not collect personal data. Settings stay in the browser. When you choose to send a private note, only scrambled text is stored until the note is opened or the time you chose runs out. We cannot read the note. Optional checks on the Shield website (a password leak check, a public IP lookup, or eSIM plan prices) run only when you use those website tools and are described in the privacy policy. They are not part of this extension’s data collection.
+
+---
+
+## Visibility and distribution
+
+Recommended: Public listing, unlisted until you are ready to promote it, or public if you want it searchable on submit. Confirm with the account owner before choosing Publish.
+
+Default language: English (United States) is fine.
+
+Pricing: Free.

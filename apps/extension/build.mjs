@@ -15,10 +15,10 @@ const shared = {
   manifest_version: 3,
   name: "NXTL Shield",
   version: "0.6.0",
-  description: "Free open-source browser protection by NXTL eSIM: known phishing and malware warnings, tracker blocking, link cleaning, and cookie-banner controls.",
+  description: "Free tools to check a link or message, block ads and trackers, and send a note that opens only once.",
   action: { default_popup: "popup.html", default_title: "NXTL Shield" },
   icons: { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" },
-  permissions: ["declarativeNetRequest", "storage", "alarms", "scripting", "tabs", "webRequest", "webNavigation", "contextMenus"],
+  permissions: ["declarativeNetRequest", "storage", "alarms", "tabs", "webRequest", "webNavigation", "contextMenus"],
   host_permissions: ["<all_urls>"],
 };
 
@@ -55,8 +55,12 @@ function manifest(target) {
       { matches: ["<all_urls>"], js: ["cosmetic.js"], run_at: "document_idle" },
     ],
   };
+  // Chrome Web Store rejects a manifest "key" field on upload.
+  // Keep it in the regular Chromium build so unpacked loads stay on the stable ID.
+  // Pass --store (or CWS=1) to omit it from the package you upload.
+  const storePackage = process.argv.includes("--store") || process.env.CWS === "1";
   if (target === "chromium") {
-    body.key = KEY;
+    if (!storePackage) body.key = KEY;
     body.externally_connectable = { matches: APP_ORIGINS };
   } else {
     body.browser_specific_settings = {
