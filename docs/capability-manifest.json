@@ -73,7 +73,7 @@
     },
     {
       "id": "secure-share",
-      "name": "Secure Share",
+      "name": "Private messages & files",
       "userStatus": "works_automatically",
       "implementationStatus": "implemented-and-verified",
       "summary": "Encrypt or decrypt a message or file you enter here, with a shared password.",

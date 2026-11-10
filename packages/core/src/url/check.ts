@@ -314,24 +314,24 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
 
   const allowlisted = hostname ? hostMatchesAllowlist(hostname, options.allowlist ?? []) : false;
   let verdict: UrlCheck["verdict"] = "no_known_match";
-  let summary = "No known dangerous or misleading signs were found in this address.";
+  let summary = "No known dangerous signs were found.";
   let level: "scam" | "careful" | "safe" = "safe";
   let actionAdvice = "Looks safe: no known threats found on bundled lists.";
 
   if (listMatch) {
     verdict = "known_malicious_match";
     level = "scam";
-    summary = "This address is on a known dangerous list.";
-    actionAdvice = "Don't open this link or enter personal details.";
+    summary = "This looks like a dangerous link.";
+    actionAdvice = "Don't open this link or enter any details.";
   } else if (evidence.some((item) => item.id === "userinfo" || item.id === "misleading-host" || item.id === "bidi")) {
     verdict = "suspicious_indicators";
     level = "scam";
-    summary = "Deceptive address: contains misleading or disguised characters.";
-    actionAdvice = "Don't open this link. It appears designed to mislead.";
+    summary = "This looks like a dangerous link.";
+    actionAdvice = "Don't open this link or enter any details.";
   } else if (evidence.some((item) => item.severity === "indicator")) {
     verdict = "suspicious_indicators";
     level = "careful";
-    summary = "Be careful: contains shortened or unusual address patterns.";
+    summary = "Be careful with this.";
     actionAdvice = "Check where this link leads before clicking.";
   } else if (!reputation.available) {
     verdict = "inconclusive";

@@ -13,3 +13,12 @@
 11. After any route change, the new page starts at the top (see section 8). Back and Forward restore the previous scroll position.
 12. Respect `prefers-reduced-motion`: no decorative animation, instant page scroll, no layout shift.
 13. Push only to the agreed branch and summarise. Do not invent scope that this prompt did not ask for (no VPN/private-connection feature, no Chrome Web Store upload, no paid APIs that need a secret in the client).
+14. Use sentence case for headings, buttons, badges, labels, and table headers. Keep the Shield wordmark and proper names as they are (NXTL, Windows, Android, iPhone, Firefox, Chrome). Do not use CSS `text-transform: capitalize` on badges or titles — it turns "Likely scam" into "Likely Scam".
+15. Status badges sit inline with the row label, with a short word and a colored dot or status icon. Action buttons sit alone on the right, vertically centered. A badge must not look like a button (no grey pill that could be mistaken for a control).
+16. In any card grid that includes a CTA, cards are equal height and the CTAs share one baseline: flex column, CTA pinned with `margin-top: auto`.
+17. Disclosure rows (`details`/`summary`) are clearly clickable: full-width row, a chevron that rotates when open, hover and focus styles, a visible border or background, and a 48px tap target. Titles are short and plain.
+18. No other-brand test pages in the main setup flow. Built-in checks stay inside Shield. If an external double-check is truly useful, keep it as a quiet secondary link, not in the primary button row.
+19. Customer-facing NXTL coverage wording must match the live NXTL site. Use "180+ countries" (confirmed 10 Nov 2026 on https://nxtlsim.com/ and https://nxtlsim.com/esim-coverage/; the destinations directory also states 182). Never write 150+.
+20. Empty file pickers show only the drop zone. A Remove control, file name, or preview chip appears only after a file is chosen. After Remove, return to the empty drop zone and clear the input value so the same file can be chosen again.
+21. Keep NXTL eSIM's London routing claim as the owner wrote it ("Routes your traffic via London for consistent privacy abroad"). It is accurate. Do not remove or soften it. Only fix coverage numbers (180+ countries).
+22. UI examples and placeholders use nxtlsim.com (for example `e.g. nxtlsim.com`). Do not use delfi.lt or other third-party sites as the example domain in the interface. Tests may still use delfi.lt.

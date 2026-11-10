@@ -1,13 +1,13 @@
 async function refresh() {
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
     const engine = document.querySelector("#engine");
-    if (engine) engine.textContent = "Rulesets on: Threat blocking, Tracker domains, URL cleaning.";
+    if (engine) engine.textContent = "Shield status is not available here.";
     for (const key of ["blocking", "trackers", "cleaning", "cosmetic"]) {
       const input = document.querySelector(`#${key}`) as HTMLInputElement | null;
-      if (input) input.checked = key !== "cosmetic";
+      if (input) input.checked = false;
     }
     const loc = document.querySelector("#location");
-    if (loc) loc.textContent = "Location setting: managed by Shield.";
+    if (loc) loc.textContent = "Location blocking is not available here.";
     return;
   }
   const status = await chrome.runtime.sendMessage({ type: "getStatus" });
@@ -16,9 +16,12 @@ async function refresh() {
   const resumeBtn = document.querySelector<HTMLElement>("#resume");
 
   if (engine) {
-    engine.textContent = status.paused
-      ? `Protection paused until ${status.pauseUntil ? new Date(status.pauseUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "5 minutes"}`
-      : "Shield is active and protecting your browsing";
+    if (status.paused) {
+      engine.textContent = `Protection paused until ${status.pauseUntil ? new Date(status.pauseUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "5 minutes"}`;
+    } else {
+      const anyOn = status.blockingEnabled || status.trackersEnabled || status.cleaningEnabled;
+      engine.textContent = anyOn ? "Shield is on in this browser." : "Shield is off in this browser.";
+    }
   }
 
   if (pauseBtn && resumeBtn) {
@@ -35,13 +38,17 @@ async function refresh() {
     input.onchange = async () => {
       const next = await chrome.runtime.sendMessage({ type: "setToggle", key, enabled: input.checked });
       input.checked = key === "cosmetic" ? next.cosmeticEnabled : key === "blocking" ? next.blockingEnabled : key === "trackers" ? next.trackersEnabled : next.cleaningEnabled;
+      const anyOn = next.blockingEnabled || next.trackersEnabled || next.cleaningEnabled;
+      if (engine && !next.paused) {
+        engine.textContent = anyOn ? "Shield is on in this browser." : "Shield is off in this browser.";
+      }
     };
   }
   const location = document.querySelector("#location");
   if (location) {
     location.textContent = status.locationSupported
       ? `Location permission: ${status.locationSetting}.`
-      : "Location control is unsupported in this browser.";
+      : "Location blocking is not available here.";
   }
 }
 

@@ -37,7 +37,7 @@ Free, open-source security tools by NXTL eSIM. Check a link or message, see your
 
 ![Windows Safe DNS setup](https://raw.githubusercontent.com/nxtlsim/nxtl-shield/main/docs/screenshots/setup-1280-light.png)
 
-![Secure Share](https://raw.githubusercontent.com/nxtlsim/nxtl-shield/main/docs/screenshots/share-1280-light.png)
+![Private messages & files](https://raw.githubusercontent.com/nxtlsim/nxtl-shield/main/docs/screenshots/share-1280-light.png)
 
 Open the live Space, or use the [GitHub Pages app](https://nxtlsim.github.io/nxtl-shield/) and the [source repository](https://github.com/nxtlsim/nxtl-shield).
 `,
