@@ -188,10 +188,10 @@ async function render() {
   const footer = h("footer", { class: "site" }, [
     h("div", { class: "wrap" }, [
       h("p", {}, [
-        "Free, open-source security tools by NXTL eSIM. NXTL eSIM is an optional paid connection and does not unlock these tools.",
+        "All tools are free. NXTL eSIM is our travel data service.",
       ]),
       h("p", {}, [
-        h("a", { href: "https://github.com/nxtlsim/nxtl-shield", target: "_blank", rel: "noreferrer" }, ["Source Code (GPLv3)"]),
+        h("a", { href: "https://github.com/nxtlsim/nxtl-shield", target: "_blank", rel: "noreferrer", "aria-label": "Source code (GPLv3)" }, ["Source code"]),
         " · ",
         h("a", { href: "#/privacy" }, ["How it works & privacy"]),
         " · ",

@@ -1287,9 +1287,28 @@ details[open] > summary {
 .result-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
+  justify-content: flex-start;
   margin-bottom: var(--sp-2);
+}
+
+.result-header .pill {
+  white-space: nowrap;
+}
+
+.result-quote {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: var(--sp-2) 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--border-strong);
+  background: var(--surface-sunken);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .result-action-box {

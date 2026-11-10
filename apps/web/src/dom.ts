@@ -93,19 +93,60 @@ export function resultCard(result: CheckResultData): HTMLElement {
       createIcon(iconName, 18),
       pillLabel,
     ]),
-    result.inputRedacted ? h("span", { class: "mono muted-soft" }, [result.inputRedacted]) : "",
   ]);
 
-  const cleanSummary = result.summary
+  const quoteBlock = result.inputRedacted
+    ? h("div", { class: "result-quote mono" }, [result.inputRedacted])
+    : null;
+
+  let cleanSummary = result.summary
     .replace(/HaGeZi|TIF|uAssets|bundled threat host list|bundled badware-risk host list/gi, "known threat lists")
-    .replace(/That is not proof the message is genuine\./gi, "");
+    .replace(/That is not proof the message is genuine\./gi, "")
+    .trim();
+
+  if (
+    cleanSummary === "Likely scam message: contains common fraud patterns." ||
+    (isScam && result.isText)
+  ) {
+    cleanSummary = "This looks like a scam.";
+  } else if (
+    cleanSummary === "Known dangerous link found in this message." ||
+    cleanSummary === "This address is on a known dangerous list." ||
+    cleanSummary === "Deceptive address: contains misleading or disguised characters." ||
+    (isScam && !result.isText)
+  ) {
+    cleanSummary = "This looks like a dangerous link.";
+  } else if (
+    cleanSummary === "Be careful: contains shortened links or unusual indicators." ||
+    cleanSummary === "Be careful: contains shortened or unusual address patterns." ||
+    isCareful
+  ) {
+    cleanSummary = "Be careful with this.";
+  } else if (
+    cleanSummary === "No scam indicators or known dangerous links found in this message." ||
+    cleanSummary === "No known dangerous or misleading signs were found in this address." ||
+    isSafe
+  ) {
+    cleanSummary = "No known dangerous signs were found.";
+  }
 
   const title = h("h2", {}, [cleanSummary]);
 
+  let adviceText = result.actionAdvice;
+  if (!adviceText) {
+    if (isScam) {
+      adviceText = result.isText
+        ? "Don't reply and don't pay. Real lotteries and inheritances never ask for fees or bank details by text."
+        : "Don't open this link or enter any details.";
+    } else if (isCareful) {
+      adviceText = "Be careful before interacting with this.";
+    }
+  }
+
   const desc = isSafe
     ? h("p", { class: "muted-soft", style: "font-size: 0.9rem;" }, ["A brand-new trick might not be on the list yet."])
-    : result.actionAdvice
-      ? h("p", { class: "muted", style: "font-weight: 500;" }, [result.actionAdvice])
+    : adviceText
+      ? h("p", { class: "muted", style: "font-weight: 500;" }, [adviceText])
       : "";
 
   const filteredEvidence = result.evidence
@@ -136,7 +177,7 @@ export function resultCard(result: CheckResultData): HTMLElement {
   }
 
   const actions = h("div", { class: "result-action-box" });
-  const clearBtn = h("button", { class: "btn sm", type: "button" }, [
+  const clearBtn = h("button", { class: "btn", type: "button" }, [
     createIcon("refresh", 16),
     "Check another",
   ]);
@@ -148,25 +189,9 @@ export function resultCard(result: CheckResultData): HTMLElement {
     }
     card.remove();
   });
+  actions.append(clearBtn);
 
-  if (isScam) {
-    const primaryAction = result.isText
-      ? h("button", { class: "primary sm", type: "button", disabled: "true" }, [
-          createIcon("close", 16),
-          "Don't reply or pay",
-        ])
-      : h("button", { class: "primary sm", type: "button", disabled: "true" }, [
-          createIcon("close", 16),
-          "Don't open this link",
-        ]);
-    actions.append(primaryAction, clearBtn);
-  } else if (isCareful) {
-    actions.append(clearBtn);
-  } else {
-    actions.append(clearBtn);
-  }
-
-  card.append(header, title, desc, list, actions);
+  card.append(header, ...(quoteBlock ? [quoteBlock] : []), title, desc, list, actions);
   return card;
 }
 

@@ -123,6 +123,9 @@ test("lottery SMS and normal message show exact customer pill labels without for
   const verdictEl = page.getByTestId("verdict");
   await expect(verdictEl).toBeVisible();
   await expect(verdictEl.locator(".pill")).toHaveText("Likely scam");
+  await expect(verdictEl.getByRole("heading", { level: 2 })).toHaveText("This looks like a scam.");
+  await expect(verdictEl.locator(".result-quote")).toBeVisible();
+  await expect(verdictEl.locator("button:disabled")).toHaveCount(0);
   const scamText = await verdictEl.innerText();
   expect(scamText.toLowerCase()).not.toContain("safe");
   expect(scamText.toLowerCase()).not.toContain("dkim");
