@@ -42,6 +42,7 @@ ablinks.trackerinfo.southbeachdiet.com
 acemetrics.aaa.com
 ad-bls-tracking.lemino.docomo.ne.jp
 ad-tracker-api.luizalabs.com
+ad.doubleclick.net
 adb-analytics.live-now.com
 adbmetrics.abc.es
 adbmetrics.blogasturias.com
@@ -116,6 +117,7 @@ adobemetrics.yellohvillage.it
 adobemetrics.yellohvillage.nl
 ads-tracking.beop.io
 ads-tracking.collectiveaudience.co
+adservice.google.com
 adtrack.alchemy-web.jp
 adtrack.loracle.jp
 adtrack.maisonlexia.com
@@ -881,6 +883,7 @@ console-telemetry.oci.oraclecloud.com
 cookietracking.eatonpowersource.com
 copilot-telemetry.githubusercontent.com
 cqsecshf4rd9.www.tracktheta.com
+criteo.com
 criteo.gap.ae
 crm-analytics.imweb.ru
 cs.analytics.lego.com
@@ -900,6 +903,7 @@ dmpmetrics.rcsmetrics.it
 dn-analytics.alketech.eu
 do-not-tracker.org
 doppler-beacon.cbsivideo.com
+doubleclick.net
 doubleclick.uk.net
 dsp-track-global.zmaticoo.com
 dt-tracker.mamikos.com
@@ -982,6 +986,9 @@ globale-analytics-sdk.global-e.com
 gmetrics.getbeamer.com
 go-usertrack-importer.pub.24ur.si
 google-analytics-cn.com
+googleads.g.doubleclick.net
+googleadservices.com
+googlesyndication.com
 greenbeacon.actonservice.com
 guestpixel.net
 gw-analytics.panasonic.com
@@ -2605,6 +2612,9 @@ optimizely.techtarget.com
 origin-smetrics.go365.com
 otrack.workday.com
 otracks.workday.com
+outbrain.com
+pagead2.googleadservices.com
+pagead2.googlesyndication.com
 partnersuccessmetrics.cisco.com
 phonetrack.hukumkaikka.in
 pixel-a.basis.net
@@ -2691,6 +2701,7 @@ privacy-analytics-proxy.cookiebot.com
 procroanalytics.com
 prod.tahoe-analytics.publishers.advertising.a2z.com
 prod.tracking.refinitiv.com
+pubads.g.doubleclick.net
 qldmga.criteo.work
 qubitanalytics.appspot.com
 query1.petametrics.com
@@ -3034,6 +3045,7 @@ securemetrics.gap.eu
 securemetrics.gpsuniforms.com
 securemetrics.marthastewart.com
 securemetrics.nbnco.com.au
+securepubads.g.doubleclick.net
 securetracking.eaton.com
 securetracking.golfpride.com
 securetracking.huntington.com
@@ -6079,6 +6091,8 @@ sswmetrics.philippineairlines.com
 sswmetrics.sabre.com
 stas.outbrain.com
 static-tracking.klaviyo.com
+static.criteo.net
+static.doubleclick.net
 stats.g.doubleclick.net.iberostar.com
 stats.leavetrackapp.com
 stats.pixeldrain.com
@@ -6158,6 +6172,7 @@ swebmetrics.oklahoma.gov
 swebmetrics.zebra.com
 t.cometlytrack.com
 t.mmganalytics.com
+taboola.com
 tagtracking.vibescm.com
 td.doubleclick.net
 tdor-smetrics.td.com
@@ -6204,6 +6219,7 @@ tm.tradetracker.net
 tmetrics.hdfcbank.com
 tmetrics.webex.com
 tonanalytics.mugiwarattagentai.agency
+tpc.googlesyndication.com
 tr.outbrain.com
 track-dark-bz.b-cdn.net
 track-e.cypress.com
@@ -7293,6 +7309,7 @@ www.domainanalytics.net
 www.ever-track-51.com
 www.fasttrack.fr
 www.fasttracker.fr
+www.googleadservices.com
 www.lead-analytics-1000.com
 www.metrics.bankaustria.at
 www.smetrics.imedeen.us

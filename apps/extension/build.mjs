@@ -33,9 +33,9 @@ function manifest(target) {
     permissions: target === "chromium" ? [...shared.permissions, "contentSettings"] : shared.permissions,
     declarative_net_request: {
       rule_resources: [
-        { id: "threats", enabled: false, path: "rules/threats.json" },
-        { id: "trackers", enabled: false, path: "rules/trackers.json" },
-        { id: "cleaning", enabled: false, path: "rules/cleaning.json" },
+        { id: "threats", enabled: true, path: "rules/threats.json" },
+        { id: "trackers", enabled: true, path: "rules/trackers.json" },
+        { id: "cleaning", enabled: true, path: "rules/cleaning.json" },
       ],
     },
     content_scripts: [
