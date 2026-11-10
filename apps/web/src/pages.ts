@@ -23,6 +23,7 @@ import {
   sourceStatus,
   type ReportEntry,
 } from "@nxtl/core";
+import { QRCodeWriter, BarcodeFormat } from "@zxing/library";
 import { queryExtension } from "./bridge";
 import { field, h, resultCard, introBlock, faqSection } from "./dom";
 import { createIcon, type IconName } from "./icons";
@@ -599,7 +600,29 @@ export async function pageHome(): Promise<HTMLElement> {
     ]),
   ]);
 
-  root.append(guideBanner, hero, statusSection, allTilesSection, esimCard);
+  // Share Shield Companion Card
+  const shareShieldCard = h("section", { class: "card share-shield-card", style: "margin-top: var(--sp-4);" }, [
+    h("div", { class: "esim-card-inner" }, [
+      h("div", { class: "esim-card-content" }, [
+        h("div", { class: "tile-icon", style: "width: 44px; height: 44px; flex-shrink: 0;" }, [createIcon("shield", 24)]),
+        h("div", { class: "esim-card-text" }, [
+          h("h3", { style: "margin: 0; font-size: 1.15rem;" }, ["Share Shield"]),
+          h("p", { class: "muted", style: "margin: 4px 0 0;" }, [
+            "Know someone who gets scam texts? Share Shield with them.",
+          ]),
+        ]),
+      ]),
+      h("a", {
+        class: "btn primary esim-card-btn",
+        href: "#/share-app",
+      }, [
+        "Share Shield",
+        createIcon("arrow-right", 16),
+      ]),
+    ]),
+  ]);
+
+  root.append(guideBanner, hero, statusSection, allTilesSection, esimCard, shareShieldCard);
   return root;
 }
 
@@ -2776,3 +2799,119 @@ export function pagePrivacy(): HTMLElement {
   root.append(header, privacyCard, sourcesCard, externalCard, openSourceCard);
   return root;
 }
+
+export function pageShareApp(): HTMLElement {
+  const root = h("div", {});
+  const header = h("header", { class: "page-header" }, [
+    h("h1", {}, ["Share Shield"]),
+    h("p", { class: "lede" }, [
+      "Know someone who gets scam texts? Share Shield with them.",
+    ]),
+  ]);
+
+  const APP_URL = "https://nxtlsim.github.io/nxtl-shield/";
+  const SHARE_TEXT = `Know someone who gets scam texts? Share Shield with them. ${APP_URL}`;
+  const EMAIL_SUBJECT = "A free tool that checks scam texts and links";
+  const EMAIL_BODY = `Know someone who gets scam texts? Share Shield with them.\n\n${APP_URL}`;
+
+  const shareActions = h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" });
+
+  // Native share if supported
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    const nativeShareBtn = h("button", {
+      type: "button",
+      class: "btn primary",
+      style: "width: 100%; justify-content: center;",
+    }, [
+      createIcon("shield", 18),
+      "Share",
+    ]);
+    nativeShareBtn.addEventListener("click", async () => {
+      try {
+        await navigator.share({
+          title: "NXTL Shield",
+          text: `Know someone who gets scam texts? Share Shield with them.`,
+          url: APP_URL,
+        });
+      } catch {
+        // User cancelled or share dismissed — stay quiet
+      }
+    });
+    shareActions.append(nativeShareBtn);
+  }
+
+  // Copy link action
+  const copyBtn = h("button", {
+    type: "button",
+    class: "btn",
+    style: "width: 100%; justify-content: center;",
+  }, [
+    createIcon("copy", 18),
+    "Copy link",
+  ]);
+  copyBtn.addEventListener("click", async () => {
+    await copyToClipboard(APP_URL, copyBtn, [createIcon("copy", 18), "Copy link"], "Link copied.");
+  });
+
+  // Email action
+  const emailLink = h("a", {
+    class: "btn",
+    style: "width: 100%; justify-content: center;",
+    href: `mailto:?subject=${encodeURIComponent(EMAIL_SUBJECT)}&body=${encodeURIComponent(EMAIL_BODY)}`,
+  }, [
+    createIcon("mail", 18),
+    "Email",
+  ]);
+
+  // Text message (SMS) action
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isIos = /iPhone|iPad|iPod/i.test(ua);
+  const smsDelimiter = isIos ? "&" : "?";
+  const smsHref = `sms:${smsDelimiter}body=${encodeURIComponent(SHARE_TEXT)}`;
+
+  const smsLink = h("a", {
+    class: "btn",
+    style: "width: 100%; justify-content: center;",
+    href: smsHref,
+  }, [
+    createIcon("message", 18),
+    "Text message",
+  ]);
+
+  shareActions.append(copyBtn, emailLink, smsLink);
+
+  // Local QR Code Card
+  let qrSvgString = "";
+  try {
+    const writer = new QRCodeWriter();
+    const matrix = writer.encode(APP_URL, BarcodeFormat.QR_CODE, 0, 0, new Map());
+    const size = matrix.getWidth();
+    let path = "";
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        if (matrix.get(x, y)) {
+          path += `M${x},${y}h1v1h-1z `;
+        }
+      }
+    }
+    qrSvgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="200" height="200" fill="currentColor" role="img" aria-label="QR code for NXTL Shield website"><path d="${path}"/></svg>`;
+  } catch {
+    qrSvgString = "";
+  }
+
+  const qrCard = h("div", {
+    class: "card",
+    style: "margin-top: var(--sp-4); text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--sp-3);",
+  }, [
+    h("h2", { style: "margin: 0; font-size: 1.15rem;" }, ["Scan QR code"]),
+    h("p", { class: "muted", style: "margin: 0;" }, ["Point any phone camera at this code to open Shield."]),
+    h("div", {
+      style: "background: #ffffff; color: #0a0c12; padding: 16px; border-radius: 4px; display: inline-flex; justify-content: center; align-items: center;",
+      innerHTML: qrSvgString,
+    }),
+  ]);
+
+  root.append(header, shareActions, qrCard);
+  return root;
+}
+
