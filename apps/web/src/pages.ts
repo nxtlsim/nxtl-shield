@@ -13,7 +13,6 @@ import {
   hibpLookup,
   inspectFile,
   installInstructions,
-  interpretDnsCheckPaste,
   loadReports,
   locationPrivacySetup,
   makeReport,
@@ -605,6 +604,47 @@ export async function pageHome(): Promise<HTMLElement> {
   return root;
 }
 
+function makeCheckWorkedRow(): HTMLElement {
+  const probeResultBox = h("div", { style: "margin-top: var(--sp-3);" });
+  const checkBtn = h("button", { class: "btn sm", type: "button" }, [
+    createIcon("check", 14),
+    "Check it worked",
+  ]);
+  checkBtn.addEventListener("click", async () => {
+    checkBtn.disabled = true;
+    probeResultBox.replaceChildren(h("span", { class: "pill neutral" }, ["Checking DNS..."]));
+    try {
+      const res = await probeDns();
+      if (res.status === "on") {
+        probeResultBox.replaceChildren(
+          h("div", { class: "banner ok" }, [createIcon("check", 14), " Safe DNS is on."]),
+        );
+      } else if (res.status === "off") {
+        probeResultBox.replaceChildren(
+          h("div", { class: "banner alert" }, ["Safe DNS is off. Finish setup, then check again."]),
+        );
+      } else {
+        probeResultBox.replaceChildren(
+          h("div", { class: "banner" }, ["Could not check yet. Check your internet and try again."]),
+        );
+      }
+    } catch {
+      probeResultBox.replaceChildren(
+        h("div", { class: "banner" }, ["Could not check yet. Check your internet and try again."]),
+      );
+    } finally {
+      checkBtn.disabled = false;
+    }
+  });
+
+  return h("div", { style: "margin-top: var(--sp-4);" }, [
+    h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); flex-wrap: wrap;" }, [
+      checkBtn,
+    ]),
+    probeResultBox,
+  ]);
+}
+
 // ----------------------------------------------------
 // DEDICATED PAGE: AD & TRACKER BLOCKER
 // ----------------------------------------------------
@@ -729,12 +769,7 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
           ]),
         ]),
       ]),
-      h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
-        h("a", { class: "btn", href: "https://adguard.com/en/test.html", target: "_blank", rel: "noreferrer" }, [
-          createIcon("check", 16),
-          "Check it worked",
-        ]),
-      ]),
+      makeCheckWorkedRow(),
     );
   } else if (device.os === "ios") {
     const profile = buildMobileconfig("adguard-default");
@@ -764,12 +799,7 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
         h("li", {}, ["Tap Profile Downloaded near the top."]),
         h("li", {}, ["Tap Install in the top right and enter your passcode."]),
       ]),
-      h("div", { class: "row", style: "margin-top: var(--sp-4);" }, [
-        h("a", { class: "btn", href: "https://adguard.com/en/test.html", target: "_blank", rel: "noreferrer" }, [
-          createIcon("check", 16),
-          "Check it worked",
-        ]),
-      ]),
+      makeCheckWorkedRow(),
     );
   } else {
     // Other / Linux
@@ -944,10 +974,6 @@ export function pagePhoneProtection(): HTMLElement {
           ]),
           h("div", { class: "row", style: "margin-top: var(--sp-4); align-items: center; gap: var(--sp-3); flex-wrap: wrap;" }, [
             checkBtn,
-            h("a", { class: "btn sm ghost", href: "https://adguard.com/en/test.html", target: "_blank", rel: "noreferrer" }, [
-              createIcon("external", 14),
-              "Provider test page",
-            ]),
           ]),
           probeResultBox,
         ]),
@@ -984,10 +1010,6 @@ export function pagePhoneProtection(): HTMLElement {
           ]),
           h("div", { class: "row", style: "margin-top: var(--sp-4); align-items: center; gap: var(--sp-3); flex-wrap: wrap;" }, [
             checkBtn,
-            h("a", { class: "btn sm ghost", href: "https://adguard.com/en/test.html", target: "_blank", rel: "noreferrer" }, [
-              createIcon("external", 14),
-              "Provider test page",
-            ]),
           ]),
           probeResultBox,
         ]),
@@ -2221,51 +2243,6 @@ export async function pageSetup(): Promise<HTMLElement> {
 
   const contentArea = h("div", { style: "margin-top: var(--sp-4);" });
 
-  function makeCheckWorkedRow(resolverUrl?: string | null) {
-    const probeResultBox = h("div", { style: "margin-top: var(--sp-3);" });
-    const checkBtn = h("button", { class: "btn sm", type: "button" }, [
-      createIcon("check", 14),
-      "Check it worked",
-    ]);
-    checkBtn.addEventListener("click", async () => {
-      checkBtn.disabled = true;
-      probeResultBox.replaceChildren(h("span", { class: "pill neutral" }, ["Checking DNS..."]));
-      try {
-        const res = await probeDns();
-        if (res.status === "on") {
-          probeResultBox.replaceChildren(
-            h("div", { class: "banner ok" }, [createIcon("check", 14), " Safe DNS is on."]),
-          );
-        } else if (res.status === "off") {
-          probeResultBox.replaceChildren(
-            h("div", { class: "banner alert" }, ["Safe DNS is off. Finish setup, then check again."]),
-          );
-        } else {
-          probeResultBox.replaceChildren(
-            h("div", { class: "banner" }, ["Could not check yet. Check your internet and try again."]),
-          );
-        }
-      } catch {
-        probeResultBox.replaceChildren(
-          h("div", { class: "banner" }, ["Could not check yet. Check your internet and try again."]),
-        );
-      } finally {
-        checkBtn.disabled = false;
-      }
-    });
-
-    return h("div", {}, [
-      h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); flex-wrap: wrap;" }, [
-        checkBtn,
-        h("a", { class: "btn sm ghost", href: resolverUrl ?? "https://adguard.com/en/test.html", target: "_blank", rel: "noreferrer" }, [
-          createIcon("external", 14),
-          "Provider test page",
-        ]),
-      ]),
-      probeResultBox,
-    ]);
-  }
-
   function renderDeviceTab() {
     for (const [id, btn] of tabButtons) {
       btn.setAttribute("aria-selected", activeTab === id ? "true" : "false");
@@ -2325,7 +2302,7 @@ export async function pageSetup(): Promise<HTMLElement> {
                 "Undo script",
               ]),
             ]),
-            makeCheckWorkedRow(resolver.verifyUrl),
+            makeCheckWorkedRow(),
           ]),
         ]),
       );
@@ -2364,7 +2341,7 @@ export async function pageSetup(): Promise<HTMLElement> {
             h("li", {}, ["Paste the hostname and tap Save. All internet lookups are now protected."]),
           ]),
           h("div", { style: "margin-top: var(--sp-4);" }, [
-            makeCheckWorkedRow(resolver.verifyUrl),
+            makeCheckWorkedRow(),
           ]),
         ]),
       );
@@ -2399,7 +2376,7 @@ export async function pageSetup(): Promise<HTMLElement> {
             h("li", {}, ["Tap 'Install' in the top right and enter your passcode."]),
           ]),
           h("div", { style: "margin-top: var(--sp-4);" }, [
-            makeCheckWorkedRow(resolver.verifyUrl),
+            makeCheckWorkedRow(),
           ]),
         ]),
       );
@@ -2436,7 +2413,7 @@ export async function pageSetup(): Promise<HTMLElement> {
             "macOS may say the profile is not signed. That is normal for this free profile.",
           ]),
           h("div", { style: "margin-top: var(--sp-4);" }, [
-            makeCheckWorkedRow(resolver.verifyUrl),
+            makeCheckWorkedRow(),
           ]),
         ]),
       );
@@ -2476,7 +2453,7 @@ export async function pageSetup(): Promise<HTMLElement> {
           ]),
           detailsAdvanced,
           h("div", { style: "margin-top: var(--sp-4);" }, [
-            makeCheckWorkedRow(resolver.verifyUrl),
+            makeCheckWorkedRow(),
           ]),
         ]),
       );
@@ -2493,35 +2470,7 @@ export async function pageSetup(): Promise<HTMLElement> {
   select.addEventListener("change", renderDeviceTab);
   renderDeviceTab();
 
-  // Collapsed paste verification section
-  const pasteBox = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
-    h("h2", {}, ["Verify Safe DNS"]),
-    h("p", { class: "muted" }, [
-      "Open your provider's test page above. If it shows verification text, you can paste it here to confirm your protection.",
-    ]),
-  ]);
-  const pasteInput = h("textarea", { placeholder: "Paste the text from the test page here..." });
-  const judgeBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("check", 16), "Read pasted check"]);
-  const pasteResult = h("div", { style: "margin-top: var(--sp-3);" });
-
-  judgeBtn.addEventListener("click", () => {
-    const resolverId = (select as HTMLSelectElement).value;
-    const res = interpretDnsCheckPaste(resolverId, pasteInput.value);
-    pasteResult.replaceChildren(
-      h("div", { class: `pill ${res.verdict === "verified" ? "ok" : res.verdict === "not_verified" ? "alert" : "neutral"}` }, [
-        res.summary,
-      ]),
-    );
-  });
-
-  pasteBox.append(field("Pasted verification text", pasteInput), judgeBtn, pasteResult);
-
-  const pasteDetails = h("details", { style: "margin-top: var(--sp-6);" }, [
-    h("summary", {}, ["Check Safe DNS another way"]),
-    pasteBox,
-  ]);
-
-  root.append(header, intro, diagram, resolverCard, tabContainer, contentArea, pasteDetails);
+  root.append(header, intro, diagram, resolverCard, tabContainer, contentArea);
   return root;
 }
 
