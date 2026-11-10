@@ -11,3 +11,17 @@ playwright-report/
 *.log
 .env
 coverage/
+
+# Local assistant notes — do not publish
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+CURSOR.md
+.cursorrules
+.cursor/
+.antigravity/
+.windsurf/
+.github/copilot-instructions.md
+.github/instructions/
+docs/facts/
+ANTIGRAVITY-PROMPT*.md
