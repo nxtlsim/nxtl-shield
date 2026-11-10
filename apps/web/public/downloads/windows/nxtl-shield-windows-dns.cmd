@@ -49,10 +49,18 @@ $backupItems = @()
 foreach ($adapter in $activeAdapters) {
     $alias = $adapter.InterfaceAlias
 
-    # Save existing DNS settings
-    $current = Get-DnsClientServerAddress -InterfaceAlias $alias -AddressFamily IPv4 -ErrorAction SilentlyContinue
-    $isDhcp = (-not $current) -or ($current.ServerAddresses.Count -eq 0)
-    $savedAddrs = if ($current -and $current.ServerAddresses) { @($current.ServerAddresses) } else { @() }
+    # Save existing IPv4 and IPv6 DNS settings (skip link-local IPv6)
+    $current4 = Get-DnsClientServerAddress -InterfaceAlias $alias -AddressFamily IPv4 -ErrorAction SilentlyContinue
+    $current6 = Get-DnsClientServerAddress -InterfaceAlias $alias -AddressFamily IPv6 -ErrorAction SilentlyContinue
+    $saved4 = if ($current4 -and $current4.ServerAddresses) { @($current4.ServerAddresses) } else { @() }
+    $saved6 = @()
+    if ($current6 -and $current6.ServerAddresses) {
+        foreach ($ip in @($current6.ServerAddresses)) {
+            if ($ip -and -not $ip.StartsWith("fe80:")) { $saved6 += $ip }
+        }
+    }
+    $isDhcp = ($saved4.Count -eq 0 -and $saved6.Count -eq 0)
+    $savedAddrs = @($saved4) + @($saved6)
 
     $backupItems += [PSCustomObject]@{
         InterfaceAlias = $alias
