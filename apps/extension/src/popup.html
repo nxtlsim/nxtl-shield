@@ -6,7 +6,7 @@
     <title>NXTL Shield</title>
     <style>
       :root {
-        color-scheme: dark;
+        color-scheme: light dark;
         --bg: #0a0c12;
         --card: #161922;
         --card-hover: #1a1e2b;
@@ -23,7 +23,19 @@
         --good-bg: rgba(46, 202, 127, 0.12);
         --warn: #e6c27a;
         --warn-bg: rgba(230, 194, 122, 0.12);
-        --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f8fafc;
+          --card: #ffffff;
+          --card-hover: #f1f5f9;
+          --raised: #f1f5f9;
+          --line: rgba(11, 21, 40, 0.08);
+          --line-strong: rgba(11, 21, 40, 0.16);
+          --text: #0b1528;
+          --muted: #596780;
+          --muted-soft: #7e8b9f;
+        }
       }
       *, *::before, *::after { box-sizing: border-box; }
       body {
@@ -58,7 +70,7 @@
         border-radius: 2px;
         font-size: 11px;
         font-weight: 700;
-        text-transform: uppercase;
+        text-transform: none;
       }
       .engine-box {
         background: var(--card);
@@ -86,7 +98,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        min-height: 52px;
+        min-height: 48px;
         cursor: pointer;
         transition: background 0.15s, border-color 0.15s;
       }
@@ -151,7 +163,7 @@
         transform: translateX(20px);
       }
       input:focus-visible + .slider {
-        outline: 2px solid var(--accent-coral);
+        outline: 3px solid #ff3d5a;
         outline-offset: 2px;
       }
       .location-box {
@@ -171,7 +183,7 @@
         font-family: inherit;
         font-size: 13px;
         font-weight: 600;
-        min-height: 42px;
+        min-height: 48px;
         flex: 1;
         border-radius: 2px;
         border: 1px solid var(--line-strong);
@@ -185,6 +197,10 @@
       }
       button:active {
         transform: translateY(1px);
+      }
+      button:focus-visible {
+        outline: 3px solid #ff3d5a;
+        outline-offset: 2px;
       }
       button.primary, button#resume {
         background: var(--gradient);
@@ -212,7 +228,7 @@
       </div>
     </div>
 
-    <div class="engine-box" id="engine">Shield is active and protecting your browsing</div>
+    <div class="engine-box" id="engine">Shield is on in this browser.</div>
 
     <div class="toggles-list">
       <label class="toggle-item" for="blocking">
@@ -260,7 +276,7 @@
       </label>
     </div>
 
-    <div class="location-box" id="location">Checking location status…</div>
+    <div class="location-box" id="location">Location blocking is not available here.</div>
 
     <div class="btn-row">
       <button id="pause" type="button">Pause on this site</button>

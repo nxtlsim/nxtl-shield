@@ -497,10 +497,15 @@ button:disabled, .btn:disabled, .btn[aria-disabled="true"] {
 }
 
 .btn-sm, button.sm {
-  min-height: 40px;
+  min-height: 48px;
   padding: 0 16px;
   font-size: 0.88rem;
   border-radius: 2px;
+}
+
+.bar .btn-sm, header .btn-sm {
+  min-height: 40px;
+  height: 40px;
 }
 
 .btn-lg, button.lg {
@@ -1369,22 +1374,26 @@ details[open] > summary {
 }
 
 /* Tabs */
-.tabs {
+.tabs, .tab-bar {
   display: flex;
   gap: var(--sp-2);
   flex-wrap: wrap;
   margin-bottom: var(--sp-4);
 }
 
-.tabs button, .tabs a {
+.tabs button, .tabs a, .tab-btn {
   border-radius: var(--radius-pill);
-  min-height: 42px;
+  min-height: 48px;
   padding: 0 var(--sp-4);
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
 }
 
 .tabs button[aria-selected="true"],
 .tabs button[aria-pressed="true"],
+.tab-btn[aria-selected="true"],
 .tabs a[aria-current="page"] {
   background: var(--gradient-cta);
   color: var(--on-accent);
