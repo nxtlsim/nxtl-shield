@@ -25,6 +25,21 @@ async function main() {
     });
     await context.setOffline(false);
     const page = await context.newPage();
+    await page.route(/ipwho\.is/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ip: "203.0.113.195",
+          type: "IPv4",
+          country: "United Kingdom",
+          country_code: "GB",
+          city: "London",
+          flag: { emoji: "🇬🇧" },
+          connection: { org: "NXTL Network", asn: 12345 },
+        }),
+      })
+    );
     const url = hash ? `${BASE_URL}#/${hash}` : BASE_URL;
     await page.goto(url, { waitUntil: "networkidle" });
     await page.evaluate((th) => {
@@ -116,7 +131,7 @@ async function main() {
 
       // 8. Safe DNS Setup
       await takeShot(vp, theme, "setup", `setup-${vp.name}-${theme}.png`, async (page) => {
-        await page.waitForSelector("h1:has-text('Safe DNS Setup')");
+        await page.waitForSelector("h1:has-text('Safe DNS')");
         const tabName = vp.name === "390" ? "iPhone & iPad" : "Windows";
         await page.getByRole("tab", { name: tabName }).click();
         const cta = vp.name === "390"

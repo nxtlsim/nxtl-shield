@@ -217,7 +217,7 @@ test("section 8 scroll tests: scroll to top on route change and restore on Back"
     (document.querySelector('a.tile[href="#/setup"]') as HTMLElement | null)?.click();
   });
   await expect(page).toHaveURL(/#\/setup/);
-  await expect(page.getByRole("heading", { name: "Safe DNS Setup" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Safe DNS setup/i })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/(#\/?$|\/nxtl-shield\/?$)/);
   await expect(page.getByRole("heading", { name: "All protections and tools" })).toBeVisible();
@@ -247,3 +247,58 @@ test("install app button invokes beforeinstallprompt when event is available", a
     expect(wasPrompted).toBe(true);
   }
 });
+
+test("finishing touch UI checks: home steps, hero check button, eSIM card, share app, footer, and private messages", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("./");
+
+  // 1. Home check button height matches the input within 2px and Paste/Scan sit below
+  const heroInputBox = await page.locator(".hero-input").boundingBox();
+  const heroCheckBtnBox = await page.locator(".btn-hero-check").boundingBox();
+  expect(heroInputBox).not.toBeNull();
+  expect(heroCheckBtnBox).not.toBeNull();
+  expect(Math.abs(heroInputBox!.height - heroCheckBtnBox!.height)).toBeLessThanOrEqual(2);
+  expect(Math.abs(heroInputBox!.y - heroCheckBtnBox!.y)).toBeLessThanOrEqual(2);
+
+  const heroActionsBox = await page.locator(".hero-input-actions").boundingBox();
+  expect(heroActionsBox).not.toBeNull();
+  expect(heroActionsBox!.y).toBeGreaterThanOrEqual(heroInputBox!.y + heroInputBox!.height - 1);
+
+  // 2. Visible placeholders use nxtlsim.com
+  expect(await page.locator(".hero-input").getAttribute("placeholder")).toContain("nxtlsim.com");
+  expect(await page.locator(".hero-input").getAttribute("placeholder")).not.toContain("delfi.lt");
+
+  // 3. eSIM card: "See plans" is right-aligned and vertically centered
+  const esimCard = page.locator(".esim-card");
+  await expect(esimCard).toBeVisible();
+  const seePlansBtn = esimCard.locator(".esim-card-btn");
+  await expect(seePlansBtn).toBeVisible();
+  const cardText = await esimCard.innerText();
+  expect(cardText).toContain("180+ countries");
+  expect(cardText).not.toContain("150+");
+  expect(cardText).toContain("Routes your traffic via London for consistent privacy abroad.");
+
+  // 4. Share Shield card on Home
+  const shareCard = page.locator(".share-shield-card");
+  await expect(shareCard).toBeVisible();
+  expect(await shareCard.innerText()).toContain("Know someone who gets scam texts? Share Shield with them.");
+
+  // 5. Footer uses the new sentence and contains Share Shield
+  const footer = page.locator("footer.site");
+  await expect(footer).toContainText("All tools are free. NXTL eSIM is our travel data service.");
+  await expect(footer.locator('a[href="#/share-app"]')).toHaveText("Share Shield");
+
+  // 6. Navigate to #/share-app
+  await page.goto("./#/share-app");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Share Shield");
+  await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Email" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Text message" })).toBeVisible();
+
+  // 7. Check #/share redirects to #/messages
+  await page.goto("./#/share");
+  await expect(page).toHaveURL(/#\/messages/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Private messages & files");
+  await expect(page.getByText("This message is gone after you read it.")).toBeVisible();
+});
+

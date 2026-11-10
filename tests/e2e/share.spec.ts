@@ -111,3 +111,51 @@ test("file dropzone layout, hidden file input, and clean password hint", async (
   expect(fullHtml).not.toContain("Signal");
   expect(fullHtml).not.toContain("WhatsApp");
 });
+
+test("private read-once link creates, opens once, clears key from URL, and second open shows expired", async ({ page, context }) => {
+  await page.goto("./#/messages");
+
+  // Fill in confidential message
+  const input = page.getByTestId("share-input");
+  await input.fill("Top secret meeting at dawn");
+
+  // Create private link
+  const createBtn = page.getByRole("button", { name: "Create a private link" });
+  await createBtn.click();
+
+  // Wait for link ready
+  await expect(page.getByRole("heading", { name: "Private link ready" })).toBeVisible({ timeout: 15_000 });
+  const linkInput = page.locator(".card input.mono");
+  const linkUrl = await linkInput.inputValue();
+  expect(linkUrl).toContain("#/messages/open/");
+  expect(linkUrl).toContain("&k=");
+
+  // Open the link in a second page
+  const recipientPage = await context.newPage();
+  await recipientPage.goto(linkUrl);
+
+  await expect(recipientPage.getByRole("heading", { name: "You have a private message" })).toBeVisible();
+  const tapBtn = recipientPage.getByRole("button", { name: "Tap to open" });
+  await expect(tapBtn).toBeVisible();
+
+  // Tap to open
+  await tapBtn.click();
+
+  // Verify message is shown
+  await expect(recipientPage.getByRole("heading", { name: "Private message" })).toBeVisible({ timeout: 15_000 });
+  await expect(recipientPage.locator("textarea.mono")).toHaveValue("Top secret meeting at dawn");
+  await expect(recipientPage.locator(".lede")).toHaveText("This message is gone after you read it.");
+
+  // Address bar cleared of key/salt via replaceState
+  expect(recipientPage.url()).not.toContain("&k=");
+  expect(recipientPage.url()).toMatch(/#\/messages$/);
+
+  // Opening the same original link URL in a third tab returns already opened or expired
+  const thirdPage = await context.newPage();
+  await thirdPage.goto(linkUrl);
+  await expect(thirdPage.getByText("This message was already opened or has expired.")).toBeVisible({ timeout: 15_000 });
+
+  await recipientPage.close();
+  await thirdPage.close();
+});
+
