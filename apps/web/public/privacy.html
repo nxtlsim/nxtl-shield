@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy — NXTL Shield</title>
+    <meta name="description" content="How NXTL Shield handles your information. Checks stay on your device. The extension collects no personal data." />
+    <link rel="icon" href="icons/favicon.png" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f5f8;
+        --card: #ffffff;
+        --text: #0b1528;
+        --muted: #596780;
+        --line: rgba(11, 21, 40, 0.08);
+        --accent: #d80044;
+        --link: #c1003c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0a0c12;
+          --card: #161922;
+          --text: #ffffff;
+          --muted: #949aa5;
+          --line: rgba(255, 255, 255, 0.08);
+          --link: #ff8a9a;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+        font-size: 16px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--line);
+        background: var(--card);
+      }
+      header img { width: 32px; height: 32px; display: block; }
+      header .wordmark {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        font-weight: 800;
+        font-size: 20px;
+        letter-spacing: -0.03em;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      h1 {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        font-size: 2rem;
+        letter-spacing: -0.03em;
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        font-size: 1.2rem;
+        letter-spacing: -0.02em;
+        margin: 32px 0 8px;
+      }
+      p, li { color: var(--text); }
+      .lede, .updated, .muted { color: var(--muted); }
+      .updated { font-size: 0.9rem; margin-top: 0; }
+      section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 20px 24px;
+        margin-top: 16px;
+      }
+      section h2 { margin-top: 0; }
+      section p:last-child { margin-bottom: 0; }
+      a { color: var(--link); }
+      footer {
+        margin-top: 32px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="./" aria-label="NXTL Shield Home"><img src="icons/icon-32.png" alt="" width="32" height="32" /></a>
+      <span class="wordmark">Shield</span>
+    </header>
+    <main>
+      <h1>Privacy</h1>
+      <p class="lede">Shield is free, and you do not need an account.</p>
+      <p class="updated">Updated 11 November 2026.</p>
+
+      <section>
+        <h2>Checks stay on your device</h2>
+        <p>When you check a link, a message, a file, or a QR code, or create a password, that work runs in your browser. We do not collect it, and we do not use analytics.</p>
+      </section>
+
+      <section>
+        <h2>The browser extension</h2>
+        <p>The Shield extension keeps its settings in your browser. It does not collect personal data. Lists of known harmful sites, ads, and trackers come with the extension.</p>
+      </section>
+
+      <section>
+        <h2>Private messages</h2>
+        <p>A private note is locked in your browser before it is sent. The server holds only the scrambled text. The key stays in the link on your device. The scrambled text is deleted when the note is opened, or when the time you chose runs out. We cannot read the note.</p>
+      </section>
+
+      <section>
+        <h2>Optional checks you choose</h2>
+        <p>Some tools on the Shield site contact a public service only when you use them: checking whether a password has appeared in a known leak, looking up your public IP address, or viewing NXTL eSIM plan prices. You can use Shield without those tools.</p>
+      </section>
+
+      <section>
+        <h2>Safe DNS</h2>
+        <p>If you turn on Safe DNS, your device sends address lookups to the resolver you chose, not to NXTL.</p>
+      </section>
+
+      <footer>
+        <p>NXTL eSIM has its own <a href="https://nxtlsim.com/privacy-policy/">privacy policy</a>. Shield does not change that service.</p>
+        <p><a href="./">Back to Shield</a> · <a href="https://github.com/nxtlsim/nxtl-shield">Source</a> · <a href="https://github.com/nxtlsim/nxtl-shield/issues">Help</a></p>
+      </footer>
+    </main>
+  </body>
+</html>

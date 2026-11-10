@@ -2850,17 +2850,31 @@ export function pagePrivacy(): HTMLElement {
   const header = h("div", {}, [
     h("h1", {}, ["How it works & privacy"]),
     h("p", { class: "lede" }, [
-      "Checks, encryption, and passwords stay on your device. You do not need an account.",
+      "Checks, private notes, and passwords stay on your device. You do not need an account.",
     ]),
   ]);
 
   const privacyCard = h("section", { class: "card" }, [
     h("h2", {}, ["What stays on your device"]),
     h("p", {}, [
-      "All security checks run locally inside your web browser. When you check a link, scan a message, inspect a file, or generate a password, no data is sent to NXTL or any central server.",
+      "When you check a link, a message, a file, or a QR code, or create a password, that work runs in your browser. We do not collect it, and we do not use analytics.",
     ]),
     h("p", { class: "muted" }, [
-      "There are no user accounts, no tracking cookies, no advertising beacons, and no telemetry.",
+      "There are no accounts and no ads in Shield.",
+    ]),
+  ]);
+
+  const extensionCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
+    h("h2", {}, ["The browser extension"]),
+    h("p", {}, [
+      "The Shield extension keeps its settings in your browser. It does not collect personal data. Lists of known harmful sites, ads, and trackers come with the extension.",
+    ]),
+  ]);
+
+  const messagesCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
+    h("h2", {}, ["Private messages"]),
+    h("p", {}, [
+      "A private note is locked in your browser before it is sent. The server holds only the scrambled text. The key stays in the link on your device. The scrambled text is deleted when the note is opened, or when the time you chose runs out. We cannot read the note.",
     ]),
   ]);
 
@@ -2878,23 +2892,33 @@ export function pagePrivacy(): HTMLElement {
   ]);
 
   const externalCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
-    h("h2", {}, ["External lookups (only when you click)"]),
+    h("h2", {}, ["Optional checks you choose"]),
     h("p", {}, [
-      "Shield only touches the network when you explicitly trigger an external lookup:",
+      "Some tools on the Shield site contact a public service only when you use them. You can use Shield without these tools.",
     ]),
     h("ul", { style: "line-height: 1.8; margin-left: var(--sp-4);" }, [
-      h("li", {}, [h("strong", {}, ["Password leak check: "]), "Only if you click the button. A short, incomplete fingerprint of the password is sent to a public leak database. Your password itself is never sent."]),
-      h("li", {}, [h("strong", {}, ["Your connection check: "]), "When you open or refresh the Your connection page, it queries a public address lookup to show your IP address, city, and network provider, and tests whether Safe DNS is actively blocking threats."]),
+      h("li", {}, [h("strong", {}, ["Password leak check: "]), "Only if you click the button. A short, incomplete check is sent to a public leak database. Your password itself is never sent."]),
+      h("li", {}, [h("strong", {}, ["Your connection check: "]), "When you open or refresh the Your connection page, it looks up your public IP address, city, and network provider, and checks whether Safe DNS is blocking threats."]),
       h("li", {}, [h("strong", {}, ["eSIM rates: "]), "Only if you look up rates for a destination. This fetches current NXTL eSIM plan prices."]),
     ]),
   ]);
 
-  const openSourceCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
-    h("h2", {}, ["Free & open source (GPLv3)"]),
+  const dnsCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
+    h("h2", {}, ["Safe DNS"]),
     h("p", {}, [
-      "NXTL Shield is 100% free software under the GNU General Public License v3.0. You can inspect every line of code, build it yourself, or contribute improvements.",
+      "If you turn on Safe DNS, your device sends address lookups to the resolver you chose, not to NXTL.",
     ]),
-    h("div", { class: "row", style: "margin-top: var(--sp-3);" }, [
+  ]);
+
+  const openSourceCard = h("section", { class: "card", style: "margin-top: var(--sp-4);" }, [
+    h("h2", {}, ["Free and open source"]),
+    h("p", {}, [
+      "NXTL Shield is free software under the GNU General Public License v3.0. You can inspect the code, build it yourself, or contribute improvements.",
+    ]),
+    h("p", { class: "muted" }, [
+      "NXTL eSIM has its own privacy policy. Shield does not change that service.",
+    ]),
+    h("div", { class: "row", style: "margin-top: var(--sp-3); flex-wrap: wrap; gap: var(--sp-3);" }, [
       h("a", {
         class: "btn primary",
         href: "https://github.com/nxtlsim/nxtl-shield",
@@ -2902,12 +2926,20 @@ export function pagePrivacy(): HTMLElement {
         rel: "noreferrer",
       }, [
         createIcon("external", 16),
-        "View source code on GitHub",
+        "View source on GitHub",
+      ]),
+      h("a", {
+        class: "btn",
+        href: "https://nxtlsim.com/privacy-policy/",
+        target: "_blank",
+        rel: "noreferrer",
+      }, [
+        "NXTL eSIM privacy policy",
       ]),
     ]),
   ]);
 
-  root.append(header, privacyCard, sourcesCard, externalCard, openSourceCard);
+  root.append(header, privacyCard, extensionCard, messagesCard, sourcesCard, externalCard, dnsCard, openSourceCard);
   return root;
 }
 
