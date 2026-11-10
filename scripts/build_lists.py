@@ -23,10 +23,56 @@ HOST = re.compile(
 )
 TRACK_TOKENS = re.compile(
     r"track|pixel|analyt|doubleclick|metric|telemetry|beacon|adservice|adserver|pagead|"
-    r"googlesyndication|scorecard|hotjar|mixpanel|segment\.|matomo|piwik|criteo|taboola|"
-    r"outbrain|quantserve|chartbeat|newrelic|sentry-cdn|optimizely",
+    r"googlesyndication|googleadservices|googletagmanager|google-analytics|scorecard|"
+    r"hotjar|mixpanel|segment\.|matomo|piwik|criteo|taboola|outbrain|quantserve|"
+    r"chartbeat|newrelic|sentry-cdn|optimizely|adsystem|adnxs|pubmatic|facebook\.net|"
+    r"advert|ads?\.|ads-",
     re.I,
 )
+
+# Always-include registrable or exact hosts from EasyList / EasyPrivacy.
+MAJOR_TRACKER_HOSTS = [
+    "doubleclick.net",
+    "googlesyndication.com",
+    "googleadservices.com",
+    "googletagmanager.com",
+    "google-analytics.com",
+    "adservice.google.com",
+    "facebook.net",
+    "connect.facebook.net",
+    "scorecardresearch.com",
+    "adnxs.com",
+    "amazon-adsystem.com",
+    "hotjar.com",
+    "pubmatic.com",
+    "criteo.com",
+    "criteo.net",
+    "taboola.com",
+    "outbrain.com",
+    "ads-twitter.com",
+    "ads.linkedin.com",
+    "ads.yahoo.com",
+    "advertising.com",
+    "adsafeprotected.com",
+    "casalemedia.com",
+    "openx.net",
+    "rubiconproject.com",
+    "2mdn.net",
+    "googletagservices.com",
+    "gstatic.com",  # too broad? skip
+]
+
+# gstatic.com is used for many first-party fonts and scripts — do not block the whole host.
+MAJOR_TRACKER_HOSTS = [h for h in MAJOR_TRACKER_HOSTS if h != "gstatic.com"]
+
+UPSTREAM = {
+    "badware.txt": "https://ublockorigin.github.io/uAssets/filters/badware.txt",
+    "tif.mini.txt": "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/tif.mini.txt",
+    "easyprivacy.txt": "https://easylist.to/easylist/easyprivacy.txt",
+    "easylist.txt": "https://easylist.to/easylist/easylist.txt",
+}
+
+TRACKER_HOST_CAP = 12000
 
 
 def sha256(path: pathlib.Path) -> str:
@@ -64,10 +110,77 @@ def write_lines(path: pathlib.Path, lines: list[str]) -> None:
     path.write_text("".join(f"{ln}\n" for ln in lines), encoding="utf-8")
 
 
+def fetch_upstream() -> None:
+    import urllib.request
+
+    SRC.mkdir(parents=True, exist_ok=True)
+    for name, url in UPSTREAM.items():
+        dest = SRC / name
+        if os.environ.get("NXTL_LIST_FETCH", "1") == "0":
+            continue
+        if dest.exists() and dest.stat().st_size > 0 and os.environ.get("NXTL_LIST_FETCH") != "force":
+            continue
+        print(f"fetch {name}")
+        req = urllib.request.Request(url, headers={"User-Agent": "nxtl-shield-lists/0.6"})
+        with urllib.request.urlopen(req, timeout=60) as response:
+            dest.write_bytes(response.read())
+
+
+def collect_hosts(path: pathlib.Path) -> list[str]:
+    hosts: list[str] = []
+    if not path.exists():
+        return hosts
+    for line in path.read_text(errors="replace").splitlines():
+        raw = line.split("#", 1)[0].strip()
+        m = HOST.match(raw)
+        if not m:
+            continue
+        opt = m.group(2)
+        if opt:
+            parts = [p.strip().lower() for p in opt.split(",")]
+            if any(p.startswith(("domain=", "to=", "ipaddress=", "denyallow=", "sitekey=")) for p in parts):
+                continue
+        hosts.append(m.group(1).lower().rstrip("."))
+    return hosts
+
+
+def prefer_tracker_hosts(hosts: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ranked: list[tuple[int, int, str]] = []
+    major = {h.lower() for h in MAJOR_TRACKER_HOSTS}
+    for host in hosts:
+        if host in seen:
+            continue
+        seen.add(host)
+        score = 0
+        if host in major:
+            score += 100
+        if TRACK_TOKENS.search(host):
+            score += 40
+        # Prefer shorter, more general hosts.
+        score -= host.count(".") * 2
+        ranked.append((-score, host.count("."), host))
+    ranked.sort()
+    # Keep majors even if the cap is tight.
+    chosen: list[str] = []
+    for _, __, host in ranked:
+        if len(chosen) >= TRACKER_HOST_CAP and host not in major:
+            continue
+        chosen.append(host)
+    # Guarantee majors are present.
+    for host in MAJOR_TRACKER_HOSTS:
+        if host not in chosen:
+            chosen.insert(0, host)
+    return chosen[:TRACKER_HOST_CAP]
+
+
 def main() -> None:
+    if os.environ.get("NXTL_LIST_FETCH", "1") != "0":
+        fetch_upstream()
     badware_src = SRC / "badware.txt"
     tif_src = SRC / "tif.mini.txt"
     privacy_src = SRC / "easyprivacy.txt"
+    easylist_src = SRC / "easylist.txt"
     bad: dict[str, str] = {}
     skipped = 0
     for line in badware_src.read_text(errors="replace").splitlines():
@@ -100,31 +213,20 @@ def main() -> None:
         tif.append(host)
     tif.sort()
 
-    trackers: list[str] = []
-    seen_t: set[str] = set()
-    for line in privacy_src.read_text(errors="replace").splitlines():
-        raw = line.split("#", 1)[0].strip()
-        m = HOST.match(raw)
-        if not m or m.group(2):
-            continue
-        host = m.group(1).lower().rstrip(".")
-        if host in seen_t or not TRACK_TOKENS.search(host):
-            continue
-        seen_t.add(host)
-        trackers.append(host)
-    trackers.sort()
+    raw_trackers = collect_hosts(privacy_src) + collect_hosts(easylist_src)
+    trackers = prefer_tracker_hosts(raw_trackers)
 
     write_lines(OUT / "badware-hosts.txt", bad_lines)
     write_lines(OUT / "tif-hosts.txt", tif)
     write_lines(OUT / "tracker-hosts.txt", trackers)
 
     manifest = {
-        "version": "2026-11-09.1",
-        "generatedFrom": "upstream files retrieved 2026-11-09; see docs/sources.md",
+        "version": "2026-11-10.1",
+        "generatedFrom": "upstream files retrieved 2026-11-10; see docs/sources.md",
         "selection": {
             "badware": "Host anchors from uBlock uAssets badware.txt. Included when the rule has no options, or only doc/all plus an optional reason. Rules with domain=, to=, ipaddress=, or resource-type limits are omitted so Shield does not widen them. Tag doc = upstream $doc (document only). Tag all = whole-host anchor.",
             "tif": "Every plain ||host^ anchor in HaGeZi TIF mini (no options, no path). The manual checker uses this full list. The extension uses a size-capped prefix; see apps/extension build.",
-            "trackers": "Plain ||host^ anchors from EasyPrivacy whose hostname matches a tracker-related token (track, pixel, analytic, doubleclick, metric, telemetry, beacon, and a short list of known tracker vendors). Not the full EasyPrivacy list. Not used as a malware verdict.",
+            "trackers": "Host anchors from EasyList and EasyPrivacy that map cleanly to ||host^ declarativeNetRequest rules, plus a short list of major ad and tracker networks. Capped to stay within extension rule limits. Not used as a malware verdict.",
             "omittedBadwareRules": skipped,
         },
         "sources": [
@@ -152,15 +254,26 @@ def main() -> None:
                 "inputsNote": "HaGeZi FAQ says aggregated inputs carry their own terms. Per-input terms were UNVERIFIED on 2026-11-09.",
             },
             {
-                "id": "easyprivacy-tracker-hosts",
-                "title": "EasyPrivacy (token-filtered host anchors)",
+                "id": "easyprivacy-hosts",
+                "title": "EasyPrivacy host anchors",
                 "url": "https://easylist.to/easylist/easyprivacy.txt",
                 "licence": "GPL-3.0-or-later AND CC-BY-SA-3.0",
                 "licenceUrl": "https://easylist.to/pages/licence.html",
                 "attribution": "The EasyList authors (https://easylist.to/)",
-                "retrieved": "2026-11-09",
+                "retrieved": "2026-11-10",
                 "expiryHint": "4 days",
-                "hosts": len(trackers),
+                "hosts": len(collect_hosts(privacy_src)),
+            },
+            {
+                "id": "easylist-hosts",
+                "title": "EasyList host anchors",
+                "url": "https://easylist.to/easylist/easylist.txt",
+                "licence": "GPL-3.0-or-later AND CC-BY-SA-3.0",
+                "licenceUrl": "https://easylist.to/pages/licence.html",
+                "attribution": "The EasyList authors (https://easylist.to/)",
+                "retrieved": "2026-11-10",
+                "expiryHint": "4 days",
+                "hosts": len(collect_hosts(easylist_src)),
             },
         ],
         "sha256": {

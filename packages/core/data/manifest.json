@@ -1,10 +1,10 @@
 {
-  "version": "2026-11-09.1",
-  "generatedFrom": "upstream files retrieved 2026-11-09; see docs/sources.md",
+  "version": "2026-11-10.1",
+  "generatedFrom": "upstream files retrieved 2026-11-10; see docs/sources.md",
   "selection": {
     "badware": "Host anchors from uBlock uAssets badware.txt. Included when the rule has no options, or only doc/all plus an optional reason. Rules with domain=, to=, ipaddress=, or resource-type limits are omitted so Shield does not widen them. Tag doc = upstream $doc (document only). Tag all = whole-host anchor.",
     "tif": "Every plain ||host^ anchor in HaGeZi TIF mini (no options, no path). The manual checker uses this full list. The extension uses a size-capped prefix; see apps/extension build.",
-    "trackers": "Plain ||host^ anchors from EasyPrivacy whose hostname matches a tracker-related token (track, pixel, analytic, doubleclick, metric, telemetry, beacon, and a short list of known tracker vendors). Not the full EasyPrivacy list. Not used as a malware verdict.",
+    "trackers": "Host anchors from EasyList and EasyPrivacy that map cleanly to ||host^ declarativeNetRequest rules, plus a short list of major ad and tracker networks. Capped to stay within extension rule limits. Not used as a malware verdict.",
     "omittedBadwareRules": 19
   },
   "sources": [
@@ -28,24 +28,35 @@
       "retrieved": "2026-11-09",
       "upstreamModified": null,
       "expiryHint": "8 hours",
-      "hosts": 187113,
+      "hosts": 187016,
       "inputsNote": "HaGeZi FAQ says aggregated inputs carry their own terms. Per-input terms were UNVERIFIED on 2026-11-09."
     },
     {
-      "id": "easyprivacy-tracker-hosts",
-      "title": "EasyPrivacy (token-filtered host anchors)",
+      "id": "easyprivacy-hosts",
+      "title": "EasyPrivacy host anchors",
       "url": "https://easylist.to/easylist/easyprivacy.txt",
       "licence": "GPL-3.0-or-later AND CC-BY-SA-3.0",
       "licenceUrl": "https://easylist.to/pages/licence.html",
       "attribution": "The EasyList authors (https://easylist.to/)",
-      "retrieved": "2026-11-09",
+      "retrieved": "2026-11-10",
       "expiryHint": "4 days",
-      "hosts": 7319
+      "hosts": 47357
+    },
+    {
+      "id": "easylist-hosts",
+      "title": "EasyList host anchors",
+      "url": "https://easylist.to/easylist/easylist.txt",
+      "licence": "GPL-3.0-or-later AND CC-BY-SA-3.0",
+      "licenceUrl": "https://easylist.to/pages/licence.html",
+      "attribution": "The EasyList authors (https://easylist.to/)",
+      "retrieved": "2026-11-10",
+      "expiryHint": "4 days",
+      "hosts": 47509
     }
   ],
   "sha256": {
     "badware-hosts.txt": "c5acc097ddae5148b277071425abb65f33e1e6949d736356f282a53800e981bc",
     "tif-hosts.txt": "bb6628d45616a5eb28eda2fad792bb3187f2151d19cd86ef084dcafbfae336ee",
-    "tracker-hosts.txt": "127ca88345974a6a9d59a91e5d97e482bc5593801d68a26eca00187c5aa9ff82"
+    "tracker-hosts.txt": "02dc95bc2a837c3456e7842c124e8bbe15eb8ac663164f8770af25c643cb9f16"
   }
 }

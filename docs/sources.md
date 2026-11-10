@@ -6,7 +6,7 @@ Shield is GPL-3.0-or-later. Bundled lists keep their own notices.
 |---|---|---|---|
 | uBlock Origin uAssets badware | 2026-11-09 | GPL-3.0 | Host snapshot for the link checker and the extension |
 | HaGeZi Threat Intelligence Feeds mini | 2026-11-09 | GPL-3.0 | Host snapshot. Aggregated inputs have their own terms; those individual terms were not re-checked one by one. |
-| EasyPrivacy (host anchors whose names look like trackers) | 2026-11-09 | GPL-3.0-or-later and CC BY-SA 3.0 | Optional extension rules. Attribution: The EasyList authors (https://easylist.to/). |
+| EasyList and EasyPrivacy (host anchors that map to extension block rules) | 2026-11-10 | GPL-3.0-or-later and CC BY-SA 3.0 | Ad and tracker blocking in the extension. Attribution: The EasyList authors (https://easylist.to/). |
 | ClearURLs rules | 2026-11-09 | LGPL-3.0-or-later | Scoped tracking-parameter rules. Path rewriting is not applied. |
 | Public Suffix List, via tldts 7.4.19 | PSL version dated 2026-11-08 | MPL-2.0 | Host parsing |
 | OpenPGP.js 6.3.2 | 2026-11-09 | LGPL-3.0-or-later | Private messages & files. https://github.com/openpgpjs/openpgpjs |
