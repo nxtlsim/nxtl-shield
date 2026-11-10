@@ -8,6 +8,10 @@ import {
   blockingDecision,
   buildHibpRequest,
   buildMobileconfig,
+  buildWindowsCmd,
+  buildWindowsUndoCmd,
+  buildWindowsSetupZip,
+  buildBrowserDnsReg,
   checkText,
   checkUrl,
   cleanUrl,
@@ -15,6 +19,7 @@ import {
   explainRates,
   generatePassword,
   generatePassphrase,
+  getResolver,
   hibpLookup,
   inspectFile,
   inspectHostLiteral,
@@ -23,6 +28,7 @@ import {
   getCapabilities,
   originException,
   passwordStrength,
+  RESOLVERS,
   setupBundle,
   SNAPSHOT_MANIFEST,
   parseBadware,
@@ -454,6 +460,72 @@ describe("text, files, dns, origin, eSIM", () => {
     expect(interpretDnsCheckPaste("quad9", "No, you are NOT using quad9").verdict).toBe("not_verified");
     expect(interpretDnsCheckPaste("quad9", "Yes, you are using quad9").verdict).toBe("verified");
     expect(interpretDnsCheckPaste("adguard-default", "all good").verdict).toBe("inconclusive");
+  });
+
+  it("provides verified IPv4 and IPv6 addresses for every resolver", () => {
+    expect(RESOLVERS.length).toBe(8);
+    for (const r of RESOLVERS) {
+      expect(r.ipv4.length).toBeGreaterThanOrEqual(1);
+      expect(r.ipv6.length).toBeGreaterThanOrEqual(1);
+      for (const ip of r.ipv4) {
+        expect(ip).toMatch(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
+      }
+      for (const ip of r.ipv6) {
+        expect(ip).toMatch(/^[0-9a-f:]+$/i);
+      }
+    }
+    const def = getResolver("adguard-default");
+    expect(def?.ipv4).toEqual(["94.140.14.14", "94.140.15.15"]);
+    expect(def?.ipv6).toEqual(["2a10:50c0::ad1:ff", "2a10:50c0::ad2:ff"]);
+
+    const family = getResolver("adguard-family");
+    expect(family?.ipv4).toEqual(["94.140.14.15", "94.140.15.16"]);
+    expect(family?.ipv6).toEqual(["2a10:50c0::bad1:ff", "2a10:50c0::bad2:ff"]);
+
+    const quad9 = getResolver("quad9");
+    expect(quad9?.ipv4).toEqual(["9.9.9.9", "149.112.112.112"]);
+  });
+
+  it("builds self-contained Windows setup and undo scripts tailored to selected resolver", () => {
+    const cmdDefault = buildWindowsCmd("adguard-default");
+    expect(cmdDefault).toContain("94.140.14.14");
+    expect(cmdDefault).toContain("https://dns.adguard-dns.com/dns-query");
+    expect(cmdDefault).toContain("Start-Process -LiteralPath '%~f0' -Verb RunAs");
+    expect(cmdDefault).toContain("[System.IO.File]::ReadAllText($env:SCRIPT_PATH)");
+    expect(cmdDefault).not.toContain("nxtl-shield-windows-dns.ps1");
+    expect(cmdDefault).toContain("\r\n");
+
+    const cmdFamily = buildWindowsCmd("adguard-family");
+    expect(cmdFamily).toContain("94.140.14.15");
+    expect(cmdFamily).toContain("https://family.adguard-dns.com/dns-query");
+    expect(cmdFamily).not.toContain("94.140.14.14");
+
+
+    expect(cmdDefault).toContain("AddressFamily IPv6");
+    expect(cmdDefault).toContain("fe80:");
+
+    const familyReg = buildBrowserDnsReg("adguard-family");
+    expect(familyReg).toContain("https://family.adguard-dns.com/dns-query");
+    expect(familyReg).not.toContain("https://dns.adguard-dns.com/dns-query");
+    expect(familyReg).toContain("\r\n");
+
+    const familyZip = buildWindowsSetupZip("adguard-family");
+    const zipText = new TextDecoder().decode(familyZip);
+    expect(zipText).toContain("nxtl-shield-windows-dns.cmd");
+    expect(zipText).toContain("94.140.14.15");
+    expect(zipText).toContain("https://family.adguard-dns.com/dns-query");
+    expect(zipText).not.toContain("https://dns.adguard-dns.com/dns-query");
+
+        const undoCmd = buildWindowsUndoCmd();
+    expect(undoCmd).toContain("Start-Process -LiteralPath '%~f0' -Verb RunAs");
+    expect(undoCmd).toContain("ResetServerAddresses");
+    expect(undoCmd).toContain("dns-backup.json");
+    expect(undoCmd).not.toContain("nxtl-shield-windows-dns.ps1");
+    expect(undoCmd).toContain("\r\n");
+
+    const familyProfile = buildMobileconfig("adguard-family");
+    expect(familyProfile.plist).toContain("https://family.adguard-dns.com/dns-query");
+    expect(familyProfile.plist).not.toContain("https://dns.adguard-dns.com/dns-query");
   });
 
   it("handles Google Maps as the www.google.com origin", () => {

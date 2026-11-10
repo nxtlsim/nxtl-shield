@@ -9,7 +9,10 @@ function hostOf(url: string): string {
 }
 
 async function main() {
-  const fromQuery = new URLSearchParams(location.search).get("url") || "";
+  const params = new URLSearchParams(location.search);
+  const fromQuery = params.get("url") || "";
+  const genuine = params.get("genuine") || "";
+  const isLookalike = Boolean(genuine || params.get("lookalike"));
   const fromHash = decodeURIComponent(location.hash.replace(/^#/, ""));
   let pending: { url?: string } | undefined;
   if (fromQuery.startsWith("http")) pending = { url: fromQuery };
@@ -21,23 +24,30 @@ async function main() {
   const title = document.querySelector("#title");
   const why = document.querySelector("#why");
   const code = document.querySelector("#url");
+  const back = document.querySelector<HTMLButtonElement>("#back");
+  const once = document.querySelector<HTMLButtonElement>("#once");
+
   if (!url) {
     const missing = document.querySelector<HTMLElement>("#missing");
     if (missing) missing.hidden = false;
-    const once = document.querySelector<HTMLButtonElement>("#once");
     if (once) once.disabled = true;
     return;
   }
   if (code) code.textContent = url;
   const host = hostOf(url);
-  if (host === TEST || host.endsWith(`.${TEST}`)) {
+  if (isLookalike && genuine) {
+    if (title) title.textContent = `This address looks like a lookalike of ${genuine}.`;
+    if (why) why.textContent = "Check the address bar before you continue.";
+    if (back) back.textContent = "Back to safety";
+    if (once) once.textContent = "Continue";
+  } else if (host === TEST || host.endsWith(`.${TEST}`)) {
     if (title) title.textContent = "NXTL Shield test rule";
     if (why) why.textContent = `${TEST} is a synthetic name used to test this extension.`;
   } else if (why) {
     why.textContent = "This address is on a known dangerous list. Going there could put your details or this device at risk.";
   }
-  document.querySelector("#back")?.addEventListener("click", () => history.length > 1 ? history.back() : window.close());
-  document.querySelector("#once")?.addEventListener("click", () => chrome.runtime.sendMessage({ type: "proceedOnce", url }));
+  back?.addEventListener("click", () => (history.length > 1 ? history.back() : window.close()));
+  once?.addEventListener("click", () => chrome.runtime.sendMessage({ type: "proceedOnce", url }));
 }
 
 void main();

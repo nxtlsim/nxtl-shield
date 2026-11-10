@@ -39,7 +39,7 @@ In Chromium browsers, the extension can block website location access, with exce
 Private messages & files encrypts text or a file on your device with a password you choose. Drop a file onto the page or type a message. Nothing is uploaded. Send the password through a different channel. You can also create a private link for a short message. That link works once, then the message is gone.
 
 ### Share Shield
-Know someone who gets scam texts? Share the official Shield link with them from the app, by copy, email, text message, or QR code.
+Free tools to check a link or message, block ads and trackers, and send a note that opens only once. Share the official Shield link from the app, by copy, email, text message, or QR code.
 
 ### Create a strong password
 Generate a password on your device, copy it in one tap, and optionally check whether it has appeared in known leaks. Your password itself is never sent.
@@ -53,11 +53,11 @@ Generate a password on your device, copy it in one tap, and optionally check whe
 
 ## Windows one-click Safe DNS
 
-1. On the [Safe DNS setup page](https://nxtlsim.github.io/nxtl-shield/#/setup), download the Windows setup file (`.cmd`), or the ZIP if you also want the undo script.
+1. On the [Safe DNS setup page](https://nxtlsim.github.io/nxtl-shield/#/setup), download the Windows setup file (`.cmd`), or the undo script (`.cmd`) to revert anytime. Both work alone without extra files. A ZIP bundle is also available.
 2. Open the file and allow it to run as administrator.
 3. Restart your browser.
 
-The ZIP also includes an undo script, Chrome/Edge policy files, and a Firefox policy file. The one-click setup uses the recommended profile that blocks ads, trackers, and scams.
+The setup configures Safe DNS for your active network connections. It uses the recommended profile that blocks ads, trackers, and scams, and can be undone anytime.
 
 ## Privacy
 

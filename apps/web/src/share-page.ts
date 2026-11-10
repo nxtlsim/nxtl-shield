@@ -553,7 +553,7 @@ export function pageShare(): HTMLElement {
     },
   ]);
 
-  root.append(header, formCard, privateLinkCard, intro, diagramShare(), faqs);
+  root.append(header, formCard, privateLinkCard, renderOtherToolsCard(), intro, diagramShare(), faqs);
   return root;
 }
 
@@ -941,6 +941,35 @@ function pageOpenPrivateMessage(): HTMLElement {
   return root;
 }
 
+function renderOtherToolsCard(): HTMLElement {
+  const card = h("section", { class: "card", style: "margin-top: var(--sp-4); display: grid; gap: var(--sp-3);" });
+  const heading = h("h3", { style: "margin: 0; font-size: 1.1rem;" }, ["Other Shield tools"]);
+  const list = h("div", { class: "grid", style: "gap: var(--sp-2);" }, [
+    h("a", { class: "btn secondary", href: "#/check", style: "justify-content: flex-start; min-height: 48px;" }, [
+      createIcon("search", 18),
+      "Check a link",
+    ]),
+    h("a", { class: "btn secondary", href: "#/setup", style: "justify-content: flex-start; min-height: 48px;" }, [
+      createIcon("dns", 18),
+      "Safe DNS",
+    ]),
+    h("a", { class: "btn secondary", href: "#/connection", style: "justify-content: flex-start; min-height: 48px;" }, [
+      createIcon("connection", 18),
+      "Your connection",
+    ]),
+    h("a", { class: "btn secondary", href: "#/password", style: "justify-content: flex-start; min-height: 48px;" }, [
+      createIcon("password", 18),
+      "Password generator",
+    ]),
+    h("a", { class: "btn secondary", href: "#/share-app", style: "justify-content: flex-start; min-height: 48px;" }, [
+      createIcon("share-lock", 18),
+      "Share Shield",
+    ]),
+  ]);
+  card.append(heading, list);
+  return card;
+}
+
 function showAlreadyOpenedOrExpired(card: HTMLElement, header: HTMLElement) {
   header.replaceChildren(
     h("h1", {}, ["Message unavailable"]),
@@ -952,6 +981,7 @@ function showAlreadyOpenedOrExpired(card: HTMLElement, header: HTMLElement) {
     h("a", { class: "btn primary", href: "#/messages", style: "justify-content: center;" }, [
       "Send a private message",
     ]),
+    renderOtherToolsCard(),
   );
 }
 
@@ -986,5 +1016,5 @@ function showOpenedMessage(card: HTMLElement, header: HTMLElement, text: string)
     "This message is gone after you read it.",
   ]);
 
-  card.replaceChildren(textBox, actions, status, note);
+  card.replaceChildren(textBox, actions, status, note, renderOtherToolsCard());
 }

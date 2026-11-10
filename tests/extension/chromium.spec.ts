@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { chromium } from "playwright";
 import { createServer } from "node:http";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -34,10 +34,13 @@ test("chromium extension blocks, allowlists, pauses, cleans, and restores locati
     headless: false,
     geolocation: { latitude: 51.5, longitude: -0.12 },
     permissions: ["geolocation"],
+    ignoreDefaultArgs: ["--disable-extensions"],
     args: [
-      `--disable-extensions-except=${EXT}`,
       `--load-extension=${EXT}`,
-      `--host-resolver-rules=MAP ${HOST} 127.0.0.1`,
+      `--disable-extensions-except=${EXT}`,
+      "--disable-features=DisableLoadExtensionCommandLineSwitch",
+      "--no-proxy-server",
+      `--host-resolver-rules=MAP ${HOST} 127.0.0.1, MAP 007itshop.com 127.0.0.1`,
       "--use-fake-ui-for-media-stream",
     ],
   });
@@ -53,8 +56,18 @@ test("chromium extension blocks, allowlists, pauses, cleans, and restores locati
     if (!worker) worker = await context.waitForEvent("serviceworker");
     // worker may restart after DNR updates; use workerOrWait() before later evaluates
     const cdp = await context.newCDPSession(await context.newPage());
-    await cdp.send("Emulation.setGeolocationOverride", { latitude: 51.5, longitude: -0.12, accuracy: 10 });
-    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { enableBlocking: () => Promise<unknown> } }).nxtlTest.enableBlocking());
+    // Threats and trackers are enabled by default on clean install
+    const initialRulesets = await worker.evaluate(async () => chrome.declarativeNetRequest.getEnabledRulesets());
+    expect(initialRulesets).toContain("threats");
+    expect(initialRulesets).toContain("trackers");
+
+    // Toggling trackers off removes it from enabled rulesets; toggling on restores it
+    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { setToggle: (k: string, e: boolean) => Promise<unknown> } }).nxtlTest.setToggle("trackers", false));
+    let rulesetsAfterToggle = await worker.evaluate(async () => chrome.declarativeNetRequest.getEnabledRulesets());
+    expect(rulesetsAfterToggle).not.toContain("trackers");
+    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { setToggle: (k: string, e: boolean) => Promise<unknown> } }).nxtlTest.setToggle("trackers", true));
+    rulesetsAfterToggle = await worker.evaluate(async () => chrome.declarativeNetRequest.getEnabledRulesets());
+    expect(rulesetsAfterToggle).toContain("trackers");
 
     const page = await context.newPage();
     await page.goto(`http://${HOST}:${port}/`);
@@ -65,11 +78,18 @@ test("chromium extension blocks, allowlists, pauses, cleans, and restores locati
     await expect(page.locator("#body")).toContainText("ORIGIN");
     await worker.evaluate(async (host) => (globalThis as unknown as { nxtlTest: { disallow: (h: string) => Promise<unknown> } }).nxtlTest.disallow(host), HOST);
 
-    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { pauseFor: (ms: number) => Promise<unknown> } }).nxtlTest.pauseFor(1500));
+    const HOST2 = "007itshop.com";
+    await worker.evaluate(async (h) => (globalThis as unknown as { nxtlTest: { pauseFor: (ms: number, host?: string) => Promise<unknown> } }).nxtlTest.pauseFor(1500, h), HOST);
     await page.goto(`http://${HOST}:${port}/paused`);
     await expect(page.locator("#body")).toContainText("ORIGIN");
+
+    const page2 = await context.newPage();
+    await page2.goto(`http://${HOST2}:${port}/blocked-check`);
+    await expect(page2.locator("h1")).toContainText(/test rule|This site is blocked/i);
+    await page2.close();
+
     await page.waitForTimeout(1800);
-    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { status: () => Promise<unknown> } }).nxtlTest.status());
+    await worker.evaluate(async (h) => (globalThis as unknown as { nxtlTest: { status: (host?: string) => Promise<unknown> } }).nxtlTest.status(h), HOST);
     await page.goto(`http://${HOST}:${port}/after`);
     await expect(page.locator("h1")).toContainText(/test rule/i);
 
@@ -144,3 +164,125 @@ test("chromium extension blocks, allowlists, pauses, cleans, and restores locati
     server.close();
   }
 });
+
+test("manifests have isolated background keys for Chromium and Firefox", () => {
+  const ch = JSON.parse(readFileSync(join(process.cwd(), "apps/extension/dist-chromium/manifest.json"), "utf8"));
+  const ff = JSON.parse(readFileSync(join(process.cwd(), "apps/extension/dist-firefox/manifest.json"), "utf8"));
+  expect(ch.background.service_worker).toBe("background.js");
+  expect(ch.background.scripts).toBeUndefined();
+  expect(ff.background.scripts).toEqual(["background.js"]);
+  expect(ff.background.service_worker).toBeUndefined();
+  expect(ff.browser_specific_settings.gecko.id).toBe("shield@nxtlsim.com");
+  expect(ff.browser_specific_settings.gecko.strict_min_version).toBe("115.0");
+  expect(ch.content_scripts[0].matches).toContain("https://nxtl-esim-nxtl-shield.static.hf.space/*");
+  expect(ch.content_scripts[0].matches).toContain("https://huggingface.co/*");
+  expect(ch.externally_connectable.matches).toContain("https://nxtl-esim-nxtl-shield.static.hf.space/*");
+  expect(ch.externally_connectable.matches).toContain("https://huggingface.co/*");
+  expect(ff.content_scripts[0].matches).toContain("https://nxtl-esim-nxtl-shield.static.hf.space/*");
+  expect(ff.content_scripts[0].matches).toContain("https://huggingface.co/*");
+});
+
+test("tracker rules include major ad networks with block action", () => {
+  const trackers = JSON.parse(readFileSync(join(process.cwd(), "apps/extension/dist-chromium/rules/trackers.json"), "utf8"));
+  const needed = [
+    "||doubleclick.net^",
+    "||googlesyndication.com^",
+    "||googletagmanager.com^",
+    "||google-analytics.com^",
+    "||amazon-adsystem.com^",
+  ];
+  for (const filter of needed) {
+    expect(trackers.some((r: any) => r.condition?.urlFilter === filter && r.action?.type === "block")).toBe(true);
+  }
+});
+
+test("popup displays Safe DNS status, tools, and on-device check verdicts", async ({ browserName }) => {
+  test.skip(browserName !== "chromium" || !process.env.DISPLAY, "Needs a display and Chromium.");
+  const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "nxtl-popup-")), {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [
+      `--load-extension=${EXT}`,
+      `--disable-extensions-except=${EXT}`,
+      "--disable-features=DisableLoadExtensionCommandLineSwitch",
+      "--no-proxy-server",
+    ],
+  });
+
+  try {
+    const popup = await context.newPage();
+    await popup.goto("chrome-extension://aihdikogmaekjmanjhdmeanhhfhiblmm/popup.html");
+    await expect(popup.locator(".brand-lockup")).toContainText("Shield");
+    await expect(popup.locator(".brand-lockup")).not.toContainText("NXTL");
+
+    // Safe DNS status is shown
+    await expect(popup.locator("#dns-text")).toBeVisible();
+    await expect(popup.locator("#dns-text")).not.toHaveText("Checking...", { timeout: 10000 });
+    const dnsText = await popup.locator("#dns-text").textContent();
+    expect(["Off", "Could not check", "On"]).toContain(dnsText?.trim());
+
+    // Check lottery-style text
+    await popup.locator("#quick-check-input").fill("Congratulations! You won the lottery! Claim your cash prize immediately.");
+    await popup.locator("#quick-check-btn").click();
+    await expect(popup.locator("#quick-check-result")).toBeVisible();
+    await expect(popup.locator("#check-badge-text")).toContainText("Likely scam");
+
+    // Check safe URL
+    await popup.locator("#quick-check-input").fill("https://nxtlsim.com");
+    await popup.locator("#quick-check-btn").click();
+    await expect(popup.locator("#check-badge-text")).toContainText("Looks safe");
+
+    // Tool links present
+    const checkLink = popup.locator('.tools-menu a[href="https://nxtlsim.github.io/nxtl-shield/#/check"]');
+    const msgLink = popup.locator('.tools-menu a[href="https://nxtlsim.github.io/nxtl-shield/#/messages"]');
+    const dnsLink = popup.locator('.tools-menu a[href="https://nxtlsim.github.io/nxtl-shield/#/setup"]');
+    await expect(checkLink).toBeVisible();
+    await expect(msgLink).toBeVisible();
+    await expect(dnsLink).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test("lookalike detection flags typos of genuine brands and warns before navigation", async ({ browserName }) => {
+  test.skip(browserName !== "chromium" || !process.env.DISPLAY, "Needs a display and Chromium.");
+  const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "nxtl-lookalike-")), {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [
+      `--load-extension=${EXT}`,
+      `--disable-extensions-except=${EXT}`,
+      "--disable-features=DisableLoadExtensionCommandLineSwitch",
+      "--no-proxy-server",
+    ],
+  });
+
+  try {
+    let worker = context.serviceWorkers()[0];
+    if (!worker) worker = await context.waitForEvent("serviceworker");
+
+    const checkLookalike = async (host: string) => {
+      return worker.evaluate(async (h) => {
+        return (globalThis as unknown as { nxtlTest: { findLookalike: (x: string) => string | null } }).nxtlTest.findLookalike(h);
+      }, host);
+    };
+
+    expect(await checkLookalike("nxtls1m.com")).toBe("nxtlsim.com");
+    expect(await checkLookalike("nxxlsim.com")).toBe("nxtlsim.com");
+    expect(await checkLookalike("nxtlsim.com")).toBeNull();
+    expect(await checkLookalike("www.nxtlsim.com")).toBeNull();
+    expect(await checkLookalike("g00gle.com")).toBe("google.com");
+    expect(await checkLookalike("google.com")).toBeNull();
+
+    // Verify warning page renders lookalike heading and buttons
+    const warnPage = await context.newPage();
+    await warnPage.goto(`chrome-extension://aihdikogmaekjmanjhdmeanhhfhiblmm/warning.html?url=https%3A%2F%2Fnxtls1m.com&lookalike=1&genuine=nxtlsim.com`);
+    await expect(warnPage.locator("#title")).toContainText("This address looks like a lookalike of nxtlsim.com.");
+    await expect(warnPage.locator("#why")).toContainText("Check the address bar before you continue.");
+    await expect(warnPage.locator("#back")).toHaveText("Back to safety");
+    await expect(warnPage.locator("#once")).toHaveText("Continue");
+  } finally {
+    await context.close();
+  }
+});
+

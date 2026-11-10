@@ -1781,6 +1781,142 @@ footer.site p {
   animation: revealCard 0.25s var(--ease);
 }
 
+/* Protection Level Selection Table */
+.protection-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: var(--sp-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.protection-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.protection-table th {
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  background: var(--raised);
+  text-transform: none;
+}
+
+.protection-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+  background: var(--card);
+}
+
+.protection-row:hover {
+  background: var(--card-hover, var(--raised));
+}
+
+.protection-row.selected {
+  background: color-mix(in srgb, var(--accent) 10%, var(--card));
+}
+
+.protection-row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.protection-row td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.protection-row:last-child td {
+  border-bottom: none;
+}
+
+.protection-radio-cell {
+  width: 44px;
+  text-align: center;
+}
+
+.protection-radio {
+  cursor: pointer;
+  accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.protection-name-cell {
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.protection-blocks-cell {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 600px) {
+  .protection-table-wrap {
+    border: none;
+    overflow-x: visible;
+  }
+
+  .protection-table,
+  .protection-table thead,
+  .protection-table tbody,
+  .protection-table tr,
+  .protection-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .protection-table thead {
+    display: none;
+  }
+
+  .protection-row {
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--sp-2);
+  }
+
+  .protection-row.selected {
+    border-color: var(--accent);
+  }
+
+  .protection-row td {
+    padding: 2px 0;
+    border: none;
+  }
+
+  .protection-radio-cell {
+    width: auto;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  .protection-name-cell {
+    display: inline-block;
+    vertical-align: middle;
+    white-space: normal;
+  }
+
+  .protection-blocks-cell {
+    display: block;
+    margin-top: 6px;
+    padding-left: 26px;
+  }
+}
+
 /* Lock Animation for Private messages & files */
 .lock-icon-wrap {
   display: inline-flex;

@@ -14,30 +14,41 @@ const KEY =
 const shared = {
   manifest_version: 3,
   name: "NXTL Shield",
-  version: "0.5.0",
+  version: "0.6.0",
   description: "Free open-source browser protection by NXTL eSIM: known phishing and malware warnings, tracker blocking, link cleaning, and cookie-banner controls.",
   action: { default_popup: "popup.html", default_title: "NXTL Shield" },
   icons: { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" },
-  background: { service_worker: "background.js", scripts: ["background.js"], type: "module" },
-  permissions: ["declarativeNetRequest", "storage", "alarms", "scripting", "tabs", "webRequest", "webNavigation"],
+  permissions: ["declarativeNetRequest", "storage", "alarms", "scripting", "tabs", "webRequest", "webNavigation", "contextMenus"],
   host_permissions: ["<all_urls>"],
 };
+
+const APP_ORIGINS = [
+  "https://nxtlsim.github.io/*",
+  "https://nxtl-esim-nxtl-shield.static.hf.space/*",
+  "https://huggingface.co/*",
+  "http://localhost/*",
+  "http://127.0.0.1/*",
+];
 
 function manifest(target) {
   const rules = target === "chromium" ? "threats.chromium.json" : "threats.firefox.json";
   const body = {
     ...shared,
+    background:
+      target === "chromium"
+        ? { service_worker: "background.js", type: "module" }
+        : { scripts: ["background.js"], type: "module" },
     permissions: target === "chromium" ? [...shared.permissions, "contentSettings"] : shared.permissions,
     declarative_net_request: {
       rule_resources: [
-        { id: "threats", enabled: false, path: "rules/threats.json" },
-        { id: "trackers", enabled: false, path: "rules/trackers.json" },
-        { id: "cleaning", enabled: false, path: "rules/cleaning.json" },
+        { id: "threats", enabled: true, path: "rules/threats.json" },
+        { id: "trackers", enabled: true, path: "rules/trackers.json" },
+        { id: "cleaning", enabled: true, path: "rules/cleaning.json" },
       ],
     },
     content_scripts: [
       {
-        matches: ["https://nxtlsim.github.io/*", "http://localhost/*", "http://127.0.0.1/*"],
+        matches: APP_ORIGINS,
         js: ["bridge.js"],
         run_at: "document_start",
       },
@@ -46,15 +57,15 @@ function manifest(target) {
   };
   if (target === "chromium") {
     body.key = KEY;
-    body.externally_connectable = { matches: ["https://nxtlsim.github.io/*", "http://localhost/*", "http://127.0.0.1/*"] };
+    body.externally_connectable = { matches: APP_ORIGINS };
   } else {
     body.browser_specific_settings = {
       gecko: {
-        id: "nxtl-shield@nxtlsim.github.io",
-        strict_min_version: "113.0",
+        id: "shield@nxtlsim.com",
+        strict_min_version: "115.0",
         data_collection_permissions: { required: ["none"] },
       },
-      gecko_android: { strict_min_version: "113.0" },
+      gecko_android: { strict_min_version: "115.0" },
     };
   }
   return { body, rules };
