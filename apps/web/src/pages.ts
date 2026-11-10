@@ -224,30 +224,30 @@ export async function pageHome(): Promise<HTMLElement> {
     h("div", { class: "guide-step-card" }, [
       h("span", { class: "guide-step-number" }, ["Step 1 · Whole device"]),
       h("h3", { style: "font-size: 1.05rem; margin-bottom: 4px;" }, ["Set up Safe DNS"]),
-      h("p", { class: "muted-soft", style: "flex: 1; margin: 0 0 12px;" }, [
+      h("p", { class: "muted-soft", style: "margin: 0 0 12px;" }, [
         "Blocks malicious websites and phishing domains across every app on your phone or computer.",
       ]),
-      h("a", { class: "btn sm", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 14)]),
+      h("a", { class: "btn primary", href: "#/setup" }, ["Set up Safe DNS", createIcon("arrow-right", 14)]),
     ]),
     h("div", { class: "guide-step-card" }, [
       h("span", { class: "guide-step-number" }, ["Step 2 · Browser"]),
-      h("h3", { style: "font-size: 1.05rem; margin-bottom: 4px;" }, ["Add Browser Extension"]),
-      h("p", { class: "muted-soft", style: "flex: 1; margin: 0 0 12px;" }, [
+      h("h3", { style: "font-size: 1.05rem; margin-bottom: 4px;" }, ["Add browser extension"]),
+      h("p", { class: "muted-soft", style: "margin: 0 0 12px;" }, [
         "Adds continuous ad & tracker blocking, URL cleaning, and live malicious site alerts in your browser.",
       ]),
       ext
-        ? h("span", { class: "pill ok", style: "align-self: flex-start;" }, [createIcon("check", 14), "Active"])
-        : h("a", { class: "btn sm", href: "#/extension" }, ["Add extension", createIcon("arrow-right", 14)]),
+        ? h("span", { class: "pill ok" }, [createIcon("check", 14), "On"])
+        : h("a", { class: "btn primary", href: "#/extension" }, ["Add extension", createIcon("arrow-right", 14)]),
     ]),
     h("div", { class: "guide-step-card" }, [
       h("span", { class: "guide-step-number" }, ["Step 3 · Standby"]),
       h("h3", { style: "font-size: 1.05rem; margin-bottom: 4px;" }, ["Install NXTL Shield"]),
-      h("p", { class: "muted-soft", style: "flex: 1; margin: 0 0 12px;" }, [
+      h("p", { class: "muted-soft", style: "margin: 0 0 12px;" }, [
         "Keep these free tools one tap away on your home screen or desktop for fast checks anytime.",
       ]),
       standalone
-        ? h("span", { class: "pill ok", style: "align-self: flex-start;" }, [createIcon("check", 14), "Installed"])
-        : h("a", { class: "btn sm", href: "#/install" }, ["Install app", createIcon("arrow-right", 14)]),
+        ? h("span", { class: "pill ok" }, [createIcon("check", 14), "Installed"])
+        : h("a", { class: "btn primary", href: "#/install" }, ["Install app", createIcon("arrow-right", 14)]),
     ]),
   ]);
 
