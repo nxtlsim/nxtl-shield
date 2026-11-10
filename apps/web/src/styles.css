@@ -635,6 +635,21 @@ main {
 
 .cards {
   grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.cards > .card,
+.cards > article,
+.cards > section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.cards > .card > :last-child,
+.cards > article > :last-child,
+.cards > section > :last-child {
+  margin-top: auto;
 }
 
 .card {
@@ -906,6 +921,7 @@ input, select, textarea {
   grid-template-columns: 1fr;
   gap: 16px;
   min-width: 0;
+  align-items: stretch;
 }
 
 @media (min-width: 768px) {
@@ -923,7 +939,16 @@ input, select, textarea {
   flex-direction: column;
   gap: var(--sp-2);
   min-width: 0;
+  height: 100%;
   box-sizing: border-box;
+}
+
+.guide-step-card > .btn,
+.guide-step-card > a.btn,
+.guide-step-card > .pill,
+.guide-step-card > :last-child {
+  margin-top: auto;
+  align-self: flex-start;
 }
 
 .guide-step-number {
