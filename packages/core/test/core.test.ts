@@ -36,6 +36,8 @@ import {
   parseIpwhoisResponse,
   parseIpapiResponse,
   probeDns,
+  isExtensionClientBlock,
+  DNS_PROBE_BLOCKED_URL,
   sha256Hex,
 } from "../src/index";
 import type { Reputation } from "../src/url/check";
@@ -396,7 +398,7 @@ describe("text, files, dns, origin, eSIM", () => {
   it("probes DNS logic correctly with mocked fetch", async () => {
     const originalFetch = globalThis.fetch;
     try {
-      // 1. Control ok, blocked fails -> on
+      // 1. Control ok, blocked fails to resolve -> on
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
         if (url.includes("example.com/control")) {
           return Promise.resolve(new Response("ok"));
@@ -409,7 +411,7 @@ describe("text, files, dns, origin, eSIM", () => {
       });
       expect(resOn.status).toBe("on");
 
-      // 2. Both succeed -> off
+      // 2. Both succeed -> off (Safe DNS is not set)
       globalThis.fetch = vi.fn().mockResolvedValue(new Response("ok"));
       const resOff = await probeDns({
         controlUrl: "https://example.com/control",
@@ -424,9 +426,29 @@ describe("text, files, dns, origin, eSIM", () => {
         blockedUrl: "https://example.com/blocked",
       });
       expect(resUnknown.status).toBe("unknown");
+
+      // 4. Control ok, but our own extension blocked the probe URL -> unknown, never On
+      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes("example.com/control")) {
+          return Promise.resolve(new Response("ok"));
+        }
+        return Promise.reject(new TypeError("Failed to fetch net::ERR_BLOCKED_BY_CLIENT"));
+      });
+      const resClientBlock = await probeDns({
+        controlUrl: "https://example.com/control",
+        blockedUrl: DNS_PROBE_BLOCKED_URL,
+      });
+      expect(resClientBlock.status).toBe("unknown");
+      expect(resClientBlock.status).not.toBe("on");
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it("detects an extension client block versus a DNS failure", () => {
+    expect(isExtensionClientBlock(new TypeError("Failed to fetch net::ERR_BLOCKED_BY_CLIENT"))).toBe(true);
+    expect(isExtensionClientBlock(new Error("DNS resolution failed"))).toBe(false);
+    expect(isExtensionClientBlock(new TypeError("Failed to fetch"))).toBe(false);
   });
 
   it("flags double extensions and says it is not a scan", async () => {
