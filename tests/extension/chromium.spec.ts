@@ -56,8 +56,18 @@ test("chromium extension blocks, allowlists, pauses, cleans, and restores locati
     if (!worker) worker = await context.waitForEvent("serviceworker");
     // worker may restart after DNR updates; use workerOrWait() before later evaluates
     const cdp = await context.newCDPSession(await context.newPage());
-    await cdp.send("Emulation.setGeolocationOverride", { latitude: 51.5, longitude: -0.12, accuracy: 10 });
-    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { enableBlocking: () => Promise<unknown> } }).nxtlTest.enableBlocking());
+    // Threats and trackers are enabled by default on clean install
+    const initialRulesets = await worker.evaluate(async () => chrome.declarativeNetRequest.getEnabledRulesets());
+    expect(initialRulesets).toContain("threats");
+    expect(initialRulesets).toContain("trackers");
+
+    // Toggling trackers off removes it from enabled rulesets; toggling on restores it
+    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { setToggle: (k: string, e: boolean) => Promise<unknown> } }).nxtlTest.setToggle("trackers", false));
+    let rulesetsAfterToggle = await worker.evaluate(async () => chrome.declarativeNetRequest.getEnabledRulesets());
+    expect(rulesetsAfterToggle).not.toContain("trackers");
+    await worker.evaluate(async () => (globalThis as unknown as { nxtlTest: { setToggle: (k: string, e: boolean) => Promise<unknown> } }).nxtlTest.setToggle("trackers", true));
+    rulesetsAfterToggle = await worker.evaluate(async () => chrome.declarativeNetRequest.getEnabledRulesets());
+    expect(rulesetsAfterToggle).toContain("trackers");
 
     const page = await context.newPage();
     await page.goto(`http://${HOST}:${port}/`);
@@ -157,4 +167,12 @@ test("manifests have isolated background keys for Chromium and Firefox", () => {
   expect(ff.background.service_worker).toBeUndefined();
   expect(ff.browser_specific_settings.gecko.id).toBe("shield@nxtlsim.com");
   expect(ff.browser_specific_settings.gecko.strict_min_version).toBe("115.0");
+});
+
+test("tracker rules include major ad networks with block action", () => {
+  const trackers = JSON.parse(readFileSync(join(process.cwd(), "apps/extension/dist-chromium/rules/trackers.json"), "utf8"));
+  const dc = trackers.find((r: any) => r.condition?.urlFilter === "||doubleclick.net^");
+  const gs = trackers.find((r: any) => r.condition?.urlFilter === "||googlesyndication.com^");
+  expect(dc?.action?.type).toBe("block");
+  expect(gs?.action?.type).toBe("block");
 });

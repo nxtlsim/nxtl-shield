@@ -162,9 +162,40 @@ def main() -> None:
 
     trackers = []
     tid = 1
+    major_ad_hosts = [
+        "doubleclick.net",
+        "googlesyndication.com",
+        "pagead2.googlesyndication.com",
+        "googleads.g.doubleclick.net",
+        "adservice.google.com",
+        "securepubads.g.doubleclick.net",
+        "pubads.g.doubleclick.net",
+        "ad.doubleclick.net",
+        "static.doubleclick.net",
+        "tpc.googlesyndication.com",
+        "pagead2.googleadservices.com",
+        "www.googleadservices.com",
+        "googleadservices.com",
+        "criteo.com",
+        "static.criteo.net",
+        "taboola.com",
+        "outbrain.com",
+    ]
+    seen_trackers: set[str] = set()
+    for host in major_ad_hosts:
+        host = host.strip().lower()
+        if host and host not in seen_trackers:
+            seen_trackers.add(host)
+            trackers.append(block(tid, host, 8))
+            tid += 1
+
     for host in (DATA / "tracker-hosts.txt").read_text().splitlines():
-        if not host:
+        host = host.strip().lower()
+        if not host or host in seen_trackers:
             continue
+        if len(trackers) >= 28000:
+            break
+        seen_trackers.add(host)
         trackers.append(block(tid, host, 8))
         tid += 1
 

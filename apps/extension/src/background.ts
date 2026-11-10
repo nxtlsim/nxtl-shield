@@ -15,10 +15,10 @@ interface Stored {
 }
 
 const DEFAULTS: Stored = {
-  blocking: false,
-  trackers: false,
-  cleaning: false,
-  cosmetic: false,
+  blocking: true,
+  trackers: true,
+  cleaning: true,
+  cosmetic: true,
   pauseUntil: null,
   allowlist: [],
   locationManaged: false,
@@ -305,10 +305,21 @@ chrome.alarms.onAlarm.addListener(async (alarm: { name: string }) => {
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
+  const current = await chrome.storage.local.get(null);
+  const toSet: Partial<Stored> = {};
+  if (current.blocking === undefined) toSet.blocking = true;
+  if (current.trackers === undefined) toSet.trackers = true;
+  if (current.cleaning === undefined) toSet.cleaning = true;
+  if (current.cosmetic === undefined) toSet.cosmetic = true;
+  if (Object.keys(toSet).length > 0) {
+    await chrome.storage.local.set(toSet);
+  }
   await applyRulesets();
   const state = await stored();
   await syncAllowlist(state.allowlist);
 });
+
+void applyRulesets();
 
 const testApi = {
   enableBlocking: () => setToggle("blocking", true),
