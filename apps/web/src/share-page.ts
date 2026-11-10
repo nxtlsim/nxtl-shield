@@ -64,6 +64,22 @@ function fromBase64Url(str: string): Uint8Array {
   return fromBase64(b64);
 }
 
+
+async function relayFetch(path: string, init: RequestInit = {}, timeoutMs = 20000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(`${RELAY_ORIGIN}${path}`, {
+      ...init,
+      credentials: "omit",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+
 function generateQrSvg(text: string): string {
   try {
     const writer = new QRCodeWriter();
@@ -164,7 +180,7 @@ export function pageShare(): HTMLElement {
   const header = h("div", {}, [
     h("h1", {}, ["Private messages & files"]),
     h("p", { class: "lede" }, [
-      "Encrypt and decrypt confidential text messages and files right in your browser. The password never leaves this device.",
+      "Encrypt a message or file on this device with a password you choose. Nothing is uploaded. Send the password through a different channel.",
     ]),
   ]);
 
@@ -529,7 +545,7 @@ export function pageShare(): HTMLElement {
     },
     {
       q: "Does NXTL see my password or messages?",
-      a: "Never. Encryption and decryption run entirely in this browser on your device. Nothing is sent to any server.",
+      a: "No. A password-protected file or message stays on this device. A private link sends only the locked text, never the key or password, and that locked text is deleted when it is opened.",
     },
     {
       q: "Can I open these files on other computers?",
@@ -635,10 +651,11 @@ function createPrivateLinkCard(textInput: HTMLTextAreaElement): HTMLElement {
           ["encrypt"]
         );
 
-        // Inner blob = msgIv || innerCipher
-        const innerBlob = new Uint8Array(12 + innerCipher.byteLength);
-        innerBlob.set(msgIv, 0);
-        innerBlob.set(new Uint8Array(innerCipher), 12);
+        // Inner blob = message key || msgIv || innerCipher (the key stays out of the URL)
+        const innerBlob = new Uint8Array(32 + 12 + innerCipher.byteLength);
+        innerBlob.set(rawMsgKey, 0);
+        innerBlob.set(msgIv, 32);
+        innerBlob.set(new Uint8Array(innerCipher), 44);
 
         const outerIv = crypto.getRandomValues(new Uint8Array(12));
         const outerCipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: outerIv }, derivedKey, innerBlob);
@@ -647,7 +664,7 @@ function createPrivateLinkCard(textInput: HTMLTextAreaElement): HTMLElement {
         outerBlob.set(new Uint8Array(outerCipher), 12);
 
         ciphertextB64 = toBase64(outerBlob);
-        fragmentParams = `p=1&k=${toBase64Url(rawMsgKey)}&s=${toBase64Url(salt)}`;
+        fragmentParams = `p=1&s=${toBase64Url(salt)}`;
       } else {
         const blob = new Uint8Array(12 + innerCipher.byteLength);
         blob.set(msgIv, 0);
@@ -664,7 +681,7 @@ function createPrivateLinkCard(textInput: HTMLTextAreaElement): HTMLElement {
       }
 
       const ttl = parseInt(ttlSelect.value, 10) || 86400;
-      const resp = await fetch(`${RELAY_ORIGIN}/v1/messages`, {
+      const resp = await relayFetch("/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -728,6 +745,7 @@ function showLinkReady(container: HTMLElement, url: string) {
         await navigator.share({
           title: "NXTL Shield",
           text: `A private message for you: ${url}`,
+          url,
         });
       } catch {
         // User cancelled — stay quiet
@@ -813,7 +831,7 @@ function pageOpenPrivateMessage(): HTMLElement {
   root.append(header, card);
 
   // Check status proactively
-  fetch(`${RELAY_ORIGIN}/v1/messages/${encodeURIComponent(messageId)}/status`, { method: "GET" })
+  relayFetch(`/v1/messages/${encodeURIComponent(messageId)}/status`, { method: "GET" })
     .then((resp) => {
       if (resp.status === 404) {
         showAlreadyOpenedOrExpired(card, header);
@@ -838,7 +856,7 @@ function pageOpenPrivateMessage(): HTMLElement {
     try {
       let ciphertextB64 = cachedCiphertextB64;
       if (!ciphertextB64) {
-        const resp = await fetch(`${RELAY_ORIGIN}/v1/messages/${encodeURIComponent(messageId)}/open`, {
+        const resp = await relayFetch(`/v1/messages/${encodeURIComponent(messageId)}/open`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         });
@@ -892,9 +910,9 @@ function pageOpenPrivateMessage(): HTMLElement {
           return;
         }
 
-        const msgIv = innerBlobArr.subarray(0, 12);
-        const msgCipher = innerBlobArr.subarray(12);
-        const rawMsgKey = keyB64Url ? fromBase64Url(keyB64Url) : new Uint8Array(32);
+        const rawMsgKey = innerBlobArr.subarray(0, 32);
+        const msgIv = innerBlobArr.subarray(32, 44);
+        const msgCipher = innerBlobArr.subarray(44);
         const msgKey = await crypto.subtle.importKey("raw", toBuffer(rawMsgKey), "AES-GCM", false, ["decrypt"]);
         const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: toBuffer(msgIv) }, msgKey, toBuffer(msgCipher));
         plaintext = dec.decode(decrypted);
