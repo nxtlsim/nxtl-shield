@@ -33,7 +33,7 @@ async function getReputation(): Promise<Reputation> {
     trackers: new Set(),
     available: true,
     stale: false,
-    version: "0.5.0",
+    version: "0.6.0",
     retrieved: "2026-11-09",
   };
   return cachedReputation;

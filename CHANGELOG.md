@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- Choose your protection level first. Windows, iPhone, Android, and Linux setup then follow that choice.
+- Windows Safe DNS setup and undo each come as a single file you can run on its own, and there is a zip if you want everything together.
+- The browser extension blocks ads and trackers by default, can pause only the site you are on, warns you about lookalike addresses, and can check a link or send a note that opens only once.
+
 ## 0.5.0
 
 - Private messages & files can create a private link that is gone after it is opened. You can also require a password. The locked text is deleted when someone opens it, or after 1 hour, 1 day, or 7 days.
