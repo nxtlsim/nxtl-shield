@@ -11,7 +11,7 @@ Used only in the page header, swapped by theme. Dark theme uses the white wordma
 | `apps/web/public/brand/nxtl-esim-lockup-dark.png` | Dark theme | Copy of `nxtl-esim-lockup-597.png`. White wordmark, coral chevron. 597×78. |
 | `apps/web/public/brand/nxtl-esim-lockup-light.png` | Light theme | Copy of `nxtl-esim-lockup-light-1D212E.png`. Navy `#1D212E` wordmark. 597×78. |
 
-Source note: `docs/facts/brand.md` (verified 2026-11-09 against nxtlsim.com). CSS does not use `filter: invert()`.
+Verified 2026-11-09 against nxtlsim.com. CSS does not use `filter: invert()`.
 
 The site’s dark tokens stay in the UI. The light theme is derived and checked for contrast; it is not an official NXTL palette.
 
