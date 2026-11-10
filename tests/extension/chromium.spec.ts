@@ -183,3 +183,51 @@ test("tracker rules include major ad networks with block action", () => {
   expect(dc?.action?.type).toBe("block");
   expect(gs?.action?.type).toBe("block");
 });
+
+test("popup displays Safe DNS status, tools, and on-device check verdicts", async ({ browserName }) => {
+  test.skip(browserName !== "chromium" || !process.env.DISPLAY, "Needs a display and Chromium.");
+  const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "nxtl-popup-")), {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [
+      `--load-extension=${EXT}`,
+      `--disable-extensions-except=${EXT}`,
+      "--disable-features=DisableLoadExtensionCommandLineSwitch",
+      "--no-proxy-server",
+    ],
+  });
+
+  try {
+    const popup = await context.newPage();
+    await popup.goto("chrome-extension://aihdikogmaekjmanjhdmeanhhfhiblmm/popup.html");
+    await expect(popup.locator(".brand-lockup")).toContainText("Shield");
+    await expect(popup.locator(".brand-lockup")).not.toContainText("NXTL");
+
+    // Safe DNS status is shown
+    await expect(popup.locator("#dns-text")).toBeVisible();
+    await expect(popup.locator("#dns-text")).not.toHaveText("Checking...", { timeout: 10000 });
+    const dnsText = await popup.locator("#dns-text").textContent();
+    expect(["Off", "Could not check", "On"]).toContain(dnsText?.trim());
+
+    // Check lottery-style text
+    await popup.locator("#quick-check-input").fill("Congratulations! You won the lottery! Claim your cash prize immediately.");
+    await popup.locator("#quick-check-btn").click();
+    await expect(popup.locator("#quick-check-result")).toBeVisible();
+    await expect(popup.locator("#check-badge-text")).toContainText("Likely scam");
+
+    // Check safe URL
+    await popup.locator("#quick-check-input").fill("https://nxtlsim.com");
+    await popup.locator("#quick-check-btn").click();
+    await expect(popup.locator("#check-badge-text")).toContainText("Looks safe");
+
+    // Tool links present
+    const checkLink = popup.locator('.tools-menu a[href="https://nxtlsim.github.io/nxtl-shield/#/check"]');
+    const msgLink = popup.locator('.tools-menu a[href="https://nxtlsim.github.io/nxtl-shield/#/messages"]');
+    const dnsLink = popup.locator('.tools-menu a[href="https://nxtlsim.github.io/nxtl-shield/#/setup"]');
+    await expect(checkLink).toBeVisible();
+    await expect(msgLink).toBeVisible();
+    await expect(dnsLink).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});

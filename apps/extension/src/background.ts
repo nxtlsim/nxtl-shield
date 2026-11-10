@@ -31,6 +31,7 @@ const DEFAULTS: Stored = {
 };
 
 const lastMain = new Map<number, string>();
+let initPromise: Promise<void> | null = null;
 
 type ContentSettingApi = {
   get: (details: { primaryUrl: string }) => Promise<{ setting: string }>;
@@ -140,6 +141,7 @@ async function readLocation(exceptions: Stored["locationExceptions"]) {
 }
 
 async function status(forHost?: string | null) {
+  if (initPromise) await initPromise;
   let state = await stored();
   const { state: activeState } = await expirePausedSites(state);
   state = activeState;
@@ -178,6 +180,7 @@ async function status(forHost?: string | null) {
 }
 
 async function setToggle(key: ToggleKey, enabled: boolean) {
+  if (initPromise) await initPromise;
   await save({ [key]: enabled });
   if (key !== "cosmetic") await applyRulesets();
   return status();
@@ -337,6 +340,24 @@ async function onMessage(
       if (sender.tab?.id !== undefined && message.url) await chrome.tabs.update(sender.tab.id, { url: String(message.url) });
       return status();
     }
+    case "createPrivateMessage": {
+      try {
+        const resp = await fetch("https://nxtl-shield-relay.dagys-mantas.workers.dev/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ciphertext: (message as any).ciphertext,
+            ttl: (message as any).ttl || 86400,
+            password: Boolean((message as any).password),
+          }),
+        });
+        if (!resp.ok) return { ok: false, status: resp.status };
+        const data = (await resp.json()) as { id: string };
+        return { ok: true, id: data.id };
+      } catch (e) {
+        return { ok: false, error: String(e) };
+      }
+    }
     default:
       return status();
   }
@@ -377,7 +398,7 @@ chrome.alarms.onAlarm.addListener(async (alarm: { name: string }) => {
   }
 });
 
-chrome.runtime.onInstalled.addListener(async () => {
+async function initDefaults() {
   const current = await chrome.storage.local.get(null);
   const toSet: Partial<Stored> = {};
   if (current.blocking === undefined) toSet.blocking = true;
@@ -390,9 +411,12 @@ chrome.runtime.onInstalled.addListener(async () => {
   await applyRulesets();
   const state = await stored();
   await syncAllowlist(state.allowlist);
-});
+}
+initPromise = initDefaults();
 
-void applyRulesets();
+chrome.runtime.onInstalled.addListener(async () => {
+  if (initPromise) await initPromise;
+});
 
 const testApi = {
   enableBlocking: () => setToggle("blocking", true),
