@@ -340,16 +340,20 @@ export async function pageHome(): Promise<HTMLElement> {
     }
   });
 
-  const heroInputRow = h("div", { class: "hero-input-row" }, [
-    h("div", { class: "hero-input-wrap" }, [
-      heroInput,
-      h("div", { class: "hero-input-actions" }, [
-        pasteBtn,
-        qrUploadBtn,
-        qrFileHidden,
-      ]),
-    ]),
+  const heroCheckFirstRow = h("div", { class: "hero-field-row" }, [
+    heroInput,
     runHeroBtn,
+  ]);
+
+  const heroInputActions = h("div", { class: "hero-input-actions" }, [
+    pasteBtn,
+    qrUploadBtn,
+    qrFileHidden,
+  ]);
+
+  const heroInputRow = h("div", { class: "hero-input-row" }, [
+    heroCheckFirstRow,
+    heroInputActions,
   ]);
 
   const heroResultContainer = h("div", { class: "hero-result-area" });
