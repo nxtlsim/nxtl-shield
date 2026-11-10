@@ -171,7 +171,10 @@ async function main() {
 
   // 11. Extension Popup
   for (const theme of THEMES) {
-    const page = await browser.newPage({ viewport: { width: 360, height: 720 } });
+    const page = await browser.newPage({
+      viewport: { width: 360, height: 720 },
+      colorScheme: theme,
+    });
     const popupPath = pathToFileURL(join(process.cwd(), "apps/extension/dist-chromium/popup.html")).href;
     await page.addInitScript(() => {
       window.chrome = {
@@ -187,6 +190,7 @@ async function main() {
                 paused: false,
                 locationSupported: true,
                 locationSetting: "ask",
+                dnsStatus: "off",
               };
             }
             return {};
@@ -198,11 +202,9 @@ async function main() {
         },
       };
     });
+    await page.emulateMedia({ colorScheme: theme });
     await page.goto(popupPath);
-    await page.evaluate((th) => {
-      document.documentElement.setAttribute("data-theme", th);
-    }, theme);
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(600);
     await page.screenshot({ path: join(OUT_DIR, `extension-popup-${theme}.png`) });
     await page.close();
   }
