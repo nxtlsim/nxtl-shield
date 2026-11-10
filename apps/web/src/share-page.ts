@@ -476,6 +476,6 @@ export function pageShare(): HTMLElement {
     },
   ]);
 
-  root.append(header, intro, diagramShare(), formCard, faqs);
+  root.append(header, formCard, intro, diagramShare(), faqs);
   return root;
 }
