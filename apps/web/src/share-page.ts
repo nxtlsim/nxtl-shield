@@ -104,9 +104,9 @@ export function pageShare(): HTMLElement {
   });
 
   const header = h("div", {}, [
-    h("h1", {}, ["Secure Share"]),
+    h("h1", {}, ["Private messages & files"]),
     h("p", { class: "lede" }, [
-      "Encrypt confidential text and files directly in your browser. All encryption happens locally on this device before anything leaves your hands.",
+      "Encrypt and decrypt confidential text messages and files right in your browser. The password never leaves this device.",
     ]),
   ]);
 

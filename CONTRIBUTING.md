@@ -18,7 +18,7 @@ If WebKit fails to launch with missing libraries (common on minimal Linux images
 PLAYWRIGHT_SKIP_WEBKIT=1 npx playwright test tests/e2e
 ```
 
-The cross-browser Secure Share test still tries Firefox. WebKit is skipped automatically when its launcher reports missing host dependencies.
+The cross-browser Private messages & files test still tries Firefox. WebKit is skipped automatically when its launcher reports missing host dependencies.
 
 Extension load tests need a display:
 

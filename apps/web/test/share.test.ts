@@ -7,7 +7,7 @@ import { SHARE_BYTE_LIMIT, runShare } from "../src/share-crypto";
 
 const configNote = "packet(3) with unknown version 6";
 
-describe("Secure Share", () => {
+describe("Private messages & files", () => {
   it("round-trips text and a file", async () => {
     const encrypted = await runShare({ op: "encrypt-text", text: "Café\nline 2", password: "correct horse", armor: true });
     expect(encrypted.kind).toBe("armored");

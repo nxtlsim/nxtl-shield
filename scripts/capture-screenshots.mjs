@@ -68,8 +68,8 @@ async function main() {
         await page.getByTestId("verdict").scrollIntoViewIfNeeded();
       });
 
-      // 3. Secure Share
-      await takeShot(vp, theme, "share", `share-${vp.name}-${theme}.png`, async (page) => {
+      // 3. Private messages & files
+      await takeShot(vp, theme, "messages", `share-${vp.name}-${theme}.png`, async (page) => {
         await page.waitForSelector('[data-testid="share-input"]');
         await page.getByTestId("share-input").fill("Confidential API keys and private backup codes");
         await page.getByTestId("share-password").fill("SuperSecretSharedPass123!");

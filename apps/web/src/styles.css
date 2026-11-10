@@ -1699,7 +1699,7 @@ footer.site p {
   animation: revealCard 0.25s var(--ease);
 }
 
-/* Lock Animation for Secure Share */
+/* Lock Animation for Private messages & files */
 .lock-icon-wrap {
   display: inline-flex;
   transition: transform 0.25s var(--ease);

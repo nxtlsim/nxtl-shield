@@ -92,7 +92,7 @@ const DESKTOP_NAV = [
   ["", "Home"],
   ["check", "Check"],
   ["setup", "Protect"],
-  ["share", "Share"],
+  ["messages", "Messages"],
 ];
 
 const ALL_NAV = [
@@ -102,7 +102,7 @@ const ALL_NAV = [
   ["ad-blocker", "Ad & tracker blocker", "ad-block"],
   ["extension", "Browser extension", "extension"],
   ["password", "Password generator", "password"],
-  ["share", "Secure Share", "share-lock"],
+  ["messages", "Private messages & files", "share-lock"],
   ["clean", "Link cleaner", "clean"],
   ["connection", "Your connection", "connection"],
   ["location", "Location privacy", "location"],
@@ -426,7 +426,7 @@ function mobileBottomNav(currentPath: string) {
     { id: "", label: "Home", icon: "shield" },
     { id: "check", label: "Check", icon: "search" },
     { id: "setup", label: "Protect", icon: "phone" },
-    { id: "share", label: "Share", icon: "share-lock" },
+    { id: "messages", label: "Messages", icon: "share-lock" },
   ];
 
   for (const tab of tabs) {
@@ -515,7 +515,10 @@ async function pageFor(path: string, tab: string) {
       return pageExtension();
     case "check":
       return pageCheck(tab);
+    case "messages":
+      return pageShare();
     case "share":
+      history.replaceState({ shield: true }, "", hashUrl("#/messages"));
       return pageShare();
     case "clean":
       return pageClean();

@@ -12,9 +12,9 @@ Free, open-source tools that help you block ads and trackers, check suspicious l
 |---|---|
 | ![Your connection details](docs/screenshots/connection-1280-light.png) | ![Windows Safe DNS setup](docs/screenshots/setup-1280-light.png) |
 
-| Secure Share | Home on a phone |
+| Private messages & files | Home on a phone |
 |---|---|
-| ![Secure Share drop zone](docs/screenshots/share-1280-light.png) | ![Home on a phone](docs/screenshots/home-390-light.png) |
+| ![Private messages & files drop zone](docs/screenshots/share-1280-light.png) | ![Home on a phone](docs/screenshots/home-390-light.png) |
 
 More captures, including light and dark at 390 and 1280, are in [`docs/screenshots/`](docs/screenshots/).
 
@@ -36,7 +36,7 @@ Follow short steps for Windows, Android, iPhone, Mac, and Linux. On Windows you 
 In Chromium browsers, the extension can block website location access, with exceptions you choose. Phone app permissions stay under your device settings.
 
 ### Encrypt a file or message
-Secure Share encrypts text or a file on your device with a password you choose. Drop a file onto the page or type a message. Nothing is uploaded. Send the password through a different channel.
+Private messages & files encrypts text or a file on your device with a password you choose. Drop a file onto the page or type a message. Nothing is uploaded. Send the password through a different channel.
 
 ### Create a strong password
 Generate a password on your device, copy it in one tap, and optionally check whether it has appeared in known leaks. Your password itself is never sent.
@@ -71,7 +71,7 @@ No.
 **Does Shield collect my browsing history?**  
 No. Extension settings stay in the browser. Threat lists ship with the app.
 
-**Does Secure Share upload my files?**  
+**Does Private messages & files upload my files?**  
 No. Encryption and decryption stay on your device.
 
 **Will it stop every scam?**  
