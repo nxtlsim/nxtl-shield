@@ -294,6 +294,12 @@ test("finishing touch UI checks: home steps, hero check button, eSIM card, share
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Email" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Text message" })).toBeVisible();
+  const qr = page.getByRole("img", { name: "QR code for NXTL Shield website" });
+  await expect(qr).toBeVisible();
+  const qrBox = await qr.boundingBox();
+  expect(qrBox).not.toBeNull();
+  expect(qrBox!.width).toBeGreaterThan(80);
+  expect(qrBox!.height).toBeGreaterThan(80);
 
   // 7. Check #/share redirects to #/messages
   await page.goto("./#/share");

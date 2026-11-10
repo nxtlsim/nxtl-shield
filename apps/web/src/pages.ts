@@ -35,7 +35,7 @@ import {
   diagramPassword,
 } from "./diagrams";
 
-export function renderCheckingPlaceholder(text = "Checking against threat intelligence databases..."): HTMLElement {
+export function renderCheckingPlaceholder(text = "Checking..."): HTMLElement {
   return h("div", { class: "scanning-container" }, [
     h("div", { class: "scan-bar" }, [
       h("div", { class: "scan-bar-indeterminate" }),
@@ -1234,7 +1234,7 @@ export async function pageCheck(tab = "link"): Promise<HTMLElement> {
   const root = h("div", { class: "grid" });
 
   const intro = introBlock({
-    what: "Inspect web addresses, text messages, files, or QR codes against known scam and threat databases.",
+    what: "Inspect a web address, text message, file, or QR code before you open it.",
     howSteps: [
       "Select Link, Message, File, or QR tab.",
       "Paste the address or content to inspect.",
@@ -1321,7 +1321,7 @@ function linkForm() {
     const raw = input.value.trim();
     if (!raw) return;
     button.disabled = true;
-    out.replaceChildren(renderCheckingPlaceholder("Checking against threat intelligence databases..."));
+    out.replaceChildren(renderCheckingPlaceholder("Checking..."));
 
     try {
       const norm = normalizeCheckInput(raw);
@@ -2903,16 +2903,18 @@ export function pageShareApp(): HTMLElement {
     qrSvgString = "";
   }
 
+  const qrBox = h("div", {
+    style: "background: #ffffff; color: #0a0c12; padding: 16px; border-radius: 4px; display: inline-flex; justify-content: center; align-items: center;",
+  });
+  if (qrSvgString) qrBox.innerHTML = qrSvgString;
+
   const qrCard = h("div", {
     class: "card",
     style: "margin-top: var(--sp-4); text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--sp-3);",
   }, [
     h("h2", { style: "margin: 0; font-size: 1.15rem;" }, ["Scan QR code"]),
     h("p", { class: "muted", style: "margin: 0;" }, ["Point any phone camera at this code to open Shield."]),
-    h("div", {
-      style: "background: #ffffff; color: #0a0c12; padding: 16px; border-radius: 4px; display: inline-flex; justify-content: center; align-items: center;",
-      innerHTML: qrSvgString,
-    }),
+    qrBox,
   ]);
 
   root.append(header, shareActions, qrCard);
