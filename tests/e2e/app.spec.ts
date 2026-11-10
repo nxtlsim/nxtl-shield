@@ -8,7 +8,13 @@ for (const width of widths) {
     test(`layout ${width}px ${theme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: width < 800 ? 720 : 900 });
       await page.goto("./");
-      await page.getByTestId("theme-toggle").selectOption(theme);
+      const trigger = page.locator(".theme-menu-trigger");
+      if (await trigger.isVisible()) {
+        await trigger.click();
+        await page.locator(`.theme-menu-dropdown button[role="option"]`, { hasText: new RegExp(theme, "i") }).click();
+      } else {
+        await page.getByTestId("theme-toggle").selectOption(theme);
+      }
 
       await expect(page.getByRole("heading", { name: "Check a link before you open it." })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Protection status" })).toBeVisible();
