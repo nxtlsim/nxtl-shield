@@ -577,10 +577,10 @@ export async function pageHome(): Promise<HTMLElement> {
 
   // eSIM Companion Card
   const esimCard = h("section", { class: "card esim-card", style: "margin-top: var(--sp-6);" }, [
-    h("div", { class: "row", style: "align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-3);" }, [
-      h("div", { style: "display: flex; align-items: center; gap: var(--sp-3);" }, [
+    h("div", { class: "esim-card-inner" }, [
+      h("div", { class: "esim-card-content" }, [
         h("div", { class: "tile-icon", style: "width: 44px; height: 44px; flex-shrink: 0;" }, [createIcon("esim", 24)]),
-        h("div", {}, [
+        h("div", { class: "esim-card-text" }, [
           h("h3", { style: "margin: 0; font-size: 1.15rem;" }, ["Traveling abroad? Connect with NXTL eSIM"]),
           h("p", { class: "muted", style: "margin: 4px 0 0;" }, [
             "Affordable travel data in 180+ countries. Routes your traffic via London for consistent privacy abroad.",
@@ -588,7 +588,7 @@ export async function pageHome(): Promise<HTMLElement> {
         ]),
       ]),
       h("a", {
-        class: "btn primary",
+        class: "btn primary esim-card-btn",
         href: NXTL_LINKS.pricing,
         target: "_blank",
         rel: "noreferrer",
