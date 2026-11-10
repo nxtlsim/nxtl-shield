@@ -5,6 +5,7 @@ import {
   buildMobileconfig,
   buildWindowsCmd,
   buildWindowsUndoCmd,
+  buildWindowsSetupZip,
   getResolver,
   checkText,
   checkUrl,
@@ -2412,7 +2413,12 @@ export async function pageSetup(): Promise<HTMLElement> {
             ]),
             h("a", {
               class: "btn lg",
-              href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-windows-setup.zip`,
+              href: URL.createObjectURL((() => {
+                const zip = buildWindowsSetupZip(resolver.id);
+                const copy = new ArrayBuffer(zip.byteLength);
+                new Uint8Array(copy).set(zip);
+                return new Blob([copy], { type: "application/zip" });
+              })()),
               download: "nxtl-shield-windows-setup.zip",
             }, [
               createIcon("file", 20),
@@ -2566,9 +2572,9 @@ export async function pageSetup(): Promise<HTMLElement> {
       );
     } else {
       // Linux
-      const copyDohBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy DoH URL"]);
+      const copyDohBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy address"]);
       copyDohBtn.addEventListener("click", () => {
-        copyToClipboard(resolver.dohUrl, copyDohBtn, [createIcon("copy", 16), "Copy DoH URL"], "Copied DoH URL!");
+        copyToClipboard(resolver.dohUrl, copyDohBtn, [createIcon("copy", 16), "Copy address"], "Copied address!");
       });
 
       const detailsAdvanced = h("details", { style: "margin-top: var(--sp-3);" }, [
