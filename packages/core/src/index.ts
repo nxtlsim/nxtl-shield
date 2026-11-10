@@ -13,6 +13,7 @@ export * from "./file/inspect";
 export * from "./lists/snapshot";
 export * from "./dns/resolvers";
 export * from "./dns/profiles";
+export * from "./dns/windows";
 export * from "./dns/steps";
 export * from "./esim/esim";
 export * from "./connection/connection";

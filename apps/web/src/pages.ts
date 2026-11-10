@@ -3,6 +3,9 @@ import {
   NXTL_LINKS,
   RESOLVERS,
   buildMobileconfig,
+  buildWindowsCmd,
+  buildWindowsUndoCmd,
+  getResolver,
   checkText,
   checkUrl,
   cleanUrl,
@@ -777,9 +780,10 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
       ]),
     );
   } else if (device.os === "android") {
+    const recResolver = getResolver("adguard-default") ?? RESOLVERS[0];
     const copyBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy hostname"]);
     copyBtn.addEventListener("click", () => {
-      copyToClipboard("dns.adguard-dns.com", copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
+      copyToClipboard(recResolver.dotHost, copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
     });
     recommendedSection.append(
       h("h2", {}, ["Android: Private DNS (3 taps)"]),
@@ -790,7 +794,7 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
         h("li", {}, [
           h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
             h("span", {}, ["Paste this hostname and tap Save:"]),
-            h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, ["dns.adguard-dns.com"]),
+            h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, [recResolver.dotHost]),
             h("div", { class: "row" }, [copyBtn]),
           ]),
         ]),
@@ -964,10 +968,11 @@ export function pagePhoneProtection(): HTMLElement {
       }
     });
 
+    const recResolver = getResolver("adguard-default") ?? RESOLVERS[0];
     if (platform === "android") {
       const copyBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy hostname"]);
       copyBtn.addEventListener("click", () => {
-        copyToClipboard("dns.adguard-dns.com", copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
+        copyToClipboard(recResolver.dotHost, copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
       });
 
       const openSettingsBtn = detectDevice().os === "android"
@@ -990,7 +995,7 @@ export function pagePhoneProtection(): HTMLElement {
             h("li", {}, [
               h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
                 h("span", {}, ["Copy this hostname: "]),
-                h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, ["dns.adguard-dns.com"]),
+                h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, [recResolver.dotHost]),
                 h("div", { class: "row", style: "gap: var(--sp-2); flex-wrap: wrap;" }, [copyBtn, ...(openSettingsBtn ? [openSettingsBtn] : [])]),
               ]),
             ]),
@@ -998,7 +1003,7 @@ export function pagePhoneProtection(): HTMLElement {
               ? h("li", {}, ["Tap Open Private DNS settings, paste the hostname, and tap Save."])
               : h("li", {}, ["On your Android phone, open Settings → Network & internet → Private DNS, paste the hostname, and tap Save."]),
             h("li", {}, ["Select 'Private DNS provider hostname'."]),
-            h("li", {}, ["Paste dns.adguard-dns.com and tap Save. All internet lookups are now protected."]),
+            h("li", {}, [`Paste ${recResolver.dotHost} and tap Save. All internet lookups are now protected.`]),
           ]),
           h("div", { class: "row", style: "margin-top: var(--sp-4); align-items: center; gap: var(--sp-3); flex-wrap: wrap;" }, [
             checkBtn,
@@ -2235,34 +2240,91 @@ export async function pageSetup(): Promise<HTMLElement> {
     ]),
   ]);
 
-  const intro = introBlock({
-    what: "Safe DNS blocks ads, tracking beacons, and known scam websites across your entire device — covering every app and browser.",
-    when: [
-      "Block annoying banner ads and tracking across all apps on your phone.",
-      "Prevent malware and phishing links from connecting on your home or office PC.",
-      "Encrypt DNS lookups so public Wi-Fi operators cannot see what domains you visit.",
-    ],
-    howSteps: [
-      "Select your device platform below.",
-      "Follow the quick 1-click download or hostname setup step.",
-      "Tap 'Check it worked' to verify that Safe DNS is actively filtering.",
-    ],
-    limit: "Safe DNS blocks threats by domain name. It does not inspect the contents of encrypted messages.",
-  });
+  let selectedResolverId = "adguard-default";
 
-  const diagram = diagramDns();
+  // Resolver Selection Table
+  const resolverTable = h("table", { class: "protection-table", role: "table", "aria-label": "Protection profiles" });
+  const thead = h("thead", {}, [
+    h("tr", {}, [
+      h("th", { scope: "col", class: "protection-radio-cell", "aria-label": "Select" }, []),
+      h("th", { scope: "col" }, ["Protection profile"]),
+      h("th", { scope: "col" }, ["What it blocks"]),
+    ]),
+  ]);
+  const tbody = h("tbody", {});
 
-  // Resolver Selector
-  const select = h("select", { "aria-label": "Select protection profile" });
+  const rowElements: Map<string, HTMLTableRowElement> = new Map();
+  const radioElements: Map<string, HTMLInputElement> = new Map();
+
   for (const resolver of RESOLVERS) {
-    const opt = h("option", { value: resolver.id }, [resolver.name]);
-    if (resolver.id === "adguard-default") opt.setAttribute("selected", "selected");
-    select.append(opt);
+    const isRecommended = resolver.id === "adguard-default";
+    const isSelected = resolver.id === selectedResolverId;
+
+    const radio = h("input", {
+      type: "radio",
+      name: "protection-resolver",
+      id: `resolver-${resolver.id}`,
+      value: resolver.id,
+      class: "protection-radio",
+      "aria-label": resolver.name,
+    }) as HTMLInputElement;
+    if (isSelected) radio.checked = true;
+
+    const nameCell = h("td", { class: "protection-name-cell" }, [
+      h("label", { for: `resolver-${resolver.id}`, style: "cursor: pointer; display: inline-flex; align-items: center; gap: 8px;" }, [
+        resolver.name,
+        ...(isRecommended ? [h("span", { class: "pill ok sm" }, ["Recommended"])] : []),
+      ]),
+    ]);
+
+    const blocksCell = h("td", { class: "protection-blocks-cell" }, [resolver.blocks]);
+    const radioCell = h("td", { class: "protection-radio-cell" }, [radio]);
+
+    const tr = h("tr", {
+      class: `protection-row${isSelected ? " selected" : ""}`,
+      tabindex: "0",
+      role: "row",
+    }, [radioCell, nameCell, blocksCell]) as HTMLTableRowElement;
+
+    function selectThisResolver() {
+      selectedResolverId = resolver.id;
+      for (const [id, r] of radioElements) {
+        r.checked = id === selectedResolverId;
+      }
+      for (const [id, row] of rowElements) {
+        if (id === selectedResolverId) {
+          row.classList.add("selected");
+        } else {
+          row.classList.remove("selected");
+        }
+      }
+      renderDeviceTab();
+    }
+
+    radio.addEventListener("change", () => {
+      if (radio.checked) selectThisResolver();
+    });
+
+    tr.addEventListener("click", () => {
+      selectThisResolver();
+    });
+
+    tr.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        selectThisResolver();
+      }
+    });
+
+    rowElements.set(resolver.id, tr);
+    radioElements.set(resolver.id, radio);
+    tbody.append(tr);
   }
 
-  const resolverCard = h("section", { class: "card", style: "background: var(--raised);" }, [
+  resolverTable.append(thead, tbody);
+  const resolverCard = h("section", { class: "card", "data-testid": "protection-level-card", style: "background: var(--raised);" }, [
     h("h2", { style: "font-size: 1.15rem; margin-bottom: var(--sp-2);" }, ["Choose your protection level"]),
-    field("Protection profile", select),
+    h("div", { class: "protection-table-wrap" }, [resolverTable]),
   ]);
 
   // Device Tabs
@@ -2308,10 +2370,17 @@ export async function pageSetup(): Promise<HTMLElement> {
       btn.setAttribute("aria-selected", activeTab === id ? "true" : "false");
     }
 
-    const resolverId = (select as HTMLSelectElement).value;
-    const resolver = RESOLVERS.find((r) => r.id === resolverId) ?? RESOLVERS[0];
+    const resolver = getResolver(selectedResolverId) ?? RESOLVERS[0];
 
     if (activeTab === "windows") {
+      const cmdContent = buildWindowsCmd(resolver.id);
+      const cmdBlob = new Blob([cmdContent], { type: "text/plain;charset=utf-8" });
+      const cmdUrl = URL.createObjectURL(cmdBlob);
+
+      const undoContent = buildWindowsUndoCmd();
+      const undoBlob = new Blob([undoContent], { type: "text/plain;charset=utf-8" });
+      const undoUrl = URL.createObjectURL(undoBlob);
+
       contentArea.replaceChildren(
         h("section", { class: "card" }, [
           h("div", { class: "row", style: "align-items: center; justify-content: space-between; margin-bottom: var(--sp-3);" }, [
@@ -2327,7 +2396,7 @@ export async function pageSetup(): Promise<HTMLElement> {
           h("div", { class: "row", style: "gap: var(--sp-3); flex-wrap: wrap; margin: var(--sp-4) 0;" }, [
             h("a", {
               class: "btn primary lg",
-              href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-windows-dns.cmd`,
+              href: cmdUrl,
               download: "nxtl-shield-windows-dns.cmd",
             }, [
               createIcon("download", 20),
@@ -2355,7 +2424,7 @@ export async function pageSetup(): Promise<HTMLElement> {
             h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); flex-wrap: wrap;" }, [
               h("a", {
                 class: "btn sm ghost",
-                href: `${import.meta.env.BASE_URL}downloads/windows/nxtl-shield-windows-dns-undo.cmd`,
+                href: undoUrl,
                 download: "nxtl-shield-windows-dns-undo.cmd",
               }, [
                 createIcon("refresh", 14),
@@ -2400,7 +2469,7 @@ export async function pageSetup(): Promise<HTMLElement> {
               ? h("li", {}, ["Tap Open Private DNS settings, paste the hostname, and tap Save."])
               : h("li", {}, ["On your Android phone, open Settings → Network & internet → Private DNS, paste the hostname, and tap Save."]),
             h("li", {}, ["Select 'Private DNS provider hostname'."]),
-            h("li", {}, ["Paste the hostname and tap Save. All internet lookups are now protected."]),
+            h("li", {}, [`Paste ${resolver.dotHost} and tap Save. All internet lookups are now protected.`]),
           ]),
           h("div", { style: "margin-top: var(--sp-4);" }, [
             makeCheckWorkedRow(),
@@ -2408,9 +2477,13 @@ export async function pageSetup(): Promise<HTMLElement> {
         ]),
       );
     } else if (activeTab === "ios") {
+      const profile = buildMobileconfig(resolver.id);
+      const blob = new Blob([profile.plist], { type: "application/x-apple-aspen-config" });
+      const profileUrl = URL.createObjectURL(blob);
+
       const downloadBtn = h("a", {
         class: "btn primary",
-        href: `${import.meta.env.BASE_URL}downloads/nxtl-shield.mobileconfig`,
+        href: profileUrl,
         download: "nxtl-shield.mobileconfig",
       }, [
         createIcon("download", 18),
@@ -2443,9 +2516,13 @@ export async function pageSetup(): Promise<HTMLElement> {
         ]),
       );
     } else if (activeTab === "mac") {
+      const profile = buildMobileconfig(resolver.id);
+      const blob = new Blob([profile.plist], { type: "application/x-apple-aspen-config" });
+      const profileUrl = URL.createObjectURL(blob);
+
       const downloadBtn = h("a", {
         class: "btn primary",
-        href: `${import.meta.env.BASE_URL}downloads/nxtl-shield.mobileconfig`,
+        href: profileUrl,
         download: "nxtl-shield.mobileconfig",
       }, [
         createIcon("download", 18),
@@ -2529,10 +2606,26 @@ export async function pageSetup(): Promise<HTMLElement> {
     });
   }
 
-  select.addEventListener("change", renderDeviceTab);
   renderDeviceTab();
 
-  root.append(header, tabContainer, contentArea, intro, diagram, resolverCard);
+  const intro = introBlock({
+    what: "Safe DNS blocks ads, tracking beacons, and known scam websites across your entire device — covering every app and browser.",
+    when: [
+      "Block annoying banner ads and tracking across all apps on your phone.",
+      "Prevent malware and phishing links from connecting on your home or office PC.",
+      "Encrypt DNS lookups so public Wi-Fi operators cannot see what domains you visit.",
+    ],
+    howSteps: [
+      "Select your device platform below.",
+      "Follow the quick 1-click download or hostname setup step.",
+      "Tap 'Check it worked' to verify that Safe DNS is actively filtering.",
+    ],
+    limit: "Safe DNS blocks threats by domain name. It does not inspect the contents of encrypted messages.",
+  });
+
+  const diagram = diagramDns();
+
+  root.append(header, resolverCard, tabContainer, contentArea, intro, diagram);
   return root;
 }
 
