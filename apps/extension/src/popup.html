@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>NXTL Shield</title>
+    <title>Shield</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -23,6 +23,8 @@
         --good-bg: rgba(46, 202, 127, 0.12);
         --warn: #e6c27a;
         --warn-bg: rgba(230, 194, 122, 0.12);
+        --danger: #ff3d5a;
+        --danger-bg: rgba(255, 61, 90, 0.12);
       }
       @media (prefers-color-scheme: light) {
         :root {
@@ -60,39 +62,99 @@
         align-items: center;
         gap: 8px;
         font-weight: 800;
-        font-size: 16px;
+        font-size: 17px;
         letter-spacing: -0.02em;
+        color: var(--text);
       }
-      .brand-badge {
-        background: var(--gradient);
-        color: #fff;
-        padding: 2px 7px;
-        border-radius: 2px;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: none;
+      .brand-lockup svg {
+        flex-shrink: 0;
       }
       .engine-box {
         background: var(--card);
         border: 1px solid var(--line);
-        border-radius: 4px;
+        border-radius: 2px;
         padding: 12px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
         font-size: 13px;
         font-weight: 600;
         color: var(--text);
         line-height: 1.4;
       }
+      .dns-card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 12px;
+        margin-bottom: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .dns-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .dns-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--muted-soft);
+      }
+      .badge-dot.on { background-color: var(--good); }
+      .badge-dot.off { background-color: var(--muted-soft); }
+      .badge-dot.warn { background-color: var(--warn); }
+      .badge-dot.danger { background-color: var(--danger); }
+      .btn-setup {
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        min-height: 48px;
+        padding: 0 14px;
+        border-radius: 2px;
+        border: 1px solid var(--line-strong);
+        background: var(--raised);
+        color: var(--text);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        width: 100%;
+        transition: background 0.15s;
+      }
+      .btn-setup:hover {
+        background: var(--card-hover);
+      }
+      .btn-setup:focus-visible {
+        outline: 3px solid #ff3d5a;
+        outline-offset: 2px;
+      }
       .toggles-list {
         display: flex;
         flex-direction: column;
         gap: 8px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
       }
       .toggle-item {
         background: var(--card);
         border: 1px solid var(--line);
-        border-radius: 4px;
+        border-radius: 2px;
         padding: 10px 12px;
         display: flex;
         align-items: center;
@@ -115,9 +177,6 @@
         font-weight: 600;
         font-size: 13px;
         color: var(--text);
-        display: flex;
-        align-items: center;
-        gap: 6px;
       }
       .toggle-desc {
         font-size: 11px;
@@ -168,7 +227,7 @@
       }
       .location-box {
         background: var(--raised);
-        border-radius: 4px;
+        border-radius: 2px;
         padding: 8px 12px;
         margin-bottom: 12px;
         font-size: 11px;
@@ -190,6 +249,10 @@
         background: var(--raised);
         color: var(--text);
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
         transition: background 0.15s, transform 0.1s;
       }
       button:hover {
@@ -211,24 +274,149 @@
         font-size: 11px;
         color: var(--muted-soft);
         text-align: center;
-        margin: 8px 0 0;
+        margin: 6px 0 16px;
         line-height: 1.4;
+      }
+      .tool-card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 12px;
+        margin-bottom: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .tool-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .input-group {
+        display: flex;
+        gap: 6px;
+      }
+      input[type="text"], textarea {
+        font-family: inherit;
+        font-size: 13px;
+        padding: 10px 12px;
+        min-height: 48px;
+        border-radius: 2px;
+        border: 1px solid var(--line-strong);
+        background: var(--raised);
+        color: var(--text);
+        width: 100%;
+        box-sizing: border-box;
+      }
+      input[type="text"]:focus-visible, textarea:focus-visible {
+        outline: 3px solid #ff3d5a;
+        outline-offset: 1px;
+      }
+      textarea {
+        resize: vertical;
+        min-height: 60px;
+        line-height: 1.4;
+      }
+      .btn-compact {
+        flex: 0 0 auto;
+        padding: 0 14px;
+        min-height: 48px;
+      }
+      .result-banner {
+        padding: 10px 12px;
+        border-radius: 2px;
+        border: 1px solid var(--line);
+        background: var(--raised);
+        font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .result-banner.danger {
+        border-color: var(--danger);
+        background: var(--danger-bg);
+      }
+      .result-banner.warning {
+        border-color: var(--warn);
+        background: var(--warn-bg);
+      }
+      .result-banner.ok {
+        border-color: var(--good);
+        background: var(--good-bg);
+      }
+      .ready-line {
+        font-size: 12px;
+        color: var(--text);
+        font-weight: 600;
+        margin: 0;
+      }
+      .tools-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 14px;
+        margin-bottom: 14px;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+      .tools-heading {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted-soft);
+        margin-bottom: 4px;
+      }
+      .tool-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 44px;
+        padding: 0 8px;
+        border-radius: 2px;
+        color: var(--text);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+        transition: background 0.15s;
+      }
+      .tool-link:hover {
+        background: var(--card-hover);
+        color: var(--accent-coral);
+      }
+      .tool-link:focus-visible {
+        outline: 3px solid #ff3d5a;
+        outline-offset: 1px;
+      }
+      .tool-link svg {
+        color: var(--muted);
       }
     </style>
   </head>
   <body>
     <div class="header">
       <div class="brand-lockup">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff3d5a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <path d="m9 12 2 2 4-4"/>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M4 4L20 20M20 4L4 20" stroke="#ff3d5a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>NXTL</span>
-        <span class="brand-badge">Shield</span>
+        <span>Shield</span>
       </div>
     </div>
 
     <div class="engine-box" id="engine">Shield</div>
+
+    <div class="dns-card">
+      <div class="dns-row">
+        <div class="dns-info">
+          <span>Safe DNS</span>
+          <span class="status-badge" id="dns-badge">
+            <span class="badge-dot" id="dns-dot"></span>
+            <span id="dns-text">Checking...</span>
+          </span>
+        </div>
+      </div>
+      <a href="https://nxtlsim.github.io/nxtl-shield/#/setup" target="_blank" class="btn-setup" id="dns-setup-btn" hidden>Set up Safe DNS</a>
+    </div>
 
     <div class="toggles-list">
       <label class="toggle-item" for="blocking">
@@ -281,10 +469,67 @@
     <div class="btn-row">
       <button id="pause" type="button">Pause on this site</button>
       <button id="resume" type="button" hidden>Resume</button>
-      <button id="open-shield" type="button" class="primary">Open Shield</button>
+    </div>
+    <p class="footer-note">Pause stops protection on this site for 5 minutes.</p>
+
+    <!-- Quick check tool -->
+    <div class="tool-card">
+      <span class="tool-label">Check a link or message</span>
+      <div class="input-group">
+        <input id="quick-check-input" type="text" placeholder="e.g. nxtlsim.com or paste text" />
+        <button id="quick-check-btn" type="button" class="btn-compact primary">Check</button>
+      </div>
+      <div id="quick-check-result" class="result-banner" hidden>
+        <div class="status-badge">
+          <span class="badge-dot" id="check-dot"></span>
+          <strong id="check-badge-text"></strong>
+        </div>
+        <span id="check-summary-text"></span>
+      </div>
     </div>
 
-    <p class="footer-note">Pause stops protection on this site for 5 minutes.</p>
+    <!-- Private message tool -->
+    <div class="tool-card">
+      <span class="tool-label">Private message</span>
+      <textarea id="private-msg-input" placeholder="Type a message that opens only once..."></textarea>
+      <button id="private-msg-btn" type="button" class="primary">Create a private link</button>
+      <div id="private-msg-result" class="result-banner" hidden>
+        <p class="ready-line">This message is gone after you read it.</p>
+        <div class="input-group" style="margin-top: 6px;">
+          <input id="private-msg-link" type="text" readonly />
+          <button id="copy-msg-btn" type="button" class="btn-compact">Copy</button>
+        </div>
+        <span id="copy-status" style="font-size: 11px; color: var(--good); margin-top: 2px;" hidden>Copied to clipboard.</span>
+      </div>
+    </div>
+
+    <!-- Tools list links -->
+    <div class="tools-menu">
+      <div class="tools-heading">Tools</div>
+      <a href="https://nxtlsim.github.io/nxtl-shield/#/check" target="_blank" class="tool-link">
+        <span>Check a link</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+      <a href="https://nxtlsim.github.io/nxtl-shield/#/messages" target="_blank" class="tool-link">
+        <span>Private messages</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+      <a href="https://nxtlsim.github.io/nxtl-shield/#/setup" target="_blank" class="tool-link">
+        <span>Safe DNS</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+      <a href="https://nxtlsim.github.io/nxtl-shield/#/connection" target="_blank" class="tool-link">
+        <span>Your connection</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+      <a href="https://nxtlsim.github.io/nxtl-shield/#/password" target="_blank" class="tool-link">
+        <span>Password generator</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+    </div>
+
+    <button id="open-shield" type="button" class="primary" style="width: 100%;">Open Shield</button>
+
     <script type="module" src="popup.js"></script>
   </body>
 </html>

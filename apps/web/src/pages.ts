@@ -1350,6 +1350,14 @@ function linkForm() {
     }
   });
 
+  const qIdx = location.hash.indexOf("?");
+  const searchParams = new URLSearchParams(qIdx !== -1 ? location.hash.slice(qIdx + 1) : "");
+  const initialUrl = searchParams.get("url") || searchParams.get("link");
+  if (initialUrl) {
+    input.value = initialUrl;
+    setTimeout(() => { void run(); }, 0);
+  }
+
   return h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
     field("Link to check", input),
     h("div", { class: "row" }, [button, pasteBtn]),
