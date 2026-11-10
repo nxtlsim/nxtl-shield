@@ -11,7 +11,7 @@ Shield runs in your browser. A few protections need the extension or a setting y
 | Link cleaner | Works in the browser | Leaves signed, login, and payment links unchanged. |
 | Password tools | Works in the browser | Generated on the device. Not stored. |
 | Breached-password check | Works in the browser | Optional. Sends only a short, incomplete fingerprint. The password itself is not sent. |
-| Secure Share | Works in the browser | Encrypts only what you enter here. Uses OpenPGP.js 6.3.2, AES-256-OCB, and Argon2. |
+| Private messages & files | Works in the browser | Encrypts only what you enter here. Uses OpenPGP.js 6.3.2, AES-256-OCB, and Argon2. |
 | Connection Doctor | Works in the browser | Browser signals and optional lookups. It cannot prove which SIM is active. |
 | NXTL eSIM guidance | Works in the browser | Optional paid connection. Live plan prices are fetched only when you look them up. |
 | Reports, theme, install | Works in the browser | History stays on the device and is redacted. |

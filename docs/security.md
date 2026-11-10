@@ -2,9 +2,9 @@
 
 ## What Shield does
 
-Checks and Secure Share run locally. The API repeats the same checks and does not fetch the address you submit.
+Checks and Private messages & files run locally. The API repeats the same checks and does not fetch the address you submit.
 
-Secure Share uses OpenPGP.js 6.3.2 with SEIPDv2, AES-256-OCB, and Argon2. The password is not attached to the encrypted result. Tell the other person the password through a different channel.
+Private messages & files uses OpenPGP.js 6.3.2 with SEIPDv2, AES-256-OCB, and Argon2. The password is not attached to the encrypted result. Tell the other person the password through a different channel.
 
 ## Limits
 

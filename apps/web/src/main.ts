@@ -25,6 +25,7 @@ import {
   pageSettings,
   pageSetup,
   pagePrivacy,
+  pageShareApp,
 } from "./pages";
 import { pageShare } from "./share-page";
 
@@ -92,7 +93,7 @@ const DESKTOP_NAV = [
   ["", "Home"],
   ["check", "Check"],
   ["setup", "Protect"],
-  ["share", "Share"],
+  ["messages", "Messages"],
 ];
 
 const ALL_NAV = [
@@ -102,13 +103,14 @@ const ALL_NAV = [
   ["ad-blocker", "Ad & tracker blocker", "ad-block"],
   ["extension", "Browser extension", "extension"],
   ["password", "Password generator", "password"],
-  ["share", "Secure Share", "share-lock"],
+  ["messages", "Private messages & files", "share-lock"],
   ["clean", "Link cleaner", "clean"],
   ["connection", "Your connection", "connection"],
   ["location", "Location privacy", "location"],
   ["phone-protection", "Protect phone", "phone"],
   ["install", "Install app", "install"],
   ["esim", "NXTL eSIM", "esim"],
+  ["share-app", "Share Shield", "shield"],
   ["privacy", "How it works & privacy", "info"],
   ["settings", "Reports", "file"],
 ] as const;
@@ -188,14 +190,16 @@ async function render() {
   const footer = h("footer", { class: "site" }, [
     h("div", { class: "wrap" }, [
       h("p", {}, [
-        "Free, open-source security tools by NXTL eSIM. NXTL eSIM is an optional paid connection and does not unlock these tools.",
+        "All tools are free. NXTL eSIM is our travel data service.",
       ]),
       h("p", {}, [
-        h("a", { href: "https://github.com/nxtlsim/nxtl-shield", target: "_blank", rel: "noreferrer" }, ["Source Code (GPLv3)"]),
+        h("a", { href: "https://github.com/nxtlsim/nxtl-shield", target: "_blank", rel: "noreferrer", "aria-label": "Source code (GPLv3)" }, ["Source code"]),
         " · ",
         h("a", { href: "#/privacy" }, ["How it works & privacy"]),
         " · ",
         h("a", { href: "#/setup" }, ["Safe DNS"]),
+        " · ",
+        h("a", { href: "#/share-app" }, ["Share Shield"]),
         " · ",
         h("a", { href: "#/settings" }, ["Reports"]),
       ]),
@@ -238,14 +242,24 @@ function themeLabel(value: string): string {
 }
 
 function themeControl() {
-  const current = localStorage.getItem("nxtl-shield-theme") || "system";
-  const icon = createIcon(current === "dark" ? "moon" : current === "light" ? "sun" : "auto", 16);
+  let current = localStorage.getItem("nxtl-shield-theme") || "system";
 
-  const wrap = h("div", { class: "theme-picker-wrap" }, [icon]);
+  let currentIcon = createIcon(current === "dark" ? "moon" : current === "light" ? "sun" : "auto", 16);
+  const triggerText = h("span", { class: "theme-menu-label" }, [themeLabel(current)]);
+
+  const trigger = h("button", {
+    type: "button",
+    class: "theme-menu-trigger",
+    "aria-haspopup": "listbox",
+    "aria-expanded": "false",
+    "aria-label": `Theme: ${themeLabel(current)}`,
+  }, [currentIcon, triggerText]);
 
   const select = h("select", {
+    class: "theme-menu-native",
     "data-testid": "theme-toggle",
-    "aria-label": `Theme: ${themeLabel(current)}`,
+    "aria-hidden": "true",
+    tabindex: "-1",
   }) as HTMLSelectElement;
 
   for (const [value, label] of [
@@ -258,18 +272,128 @@ function themeControl() {
     select.append(opt);
   }
 
-  function syncTheme(val: string) {
+  const dropdown = h("div", {
+    class: "theme-menu-dropdown",
+    role: "listbox",
+    "aria-label": "Select theme",
+  });
+  dropdown.hidden = true;
+
+  const options: { val: string; label: string; icon: IconName; btn: HTMLButtonElement }[] = [];
+
+  function applyAndSync(val: string) {
+    current = val;
     applyTheme(val);
-    select.setAttribute("aria-label", `Theme: ${themeLabel(val)}`);
+    trigger.setAttribute("aria-label", `Theme: ${themeLabel(val)}`);
+    triggerText.textContent = themeLabel(val);
     const newIcon = createIcon(val === "dark" ? "moon" : val === "light" ? "sun" : "auto", 16);
-    wrap.firstElementChild?.replaceWith(newIcon);
+    currentIcon.replaceWith(newIcon);
+    currentIcon = newIcon;
+
+    select.value = val;
+    for (const opt of options) {
+      const isSel = opt.val === val;
+      opt.btn.setAttribute("aria-selected", isSel ? "true" : "false");
+      const checkEl = opt.btn.querySelector(".theme-check");
+      if (checkEl) checkEl.replaceChildren(isSel ? createIcon("check", 14) : "");
+    }
   }
 
   select.addEventListener("change", () => {
-    syncTheme(select.value);
+    applyAndSync(select.value);
   });
 
-  wrap.append(select);
+  let isOpen = false;
+
+  function openDropdown() {
+    isOpen = true;
+    dropdown.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    const active = options.find((o) => o.val === current)?.btn || options[0]?.btn;
+    active?.focus();
+  }
+
+  function closeDropdown() {
+    isOpen = false;
+    dropdown.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+  }
+
+  trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (isOpen) closeDropdown();
+    else openDropdown();
+  });
+
+  trigger.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openDropdown();
+    }
+  });
+
+  const optDefs: [string, string, IconName][] = [
+    ["system", "System", "auto"],
+    ["light", "Light", "sun"],
+    ["dark", "Dark", "moon"],
+  ];
+
+  for (const [val, label, iconName] of optDefs) {
+    const isSel = val === current;
+    const checkEl = h("span", { class: "theme-check" }, [isSel ? createIcon("check", 14) : ""]);
+    const btn = h("button", {
+      type: "button",
+      class: "theme-menu-item",
+      role: "option",
+      "aria-selected": isSel ? "true" : "false",
+    }, [
+      h("span", { class: "theme-item-left" }, [createIcon(iconName, 14), label]),
+      checkEl,
+    ]) as HTMLButtonElement;
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      applyAndSync(val);
+      closeDropdown();
+      trigger.focus();
+    });
+
+    btn.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeDropdown();
+        trigger.focus();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const idx = options.findIndex((o) => o.btn === btn);
+        const next = (idx + 1) % options.length;
+        options[next].btn.focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const idx = options.findIndex((o) => o.btn === btn);
+        const prev = (idx - 1 + options.length) % options.length;
+        options[prev].btn.focus();
+      }
+    });
+
+    options.push({ val, label, icon: iconName, btn });
+    dropdown.append(btn);
+  }
+
+  document.addEventListener("click", (e) => {
+    if (isOpen && !wrap.contains(e.target as Node)) {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isOpen) {
+      closeDropdown();
+      trigger.focus();
+    }
+  });
+
+  const wrap = h("div", { class: "theme-menu-wrap" }, [trigger, dropdown, select]);
   return wrap;
 }
 
@@ -278,7 +402,8 @@ function desktopNav(currentPath: string) {
   for (const [id, label] of DESKTOP_NAV) {
     const href = id ? `#/${id}` : "#/";
     const anchor = h("a", { href }, [label]);
-    if (currentPath === id) anchor.setAttribute("aria-current", "page");
+    const isCurrent = id ? (currentPath === id || currentPath.startsWith(`${id}/`)) : currentPath === "";
+    if (isCurrent) anchor.setAttribute("aria-current", "page");
     el.append(anchor);
   }
 
@@ -306,11 +431,11 @@ function mobileBottomNav(currentPath: string) {
     { id: "", label: "Home", icon: "shield" },
     { id: "check", label: "Check", icon: "search" },
     { id: "setup", label: "Protect", icon: "phone" },
-    { id: "share", label: "Share", icon: "share-lock" },
+    { id: "messages", label: "Messages", icon: "share-lock" },
   ];
 
   for (const tab of tabs) {
-    const isCurrent = currentPath === tab.id;
+    const isCurrent = tab.id ? (currentPath === tab.id || currentPath.startsWith(`${tab.id}/`)) : currentPath === "";
     const item = h("a", {
       class: "bottom-tab",
       href: tab.id ? `#/${tab.id}` : "#/",
@@ -384,7 +509,8 @@ function openFullNavDialog(currentPath: string) {
 }
 
 async function pageFor(path: string, tab: string) {
-  switch (path) {
+  const root = path.split("/")[0];
+  switch (root) {
     case "ad-blocker":
     case "adblock":
       return pageAdBlocker();
@@ -395,7 +521,12 @@ async function pageFor(path: string, tab: string) {
       return pageExtension();
     case "check":
       return pageCheck(tab);
+    case "messages":
+      return pageShare();
     case "share":
+      if (!path.startsWith("share/open/")) {
+        history.replaceState({ shield: true }, "", hashUrl("#/messages"));
+      }
       return pageShare();
     case "clean":
       return pageClean();
@@ -407,6 +538,8 @@ async function pageFor(path: string, tab: string) {
       return pageLocation();
     case "esim":
       return pageEsim();
+    case "share-app":
+      return pageShareApp();
     case "setup":
       return pageSetup();
     case "status":

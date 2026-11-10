@@ -111,3 +111,91 @@ test("file dropzone layout, hidden file input, and clean password hint", async (
   expect(fullHtml).not.toContain("Signal");
   expect(fullHtml).not.toContain("WhatsApp");
 });
+
+test("private read-once link creates, opens once, clears key from URL, and second open shows expired", async ({ page, context }) => {
+  await page.goto("./#/messages");
+
+  // Fill in confidential message
+  const input = page.getByTestId("share-input");
+  await input.fill("Top secret meeting at dawn");
+
+  // Create private link
+  const createBtn = page.getByRole("button", { name: "Create a private link" });
+  await createBtn.click();
+
+  // Wait for link ready
+  await expect(page.getByRole("heading", { name: "Private link ready" })).toBeVisible({ timeout: 15_000 });
+  const linkInput = page.locator(".card input.mono");
+  const linkUrl = await linkInput.inputValue();
+  expect(linkUrl).toContain("#/messages/open/");
+  expect(linkUrl).toContain("&k=");
+
+  // Open the link in a second page
+  const recipientPage = await context.newPage();
+  await recipientPage.goto(linkUrl);
+
+  await expect(recipientPage.getByRole("heading", { name: "You have a private message" })).toBeVisible();
+  const tapBtn = recipientPage.getByRole("button", { name: "Tap to open" });
+  await expect(tapBtn).toBeVisible();
+
+  // Tap to open
+  await tapBtn.click();
+
+  // Verify message is shown
+  await expect(recipientPage.getByRole("heading", { name: "Private message" })).toBeVisible({ timeout: 15_000 });
+  await expect(recipientPage.locator("textarea.mono")).toHaveValue("Top secret meeting at dawn");
+  await expect(recipientPage.locator(".lede")).toHaveText("This message is gone after you read it.");
+
+  // Address bar cleared of key/salt via replaceState
+  expect(recipientPage.url()).not.toContain("&k=");
+  expect(recipientPage.url()).toMatch(/#\/messages$/);
+
+  // Opening the same original link URL in a third tab returns already opened or expired
+  const thirdPage = await context.newPage();
+  await thirdPage.goto(linkUrl);
+  await expect(thirdPage.getByText("This message was already opened or has expired.")).toBeVisible({ timeout: 15_000 });
+
+  await recipientPage.close();
+  await thirdPage.close();
+});
+
+test("password-protected private link asks for the password before open and omits the key from the URL", async ({ page, context }) => {
+  await page.goto("./#/messages");
+  await page.getByTestId("share-input").fill("Password-locked hello");
+  await page.getByLabel("Also require a password").check();
+  await page.getByPlaceholder("Extra secret password...").fill("correct-horse");
+  await page.getByRole("button", { name: "Create a private link" }).click();
+  await expect(page.getByRole("heading", { name: "Private link ready" })).toBeVisible({ timeout: 20_000 });
+  const linkUrl = await page.locator(".card input.mono").inputValue();
+  expect(linkUrl).toContain("#/messages/open/");
+  expect(linkUrl).toContain("p=1");
+  expect(linkUrl).toContain("&s=");
+  expect(linkUrl).not.toContain("&k=");
+
+  const recipientPage = await context.newPage();
+  await recipientPage.goto(linkUrl);
+  await expect(recipientPage.getByRole("heading", { name: "You have a private message" })).toBeVisible();
+  await expect(recipientPage.getByPlaceholder("Enter the message password...")).toBeVisible();
+
+  const requests: string[] = [];
+  recipientPage.on("request", (req) => {
+    if (req.method() === "POST" && req.url().includes("/open")) requests.push(req.url());
+  });
+
+  await recipientPage.getByRole("button", { name: "Tap to open" }).click();
+  await expect(recipientPage.getByText("Enter the password first.")).toBeVisible();
+  expect(requests).toHaveLength(0);
+
+  await recipientPage.getByPlaceholder("Enter the message password...").fill("wrong-password");
+  await recipientPage.getByRole("button", { name: "Tap to open" }).click();
+  await expect(recipientPage.getByText("That password does not match.")).toBeVisible({ timeout: 20_000 });
+  expect(requests).toHaveLength(1);
+
+  await recipientPage.getByPlaceholder("Enter the message password...").fill("correct-horse");
+  await recipientPage.getByRole("button", { name: "Tap to open" }).click();
+  await expect(recipientPage.locator("textarea.mono")).toHaveValue("Password-locked hello", { timeout: 20_000 });
+  expect(recipientPage.url()).not.toContain("&s=");
+  expect(recipientPage.url()).toMatch(/#\/messages$/);
+  await recipientPage.close();
+});
+

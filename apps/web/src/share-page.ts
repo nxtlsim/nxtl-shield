@@ -1,10 +1,19 @@
+import { QRCodeWriter, BarcodeFormat } from "@zxing/library";
 import { generatePassword } from "@nxtl/core";
 import { field, h, introBlock, faqSection } from "./dom";
 import { createIcon } from "./icons";
 import { diagramShare } from "./diagrams";
+import { copyToClipboard } from "./pages";
 import type { ShareJob, ShareOk } from "./share-crypto";
 
+const RELAY_ORIGIN = "https://nxtl-shield-relay.dagys-mantas.workers.dev";
 const LIMIT = 25 * 1024 * 1024;
+const MAX_CIPHERTEXT_BYTES = 64 * 1024;
+
+function toBuffer(arr: Uint8Array): ArrayBuffer {
+  return arr.buffer.slice(arr.byteOffset, arr.byteOffset + arr.byteLength) as ArrayBuffer;
+}
+
 let worker: Worker | null = null;
 let seq = 0;
 
@@ -28,7 +37,69 @@ function run(job: ShareJob): Promise<ShareOk> {
   });
 }
 
-async function copyText(value: string, status: HTMLElement, box?: HTMLTextAreaElement) {
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function fromBase64(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function toBase64Url(bytes: Uint8Array): string {
+  return toBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(str: string): Uint8Array {
+  let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+  return fromBase64(b64);
+}
+
+
+async function relayFetch(path: string, init: RequestInit = {}, timeoutMs = 20000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(`${RELAY_ORIGIN}${path}`, {
+      ...init,
+      credentials: "omit",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+
+function generateQrSvg(text: string): string {
+  try {
+    const writer = new QRCodeWriter();
+    const matrix = writer.encode(text, BarcodeFormat.QR_CODE, 0, 0, new Map());
+    const size = matrix.getWidth();
+    let path = "";
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        if (matrix.get(x, y)) {
+          path += `M${x},${y}h1v1h-1z `;
+        }
+      }
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="200" height="200" fill="currentColor" role="img" aria-label="QR code"><path d="${path}"/></svg>`;
+  } catch {
+    return "";
+  }
+}
+
+async function copyText(value: string, status: HTMLElement, box?: HTMLTextAreaElement | HTMLInputElement) {
   try {
     await navigator.clipboard.writeText(value);
     status.textContent = "Copied to clipboard.";
@@ -49,13 +120,11 @@ async function shareOut(status: HTMLElement, title: string, text?: string, file?
       const blob = new File([new Uint8Array(file.bytes)], file.name, { type: "application/octet-stream" });
       if (navigator.canShare({ files: [blob] })) {
         await navigator.share({ files: [blob], title });
-        status.textContent = "Shared successfully.";
         return;
       }
     }
     if (text) {
       await navigator.share({ title, text });
-      status.textContent = "Shared successfully.";
       return;
     }
     status.textContent = "This browser cannot share that file type. Use Download instead.";
@@ -84,6 +153,11 @@ async function digest(bytes: Uint8Array): Promise<string> {
 }
 
 export function pageShare(): HTMLElement {
+  const rawHash = location.hash.replace(/^#\/?/, "");
+  if (rawHash.startsWith("messages/open/") || rawHash.startsWith("share/open/")) {
+    return pageOpenPrivateMessage();
+  }
+
   let mode: "encrypt" | "decrypt" = "encrypt";
   let file: { name: string; bytes: Uint8Array } | null = null;
   let output: ShareOk | null = null;
@@ -104,9 +178,9 @@ export function pageShare(): HTMLElement {
   });
 
   const header = h("div", {}, [
-    h("h1", {}, ["Secure Share"]),
+    h("h1", {}, ["Private messages & files"]),
     h("p", { class: "lede" }, [
-      "Encrypt confidential text and files directly in your browser. All encryption happens locally on this device before anything leaves your hands.",
+      "Encrypt a message or file on this device with a password you choose. Nothing is uploaded. Send the password through a different channel.",
     ]),
   ]);
 
@@ -426,7 +500,7 @@ export function pageShare(): HTMLElement {
   setMode("encrypt");
 
   const advanced = h("details", { class: "advanced-box" }, [
-    h("summary", {}, ["Advanced encryption settings"]),
+    h("summary", {}, ["Advanced settings"]),
     h("label", { class: "row", style: "margin-top: var(--sp-3);" }, [
       armor,
       " Armored text (easier to copy). Uncheck for raw binary file.",
@@ -435,6 +509,9 @@ export function pageShare(): HTMLElement {
       "Messages and files are encrypted on this device with a password you choose. The password is never sent across the internet.",
     ]),
   ]);
+
+  // Private Link Section
+  const privateLinkCard = createPrivateLinkCard(input);
 
   const formCard = h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" }, [
     tabs,
@@ -468,7 +545,7 @@ export function pageShare(): HTMLElement {
     },
     {
       q: "Does NXTL see my password or messages?",
-      a: "Never. Encryption and decryption run entirely in this browser on your device. Nothing is sent to any server.",
+      a: "No. A password-protected file or message stays on this device. A private link sends only the locked text, never the key or password, and that locked text is deleted when it is opened.",
     },
     {
       q: "Can I open these files on other computers?",
@@ -476,6 +553,438 @@ export function pageShare(): HTMLElement {
     },
   ]);
 
-  root.append(header, intro, diagramShare(), formCard, faqs);
+  root.append(header, formCard, privateLinkCard, intro, diagramShare(), faqs);
   return root;
+}
+
+// ---------------------------------------------------------------------
+// Private Read-Once Link Creation Card
+// ---------------------------------------------------------------------
+function createPrivateLinkCard(textInput: HTMLTextAreaElement): HTMLElement {
+  const card = h("section", { class: "card", style: "margin-top: var(--sp-4); display: grid; gap: var(--sp-3);" });
+  const title = h("h2", { style: "margin: 0; font-size: 1.25rem;" }, ["Send a read-once private link"]);
+  const lede = h("p", { class: "muted", style: "margin: 0;" }, [
+    "Lock a text message so it can only be opened once. This message is gone after you read it.",
+  ]);
+
+  const ttlSelect = h("select", { style: "width: auto; min-width: 140px;" }, [
+    h("option", { value: "86400" }, ["1 day"]),
+    h("option", { value: "3600" }, ["1 hour"]),
+    h("option", { value: "604800" }, ["7 days"]),
+  ]) as HTMLSelectElement;
+
+  const ttlLabel = h("label", { class: "field", style: "display: flex; align-items: center; gap: var(--sp-3); margin-bottom: 0;" }, [
+    h("span", { style: "font-weight: 600;" }, ["Delete after"]),
+    ttlSelect,
+  ]);
+
+  const passwordCheck = h("input", { type: "checkbox" }) as HTMLInputElement;
+  const passwordField = h("input", {
+    type: "password",
+    placeholder: "Extra secret password...",
+    style: "display: none; margin-top: var(--sp-2);",
+    autocomplete: "off",
+  }) as HTMLInputElement;
+
+  passwordCheck.addEventListener("change", () => {
+    passwordField.style.display = passwordCheck.checked ? "block" : "none";
+    if (passwordCheck.checked) passwordField.focus();
+  });
+
+  const passwordLabel = h("div", {}, [
+    h("label", { class: "row", style: "cursor: pointer; user-select: none;" }, [
+      passwordCheck,
+      " Also require a password",
+    ]),
+    passwordField,
+  ]);
+
+  const status = h("p", { class: "banner alert", style: "display: none; margin: 0;" });
+  const resultContainer = h("div", { style: "display: none; margin-top: var(--sp-3);" });
+
+  const createBtn = h("button", {
+    type: "button",
+    class: "btn primary",
+    style: "align-self: flex-start;",
+  }, [
+    createIcon("share-lock", 18),
+    "Create a private link",
+  ]);
+
+  createBtn.addEventListener("click", async () => {
+    const rawText = textInput.value.trim();
+    if (!rawText) {
+      status.textContent = "Add a message first.";
+      status.style.display = "block";
+      return;
+    }
+
+    const usePassword = passwordCheck.checked;
+    const pwValue = passwordField.value;
+    if (usePassword && !pwValue) {
+      status.textContent = "Enter a password first.";
+      status.style.display = "block";
+      return;
+    }
+
+    status.style.display = "none";
+    createBtn.disabled = true;
+
+    try {
+      const enc = new TextEncoder();
+      const rawMsgKey = crypto.getRandomValues(new Uint8Array(32));
+      const msgKey = await crypto.subtle.importKey("raw", rawMsgKey, "AES-GCM", false, ["encrypt"]);
+      const msgIv = crypto.getRandomValues(new Uint8Array(12));
+      const innerCipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: msgIv }, msgKey, enc.encode(rawText));
+
+      let ciphertextB64 = "";
+      let fragmentParams = "";
+
+      if (usePassword) {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const baseKey = await crypto.subtle.importKey("raw", enc.encode(pwValue), "PBKDF2", false, ["deriveKey"]);
+        const derivedKey = await crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt, iterations: 600000, hash: "SHA-256" },
+          baseKey,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt"]
+        );
+
+        // Inner blob = message key || msgIv || innerCipher (the key stays out of the URL)
+        const innerBlob = new Uint8Array(32 + 12 + innerCipher.byteLength);
+        innerBlob.set(rawMsgKey, 0);
+        innerBlob.set(msgIv, 32);
+        innerBlob.set(new Uint8Array(innerCipher), 44);
+
+        const outerIv = crypto.getRandomValues(new Uint8Array(12));
+        const outerCipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: outerIv }, derivedKey, innerBlob);
+        const outerBlob = new Uint8Array(12 + outerCipher.byteLength);
+        outerBlob.set(outerIv, 0);
+        outerBlob.set(new Uint8Array(outerCipher), 12);
+
+        ciphertextB64 = toBase64(outerBlob);
+        fragmentParams = `p=1&s=${toBase64Url(salt)}`;
+      } else {
+        const blob = new Uint8Array(12 + innerCipher.byteLength);
+        blob.set(msgIv, 0);
+        blob.set(new Uint8Array(innerCipher), 12);
+        ciphertextB64 = toBase64(blob);
+        fragmentParams = `k=${toBase64Url(rawMsgKey)}`;
+      }
+
+      if (ciphertextB64.length > MAX_CIPHERTEXT_BYTES) {
+        status.textContent = "This message is too long for a link. Shorten it, or use a password and send the message another way.";
+        status.style.display = "block";
+        createBtn.disabled = false;
+        return;
+      }
+
+      const ttl = parseInt(ttlSelect.value, 10) || 86400;
+      const resp = await relayFetch("/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ciphertext: ciphertextB64,
+          ttl,
+          password: usePassword,
+        }),
+      });
+
+      if (!resp.ok) {
+        status.textContent = "Could not reach the message service. Try again in a moment.";
+        status.style.display = "block";
+        createBtn.disabled = false;
+        return;
+      }
+
+      const data = await resp.json() as { id: string };
+      const linkUrl = `${location.origin}${location.pathname}#/messages/open/${data.id}&${fragmentParams}`;
+
+      showLinkReady(resultContainer, linkUrl);
+      resultContainer.style.display = "block";
+    } catch {
+      status.textContent = "Could not reach the message service. Try again in a moment.";
+      status.style.display = "block";
+    } finally {
+      createBtn.disabled = false;
+    }
+  });
+
+  card.append(title, lede, ttlLabel, passwordLabel, createBtn, status, resultContainer);
+  return card;
+}
+
+function showLinkReady(container: HTMLElement, url: string) {
+  const resultHeading = h("h3", { style: "margin: 0 0 var(--sp-2); font-size: 1.15rem;" }, ["Private link ready"]);
+  const linkInput = h("input", {
+    type: "text",
+    readonly: "true",
+    value: url,
+    class: "mono",
+    style: "background: var(--raised);",
+  }) as HTMLInputElement;
+
+  const copyBtn = h("button", { type: "button", class: "btn primary" }, [
+    createIcon("copy", 18),
+    "Copy link",
+  ]);
+  copyBtn.addEventListener("click", async () => {
+    await copyToClipboard(url, copyBtn, [createIcon("copy", 18), "Copy link"], "Link copied.");
+  });
+
+  const actionsRow = h("div", { class: "row", style: "gap: var(--sp-2); margin-top: var(--sp-3);" }, [copyBtn]);
+
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    const shareBtn = h("button", { type: "button", class: "btn" }, [
+      createIcon("external", 18),
+      "Share",
+    ]);
+    shareBtn.addEventListener("click", async () => {
+      try {
+        await navigator.share({
+          title: "NXTL Shield",
+          text: `A private message for you: ${url}`,
+          url,
+        });
+      } catch {
+        // User cancelled — stay quiet
+      }
+    });
+    actionsRow.append(shareBtn);
+  }
+
+  const qrContainer = h("div", { style: "display: none; margin-top: var(--sp-3); text-align: center;" });
+  const qrSvg = generateQrSvg(url);
+  qrContainer.innerHTML = `<div style="background: #ffffff; color: #0a0c12; padding: 16px; border-radius: 4px; display: inline-flex;">${qrSvg}</div>`;
+
+  const qrBtn = h("button", { type: "button", class: "btn ghost" }, [
+    createIcon("qr", 18),
+    "Show QR",
+  ]);
+  qrBtn.addEventListener("click", () => {
+    const visible = qrContainer.style.display !== "none";
+    qrContainer.style.display = visible ? "none" : "block";
+    qrBtn.replaceChildren(createIcon("qr", 18), visible ? "Show QR" : "Hide QR");
+  });
+  actionsRow.append(qrBtn);
+
+  const readyNote = h("p", { class: "muted-soft", style: "margin-top: var(--sp-3);" }, [
+    "This message is gone after you read it.",
+  ]);
+
+  container.replaceChildren(resultHeading, linkInput, actionsRow, qrContainer, readyNote);
+}
+
+// ---------------------------------------------------------------------
+// Recipient: Open Private Message Screen
+// ---------------------------------------------------------------------
+function pageOpenPrivateMessage(): HTMLElement {
+  const root = h("div", { class: "grid" });
+  const header = h("header", { class: "page-header" }, [
+    h("h1", {}, ["You have a private message"]),
+    h("p", { class: "lede" }, [
+      "This message is gone after you read it.",
+    ]),
+  ]);
+
+  const rawHash = location.hash.replace(/^#\/?/, "");
+  // Parse #/messages/open/<id>&params or #/share/open/<id>&params
+  const prefixMatch = rawHash.match(/^(?:messages|share)\/open\/([^&?]+)(?:[?&](.*))?$/);
+  if (!prefixMatch) {
+    return h("div", { class: "card" }, [
+      h("p", { class: "banner alert" }, ["Invalid private message link."]),
+    ]);
+  }
+
+  const messageId = prefixMatch[1];
+  const paramsStr = prefixMatch[2] || "";
+  const params = new URLSearchParams(paramsStr.replace(/&/g, "&"));
+
+  const keyB64Url = params.get("k");
+  const requiresPassword = params.get("p") === "1";
+  const saltB64Url = params.get("s");
+
+  const card = h("div", { class: "card", style: "display: grid; gap: var(--sp-4);" });
+  const statusBanner = h("div", { class: "banner alert", style: "display: none;" });
+
+  const passwordInput = h("input", {
+    type: "password",
+    placeholder: "Enter the message password...",
+    autocomplete: "off",
+  }) as HTMLInputElement;
+
+  if (requiresPassword) {
+    card.append(field("Password required", passwordInput, "The sender locked this with a password"));
+  }
+
+  const openBtn = h("button", {
+    type: "button",
+    class: "btn primary lg",
+    style: "justify-content: center;",
+  }, [
+    createIcon("eye", 20),
+    "Tap to open",
+  ]);
+
+  card.append(openBtn, statusBanner);
+  root.append(header, card);
+
+  // Check status proactively
+  relayFetch(`/v1/messages/${encodeURIComponent(messageId)}/status`, { method: "GET" })
+    .then((resp) => {
+      if (resp.status === 404) {
+        showAlreadyOpenedOrExpired(card, header);
+      }
+    })
+    .catch(() => {
+      // Network check error; let user tap to retry
+    });
+
+  let cachedCiphertextB64: string | null = null;
+
+  openBtn.addEventListener("click", async () => {
+    statusBanner.style.display = "none";
+    if (requiresPassword && !passwordInput.value) {
+      statusBanner.textContent = "Enter the password first.";
+      statusBanner.style.display = "block";
+      return;
+    }
+
+    openBtn.disabled = true;
+
+    try {
+      let ciphertextB64 = cachedCiphertextB64;
+      if (!ciphertextB64) {
+        const resp = await relayFetch(`/v1/messages/${encodeURIComponent(messageId)}/open`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (resp.status === 404) {
+          showAlreadyOpenedOrExpired(card, header);
+          return;
+        }
+
+        if (!resp.ok) {
+          statusBanner.textContent = "Could not reach the message service. Try again in a moment.";
+          statusBanner.style.display = "block";
+          openBtn.disabled = false;
+          return;
+        }
+
+        const data = await resp.json() as { ciphertext: string; password: boolean };
+        ciphertextB64 = data.ciphertext;
+        cachedCiphertextB64 = data.ciphertext;
+      }
+
+      // Decrypt
+      let plaintext = "";
+      const enc = new TextEncoder();
+      const dec = new TextDecoder();
+
+      if (requiresPassword) {
+        const pwValue = passwordInput.value;
+        const salt = saltB64Url ? fromBase64Url(saltB64Url) : new Uint8Array(16);
+        const baseKey = await crypto.subtle.importKey("raw", enc.encode(pwValue), "PBKDF2", false, ["deriveKey"]);
+        const derivedKey = await crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt: toBuffer(salt), iterations: 600000, hash: "SHA-256" },
+          baseKey,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["decrypt"]
+        );
+
+        const outerBlob = fromBase64(ciphertextB64);
+        const outerIv = outerBlob.subarray(0, 12);
+        const outerCipher = outerBlob.subarray(12);
+
+        let innerBlobArr: Uint8Array;
+        try {
+          const innerBlob = await crypto.subtle.decrypt({ name: "AES-GCM", iv: toBuffer(outerIv) }, derivedKey, toBuffer(outerCipher));
+          innerBlobArr = new Uint8Array(innerBlob);
+        } catch {
+          statusBanner.textContent = "That password does not match.";
+          statusBanner.style.display = "block";
+          openBtn.disabled = false;
+          return;
+        }
+
+        const rawMsgKey = innerBlobArr.subarray(0, 32);
+        const msgIv = innerBlobArr.subarray(32, 44);
+        const msgCipher = innerBlobArr.subarray(44);
+        const msgKey = await crypto.subtle.importKey("raw", toBuffer(rawMsgKey), "AES-GCM", false, ["decrypt"]);
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: toBuffer(msgIv) }, msgKey, toBuffer(msgCipher));
+        plaintext = dec.decode(decrypted);
+      } else {
+        const blob = fromBase64(ciphertextB64);
+        const iv = blob.subarray(0, 12);
+        const cipher = blob.subarray(12);
+        const rawKey = keyB64Url ? fromBase64Url(keyB64Url) : new Uint8Array(32);
+        const key = await crypto.subtle.importKey("raw", toBuffer(rawKey), "AES-GCM", false, ["decrypt"]);
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: toBuffer(iv) }, key, toBuffer(cipher));
+        plaintext = dec.decode(decrypted);
+      }
+
+      // Decrypt succeeded! Clear key/salt from address bar
+      history.replaceState({ shield: true }, "", `${location.pathname}#/messages`);
+
+      // Show decrypted message
+      showOpenedMessage(card, header, plaintext);
+    } catch {
+      statusBanner.textContent = "Could not reach the message service. Try again in a moment.";
+      statusBanner.style.display = "block";
+      openBtn.disabled = false;
+    }
+  });
+
+  return root;
+}
+
+function showAlreadyOpenedOrExpired(card: HTMLElement, header: HTMLElement) {
+  header.replaceChildren(
+    h("h1", {}, ["Message unavailable"]),
+  );
+  card.replaceChildren(
+    h("p", { class: "banner neutral", style: "font-size: 1.05rem;" }, [
+      "This message was already opened or has expired.",
+    ]),
+    h("a", { class: "btn primary", href: "#/messages", style: "justify-content: center;" }, [
+      "Send a private message",
+    ]),
+  );
+}
+
+function showOpenedMessage(card: HTMLElement, header: HTMLElement, text: string) {
+  header.replaceChildren(
+    h("h1", {}, ["Private message"]),
+    h("p", { class: "lede" }, ["This message is gone after you read it."]),
+  );
+
+  const textBox = h("textarea", {
+    readonly: "true",
+    rows: "6",
+    class: "mono",
+    style: "background: var(--raised); border-color: var(--line-accent);",
+  }, [text]) as HTMLTextAreaElement;
+  textBox.value = text;
+
+  const copyBtn = h("button", { type: "button", class: "btn primary" }, [
+    createIcon("copy", 18),
+    "Copy message",
+  ]);
+  const status = h("p", { class: "banner ok", style: "display: none;" });
+
+  copyBtn.addEventListener("click", async () => {
+    await copyText(text, status, textBox);
+    status.style.display = "block";
+  });
+
+  const actions = h("div", { class: "row", style: "gap: var(--sp-2);" }, [copyBtn]);
+
+  const note = h("p", { class: "muted-soft", style: "margin: 0;" }, [
+    "This message is gone after you read it.",
+  ]);
+
+  card.replaceChildren(textBox, actions, status, note);
 }

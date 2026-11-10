@@ -57,12 +57,12 @@ export function locationPrivacySetup(os: string): LocationGuide {
   }
   if (key === "chrome" || key === "chromium" || key === "edge") {
     return {
-      os: "Chromium (Chrome, Edge, and other Chromium browsers that expose contentSettings)",
+      os: "Chrome, Edge, and other Chromium browsers",
       ...SHARED,
-      nativePermission: "The extension can set the browser's location content setting. Firefox and Safari do not offer contentSettings, so this control is unsupported there.",
+      nativePermission: "The extension can set the browser's location setting.",
       steps: [
         "Install the NXTL Shield extension and turn on Block location in this browser.",
-        "Add an exact origin exception for a map you trust. https://www.google.com/maps is the origin https://www.google.com, not maps.google.com and not every Google subdomain.",
+        "Add an exact origin exception for a map you trust.",
         "Prefer Ask rather than Allow. Allow is an explicit choice.",
         "Restore clears only the content settings this extension set.",
       ],
@@ -74,16 +74,16 @@ export function locationPrivacySetup(os: string): LocationGuide {
       sourceUrl: "https://developer.chrome.com/docs/extensions/reference/api/contentSettings",
     };
   }
-  if (key === "firefox") {
+  if (key === "firefox" || key === "safari") {
     return {
-      os: "Firefox",
+      os: "Firefox and Safari",
       ...SHARED,
-      nativePermission: "Firefox has no contentSettings API. The extension cannot block Geolocation for other sites. Use the site's own permission icon or Firefox settings.",
+      nativePermission: "The extension cannot change location permissions in Firefox or Safari. Use your browser settings to control which websites can see your location.",
       steps: [
-        "This control is unsupported in the Firefox extension.",
+        "Use your browser settings to review and block location access for websites.",
         "Manual checks in the NXTL Shield page still work. The page does not request location.",
       ],
-      limits: ["Do not expect a location switch in the Firefox popup. It is intentionally absent."],
+      limits: ["This control is handled directly in your browser's privacy settings."],
     };
   }
   return {
@@ -92,7 +92,7 @@ export function locationPrivacySetup(os: string): LocationGuide {
     nativePermission: "Shield does not request location for itself. Permission state shown in the page, when the Permissions API exists, is only this site's status.",
     steps: [
       "Use the operating-system steps for iOS or Android if you want to review app permissions.",
-      "Use the Chromium extension where contentSettings exists.",
+      "Use the Chromium extension to manage website location permissions.",
     ],
     limits: ["If the browser is an in-app webview, open Shield in Safari or Chrome before relying on install or permission prompts."],
   };
