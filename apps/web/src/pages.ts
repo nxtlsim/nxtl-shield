@@ -180,6 +180,47 @@ export async function copyToClipboard(
   }
 }
 
+// Android Private DNS steps. A web page cannot open Android Settings
+// (browsers only launch app screens marked safe for links, and Settings is not),
+// so the button copies the hostname and the steps say where to paste it.
+export function androidPrivateDnsBlock(host: string): HTMLElement {
+  const label = (): (string | Node)[] => [createIcon("copy", 16), "Copy hostname"];
+  const status = h("p", { class: "muted", role: "status", "aria-live": "polite", style: "margin: 0;" }, []);
+  const hostEl = h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral); user-select: all; word-break: break-all;" }, [host]);
+  const copyBtn = h("button", { class: "btn primary", type: "button" }, label());
+  copyBtn.addEventListener("click", async () => {
+    const ok = await copyToClipboard(host, copyBtn, label(), "Copied");
+    if (ok) {
+      status.textContent = "Copied. Now open your phone's Settings app and follow the steps below.";
+    } else {
+      const range = document.createRange();
+      range.selectNodeContents(hostEl);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      status.textContent = "Press and hold the hostname above to copy it.";
+    }
+  });
+  return h("div", { class: "android-dns", style: "display: flex; flex-direction: column; gap: var(--sp-3);" }, [
+    h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
+      h("span", {}, ["Your hostname:"]),
+      hostEl,
+      h("div", { class: "row", style: "gap: var(--sp-2); flex-wrap: wrap;" }, [copyBtn]),
+      status,
+    ]),
+    h("ol", { class: "stepper-list" }, [
+      h("li", {}, ["Tap Copy hostname."]),
+      h("li", {}, ["Open your phone's Settings app."]),
+      h("li", {}, ["Go to Network & internet → Private DNS."]),
+      h("li", {}, ["Choose Private DNS provider hostname."]),
+      h("li", {}, ["Paste the hostname and tap Save."]),
+    ]),
+    h("p", { class: "muted", style: "margin: 0;" }, [
+      "Menu names vary a little by phone. On Samsung: Settings → Connections → More connection settings → Private DNS. A web page can't open Settings for you, so this takes a few taps.",
+    ]),
+  ]);
+}
+
 // ----------------------------------------------------
 // HOME PAGE
 // ----------------------------------------------------
@@ -782,24 +823,10 @@ export async function pageAdBlocker(): Promise<HTMLElement> {
     );
   } else if (device.os === "android") {
     const recResolver = getResolver("adguard-default") ?? RESOLVERS[0];
-    const copyBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy hostname"]);
-    copyBtn.addEventListener("click", () => {
-      copyToClipboard(recResolver.dotHost, copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
-    });
     recommendedSection.append(
-      h("h2", {}, ["Android: Private DNS (3 taps)"]),
-      h("p", { class: "muted" }, ["Android blocks ads and trackers across all apps natively with Private DNS. No apps to install."]),
-      h("ol", { class: "stepper-list" }, [
-        h("li", {}, ["Open Settings → Network & internet (or Connections) → Private DNS."]),
-        h("li", {}, ["Select Private DNS provider hostname."]),
-        h("li", {}, [
-          h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
-            h("span", {}, ["Paste this hostname and tap Save:"]),
-            h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, [recResolver.dotHost]),
-            h("div", { class: "row" }, [copyBtn]),
-          ]),
-        ]),
-      ]),
+      h("h2", {}, ["Android: Private DNS"]),
+      h("p", { class: "muted" }, ["Android blocks ads and trackers across all apps with Private DNS. No apps to install."]),
+      androidPrivateDnsBlock(recResolver.dotHost),
       makeCheckWorkedRow(),
     );
   } else if (device.os === "ios") {
@@ -971,18 +998,6 @@ export function pagePhoneProtection(): HTMLElement {
 
     const recResolver = getResolver("adguard-default") ?? RESOLVERS[0];
     if (platform === "android") {
-      const copyBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy hostname"]);
-      copyBtn.addEventListener("click", () => {
-        copyToClipboard(recResolver.dotHost, copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
-      });
-
-      const openSettingsBtn = detectDevice().os === "android"
-        ? h("a", {
-            class: "btn sm",
-            href: "intent:#Intent;action=android.settings.PRIVATE_DNS_SETTINGS;end",
-          }, [createIcon("arrow-right", 14), "Open Private DNS settings"])
-        : "";
-
       contentArea.replaceChildren(
         h("section", { class: "card" }, [
           h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
@@ -992,20 +1007,7 @@ export function pagePhoneProtection(): HTMLElement {
           h("p", { class: "muted" }, [
             "Android natively supports encrypted Private DNS. This blocks ads, trackers, and scam sites across Chrome, Samsung Internet, and all mobile apps.",
           ]),
-          h("ol", { class: "stepper-list" }, [
-            h("li", {}, [
-              h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
-                h("span", {}, ["Copy this hostname: "]),
-                h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, [recResolver.dotHost]),
-                h("div", { class: "row", style: "gap: var(--sp-2); flex-wrap: wrap;" }, [copyBtn, ...(openSettingsBtn ? [openSettingsBtn] : [])]),
-              ]),
-            ]),
-            openSettingsBtn
-              ? h("li", {}, ["Tap Open Private DNS settings, paste the hostname, and tap Save."])
-              : h("li", {}, ["On your Android phone, open Settings → Network & internet → Private DNS, paste the hostname, and tap Save."]),
-            h("li", {}, ["Select 'Private DNS provider hostname'."]),
-            h("li", {}, [`Paste ${recResolver.dotHost} and tap Save. All internet lookups are now protected.`]),
-          ]),
+          androidPrivateDnsBlock(recResolver.dotHost),
           h("div", { class: "row", style: "margin-top: var(--sp-4); align-items: center; gap: var(--sp-3); flex-wrap: wrap;" }, [
             checkBtn,
           ]),
@@ -2450,18 +2452,6 @@ export async function pageSetup(): Promise<HTMLElement> {
         ]),
       );
     } else if (activeTab === "android") {
-      const copyBtn = h("button", { class: "btn primary sm", type: "button" }, [createIcon("copy", 16), "Copy hostname"]);
-      copyBtn.addEventListener("click", () => {
-        copyToClipboard(resolver.dotHost, copyBtn, [createIcon("copy", 16), "Copy hostname"], "Copied hostname!");
-      });
-
-      const openSettingsBtn = detectDevice().os === "android"
-        ? h("a", {
-            class: "btn sm",
-            href: "intent:#Intent;action=android.settings.PRIVATE_DNS_SETTINGS;end",
-          }, [createIcon("arrow-right", 14), "Open Private DNS settings"])
-        : "";
-
       contentArea.replaceChildren(
         h("section", { class: "card" }, [
           h("div", { class: "row", style: "align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);" }, [
@@ -2471,20 +2461,7 @@ export async function pageSetup(): Promise<HTMLElement> {
           h("p", { class: "muted" }, [
             "Encrypted DNS protection for Android 9 and newer. Filters connections across Chrome, Samsung Internet, and background apps.",
           ]),
-          h("ol", { class: "stepper-list" }, [
-            h("li", {}, [
-              h("div", { style: "display: flex; flex-direction: column; gap: var(--sp-2);" }, [
-                h("span", {}, ["Copy this hostname: "]),
-                h("span", { class: "mono", style: "font-weight: 700; color: var(--accent-coral);" }, [resolver.dotHost]),
-                h("div", { class: "row", style: "gap: var(--sp-2); flex-wrap: wrap;" }, [copyBtn, ...(openSettingsBtn ? [openSettingsBtn] : [])]),
-              ]),
-            ]),
-            openSettingsBtn
-              ? h("li", {}, ["Tap Open Private DNS settings, paste the hostname, and tap Save."])
-              : h("li", {}, ["On your Android phone, open Settings → Network & internet → Private DNS, paste the hostname, and tap Save."]),
-            h("li", {}, ["Select 'Private DNS provider hostname'."]),
-            h("li", {}, [`Paste ${resolver.dotHost} and tap Save. All internet lookups are now protected.`]),
-          ]),
+          androidPrivateDnsBlock(resolver.dotHost),
           h("div", { style: "margin-top: var(--sp-4);" }, [
             makeCheckWorkedRow(),
           ]),
