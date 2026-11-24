@@ -273,6 +273,12 @@ test("lookalike detection flags typos of genuine brands and warns before navigat
     expect(await checkLookalike("www.nxtlsim.com")).toBeNull();
     expect(await checkLookalike("g00gle.com")).toBe("google.com");
     expect(await checkLookalike("google.com")).toBeNull();
+    expect(await checkLookalike("nxtlsim.github.io")).toBeNull();
+    expect(await checkLookalike("nxtl-esim-nxtl-shield.static.hf.space")).toBeNull();
+    expect(await checkLookalike("expo.dev")).toBeNull();
+    expect(await checkLookalike("nxtlsim-fake.github.io")).toBe("nxtlsim.com");
+    expect(await checkLookalike("nxtlsim.github.io.evil.com")).toBe("nxtlsim.com");
+    expect(await checkLookalike("nxtlsim.com.evil.io")).toBe("nxtlsim.com");
 
     // Verify warning page renders lookalike heading and buttons
     const warnPage = await context.newPage();

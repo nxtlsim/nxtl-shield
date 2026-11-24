@@ -14,7 +14,7 @@ const KEY =
 const shared = {
   manifest_version: 3,
   name: "NXTL Shield",
-  version: "0.6.1",
+  version: "0.6.2",
   description: "Free tools to check a link or message, block ads and trackers, and send a note that opens only once.",
   action: { default_popup: "popup.html", default_title: "NXTL Shield" },
   icons: { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" },
