@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.3
+
+- Same features as 0.6.2. This is the first version listed on Firefox Add-ons.
+
 ## 0.6.2
 
 - The lookalike warning no longer appears on NXTL eSIM's own pages, such as the Shield site on nxtlsim.github.io. This also fixes the warning that showed up every time you used Check this link.
