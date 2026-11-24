@@ -1,4 +1,5 @@
 import { originException } from "../../../packages/core/src/origin";
+import { findLookalike } from "../../../packages/core/src/url/lookalike";
 
 const RULESETS = ["threats", "trackers", "cleaning"] as const;
 type ToggleKey = "blocking" | "trackers" | "cleaning" | "cosmetic";
@@ -381,52 +382,6 @@ chrome.webRequest.onBeforeRequest.addListener(
   },
   { urls: ["<all_urls>"] },
 );
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  const d: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) d[i][0] = i;
-  for (let j = 0; j <= n; j++) d[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
-    }
-  }
-  return d[m][n];
-}
-
-const GENUINE_DOMAINS = [
-  "nxtlsim.com",
-  "paypal.com",
-  "apple.com",
-  "google.com",
-  "microsoft.com",
-  "amazon.com",
-  "netflix.com",
-  "facebook.com",
-  "instagram.com",
-];
-
-function findLookalike(host: string): string | null {
-  const clean = host.toLowerCase().replace(/:\d+$/, "");
-  for (const genuine of GENUINE_DOMAINS) {
-    if (clean === genuine || clean.endsWith("." + genuine)) return null;
-    const genuineBase = genuine.split(".")[0];
-    const hostBase = clean.split(".")[0];
-
-    // 1. Homoglyphs & confusable substitutions (e.g. 1 -> i or l, 0 -> o, vv -> w)
-    const foldedI = hostBase.replace(/1/g, "i").replace(/0/g, "o").replace(/vv/g, "w");
-    const foldedL = hostBase.replace(/1/g, "l").replace(/0/g, "o");
-    if (foldedI === genuineBase || foldedL === genuineBase) return genuine;
-
-    // 2. Levenshtein edit distance <= 1 for bases >= 5 chars
-    const dist = levenshtein(hostBase, genuineBase);
-    if (genuineBase.length >= 5 && dist === 1) return genuine;
-  }
-  return null;
-}
 
 chrome.webNavigation.onBeforeNavigate?.addListener(async (details: { frameId: number; tabId: number; url: string }) => {
   if (details.frameId !== 0) return;

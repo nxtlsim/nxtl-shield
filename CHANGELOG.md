@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2
+
+- The lookalike warning no longer appears on NXTL eSIM's own pages, such as the Shield site on nxtlsim.github.io. This also fixes the warning that showed up every time you used Check this link.
+- Real fakes are still caught, such as nxt1sim.com, nxtlsim-esim.com or nxtlsim.com.evil.io. A name that only appears in the link's query is not flagged on its own.
+
 ## 0.6.1
 
 - The Safe DNS check in the extension and on the site no longer reads On just because the extension blocked the test address. It only reads On when that address really fails to load.

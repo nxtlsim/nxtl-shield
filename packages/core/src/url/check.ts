@@ -5,6 +5,7 @@ import { redactRaw } from "../redact";
 import type { CheckBase, Evidence } from "../types";
 import { BRAND_DOMAINS, mixedScripts, skeletonLabel } from "./brands";
 import { inspectHostLiteral, rawHostFromInput } from "./ip";
+import { findLookalike, isOfficialHost } from "./lookalike";
 
 export interface Reputation {
   badware: Map<string, "all" | "doc">;
@@ -213,7 +214,17 @@ export function checkUrl(input: string, reputation: Reputation, options: UrlChec
   }
   const skeletonHost = labels.map((label) => skeletonLabel(label).skeleton).join(".");
   const skeletonChanged = labels.some((label) => skeletonLabel(label).changed);
-  const brand = brandHit(hostname) ?? (skeletonChanged ? brandHit(skeletonHost) : null);
+  const official = isOfficialHost(hostname);
+  const brand = official ? null : (brandHit(hostname) ?? (skeletonChanged ? brandHit(skeletonHost) : null));
+  const lookalike = official || brand || ip ? null : findLookalike(skeletonChanged ? skeletonHost : hostname);
+  if (lookalike) {
+    push(evidence, {
+      id: "misleading-host",
+      title: `Looks like ${lookalike}`,
+      detail: `This address looks like ${lookalike}, but it is a different site. Check the address carefully before you continue.`,
+      severity: "indicator",
+    });
+  }
   if (brand) {
     push(evidence, {
       id: "misleading-host",

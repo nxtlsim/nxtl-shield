@@ -6,6 +6,7 @@ export * from "./blocking";
 export * from "./url/ip";
 export * from "./url/brands";
 export * from "./url/check";
+export * from "./url/lookalike";
 export * from "./text/check";
 export * from "./clean/cleaner";
 export * from "./password/password";
